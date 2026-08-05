@@ -43,7 +43,7 @@
   --sombra:0 1px 2px rgba(18,26,28,.06), 0 4px 14px rgba(18,26,28,.05);
 }
 *{box-sizing:border-box}
-html,body{margin:0;padding:0}
+html,body{margin:0;padding:0;overflow-x:hidden;max-width:100%}
 body{background:var(--fondo);color:var(--tinta);font-family:var(--ui);font-size:16px;
      line-height:1.5;-webkit-text-size-adjust:100%;padding-bottom:env(safe-area-inset-bottom)}
 button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
@@ -69,9 +69,12 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .barra i{display:block;height:100%;background:#fff;transition:width .3s ease}
 #reloj:not(.corriendo):not(.descansando) .barra i{background:var(--agua)}
 
-nav{display:flex;gap:2px;padding:12px 0 0}
-nav button{flex:1;padding:9px 3px 10px;font-size:.78rem;font-weight:600;color:var(--acero);
-           border-bottom:2px solid var(--linea);letter-spacing:.03em}
+nav{display:flex;gap:2px;padding:12px 0 0;overflow-x:auto;scrollbar-width:none;
+    -webkit-overflow-scrolling:touch}
+nav::-webkit-scrollbar{display:none}
+nav button{flex:1 1 auto;min-width:0;padding:9px 7px 10px;font-size:.74rem;font-weight:700;
+           color:var(--acero);border-bottom:2px solid var(--linea);letter-spacing:.03em;
+           white-space:nowrap}
 nav button[aria-selected="true"]{color:var(--agua);border-bottom-color:var(--agua)}
 
 .dia-cab{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
@@ -209,6 +212,56 @@ svg.esq{width:100%;max-width:340px;height:108px;color:var(--tinta);display:block
 .fichaCab{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
 .fichaCab h3{margin:0;font-size:1.05rem;letter-spacing:-.01em}
 .avisoAlmacen{background:var(--alerta);color:#fff;padding:11px 16px;font-size:.86rem;line-height:1.4}
+
+/* ---- Pasos, arriba y a mano ---- */
+.filaPasos{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:13px 16px;margin-bottom:8px}
+.filaPasos label{font-size:.9rem;font-weight:600;flex:1;min-width:120px}
+.filaPasos input{width:104px;text-align:center;font-family:var(--mono);font-size:1rem;font-weight:700}
+.filaPasos span{font-family:var(--mono);font-size:.85rem;color:var(--agua);font-weight:700;min-width:74px}
+
+/* ---- Cuerpo: lo importante primero y grande ---- */
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.heroT{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r);
+       padding:16px 17px;box-shadow:var(--sombra)}
+.heroT .et{font-size:.66rem;text-transform:uppercase;letter-spacing:.09em;color:var(--acero);font-weight:700}
+.heroT .val{font-family:var(--mono);font-size:2.1rem;font-weight:700;line-height:1.05;
+            letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin:4px 0 2px}
+.heroT .val small{font-size:.9rem;font-weight:600;color:var(--acero);letter-spacing:0}
+.heroT .delta{font-size:.79rem;font-weight:700;font-family:var(--mono)}
+.heroT .delta.baja{color:var(--hecho)} .heroT .delta.sube{color:var(--descanso)}
+.heroT .delta.igual{color:var(--acero)}
+.heroT .desde{font-size:.7rem;color:var(--acero);display:block;font-weight:400;font-family:var(--ui)}
+
+.progT{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r);
+       padding:15px 17px;box-shadow:var(--sombra);margin-bottom:10px}
+.progT .cabP{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:9px}
+.progT .cabP b{font-size:.92rem} .progT .cabP span{font-family:var(--mono);font-size:.85rem;color:var(--agua);font-weight:700}
+.rielG{height:12px;background:var(--fondo);border-radius:99px;overflow:hidden}
+.rielG i{display:block;height:100%;background:var(--agua);border-radius:99px;transition:width .4s ease}
+.progT .pies{display:flex;justify-content:space-between;font-size:.73rem;color:var(--acero);
+             margin-top:6px;font-family:var(--mono)}
+
+.gemelas{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+@media(max-width:430px){.gemelas{grid-template-columns:1fr}}
+.mini{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r);
+      padding:13px 14px 9px;box-shadow:var(--sombra)}
+.mini h4{margin:0;font-size:.8rem;font-weight:700;display:flex;justify-content:space-between;
+         align-items:baseline;gap:8px}
+.mini h4 span{font-family:var(--mono);font-size:.76rem;font-weight:700}
+.mini svg{width:100%;height:88px;display:block;margin-top:6px;overflow:visible}
+.mini .rango{display:flex;justify-content:space-between;font-size:.68rem;color:var(--acero);
+             font-family:var(--mono);margin-top:2px}
+.mini .nada{font-size:.8rem;color:var(--acero);padding:22px 0;text-align:center}
+
+.indT{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r);
+      padding:15px 17px;box-shadow:var(--sombra);margin-bottom:10px}
+.escala{position:relative;height:13px;border-radius:99px;overflow:hidden;display:flex;margin:12px 0 4px}
+.escala i{height:100%}
+.escala .marca{position:absolute;top:-4px;width:3px;height:21px;background:var(--tinta);
+               border-radius:2px;box-shadow:0 0 0 2px var(--panel)}
+.zonas{display:flex;font-size:.66rem;color:var(--acero);font-weight:700;text-transform:uppercase;
+       letter-spacing:.05em}
+.zonas span{text-align:center}
 
 #barraAbajo{position:fixed;inset:auto 0 0 0;z-index:50;color:#fff;display:none;
             padding:16px 14px calc(16px + env(safe-area-inset-bottom));background:var(--descanso)}
@@ -402,6 +455,15 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
 
   <div class="tarj" id="comResumen"></div>
 
+  <div class="tarj filaPasos">
+    <label for="comPasos">👟 Pasos de hoy</label>
+    <input id="comPasos" type="number" inputmode="numeric" step="100" min="0" placeholder="8500">
+    <span id="pasosKcal">—</span>
+  </div>
+  <p style="font-size:.79rem;color:var(--acero);margin:-4px 0 0">
+    Míralos en tu app de paseo y tecléalos. Una web no puede leerlos sola, pero con ese número
+    el gasto del día te sale ajustado.</p>
+
   <h2 class="sec">Tus comidas del plan</h2>
   <p style="font-size:.86rem;color:var(--acero);margin-top:0">Un toque y se apunta. Si ese día cambiaste algo, lo ajustas abajo.</p>
   <div class="platos" id="comPlan"></div>
@@ -437,23 +499,34 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
   <h2 class="sec">Lo que llevas hoy</h2>
   <div class="hist" id="comLista"></div>
 
-  <h2 class="sec">Movimiento del día</h2>
-  <div class="tarj">
-    <div class="rejilla">
-      <div class="campo"><label for="comPasos">Pasos (de tu app de paseo)</label>
-        <input id="comPasos" type="number" inputmode="numeric" step="100" min="0" placeholder="8500"></div>
-    </div>
-    <p style="font-size:.82rem;color:var(--acero);margin:10px 0 0">
-      Hay que meterlos a mano: una web no puede leer los datos de otras apps del móvil.
-      Con eso ajusto el gasto estimado del día.</p>
-  </div>
-
   <h2 class="sec">Últimos días</h2>
   <div class="hist" id="comHist"></div>
 </main>
 
 <!-- ============ CUERPO ============ -->
 <main class="env panel-sec" id="p-cuerpo" hidden>
+  <div id="heroCuerpo"></div>
+  <div id="progresoCuerpo"></div>
+  <div id="graficasCuerpo"></div>
+  <div id="indicadorCuerpo"></div>
+
+  <h2 class="sec">Nueva medición</h2>
+  <p style="font-size:.86rem;color:var(--acero);margin-top:0">Una vez por semana, mismo día, recién levantado y en ayunas. El peso diario oscila 1-2 kg por agua y comida: pesarte a diario solo mete ruido.</p>
+  <div class="tarj">
+    <div class="rejilla">
+      <div class="campo"><label for="cFecha">Fecha</label><input id="cFecha" type="date"></div>
+      <div class="campo"><label for="cPeso">Peso (kg)</label>
+        <input id="cPeso" type="number" inputmode="decimal" step="0.1" min="30" max="250" placeholder="98"></div>
+      <div class="campo"><label for="cCintura">Cintura (cm)</label>
+        <input id="cCintura" type="number" inputmode="decimal" step="0.5" min="40" max="200" placeholder="104"></div>
+    </div>
+    <div class="campo" style="margin-top:12px"><label for="cNota">Nota (opcional)</label>
+      <textarea id="cNota" placeholder="Cómo te ves, cómo has dormido, cambios en la dieta…"></textarea></div>
+    <div class="acciones" style="margin-top:12px">
+      <button class="bt p" id="cGuardar">Guardar medición</button>
+    </div>
+  </div>
+
   <h2 class="sec">Tu perfil</h2>
   <div class="tarj" id="fichaPerfil"></div>
   <div class="tarj" id="formPerfil" hidden>
@@ -492,26 +565,8 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
     </div>
   </div>
 
-  <h2 class="sec">Registro corporal</h2>
-  <p style="font-size:.86rem;color:var(--acero);margin-top:0">Pésate <strong>una vez por semana</strong>, mismo día y a la misma hora, en ayunas. El peso diario oscila 1-2 kg por agua y comida y solo genera ruido.</p>
-  <div class="tarj">
-    <div class="rejilla">
-      <div class="campo"><label for="cFecha">Fecha</label><input id="cFecha" type="date"></div>
-      <div class="campo"><label for="cPeso">Peso (kg)</label>
-        <input id="cPeso" type="number" inputmode="decimal" step="0.1" min="30" max="250" placeholder="82.5"></div>
-      <div class="campo"><label for="cCintura">Cintura (cm)</label>
-        <input id="cCintura" type="number" inputmode="decimal" step="0.5" min="40" max="200" placeholder="88"></div>
-    </div>
-    <div class="campo" style="margin-top:12px"><label for="cNota">Nota (opcional)</label>
-      <textarea id="cNota" placeholder="Cómo te ves, cómo has dormido, cambios en la dieta…"></textarea></div>
-    <div class="acciones" style="margin-top:12px">
-      <button class="bt p" id="cGuardar">Guardar medición</button>
-    </div>
-  </div>
 
-  <div class="tarj" id="tarjGrafico"></div>
-
-  <h2 class="sec">Tus mediciones</h2>
+  <h2 class="sec">Todas tus mediciones</h2>
   <div class="hist" id="listaCuerpo"></div>
 
   <h2 class="sec">Tus datos</h2>
@@ -1800,46 +1855,130 @@ $("#cGuardar").addEventListener("click", () => {
   aviso(i >= 0 ? "Medición del " + f + " actualizada." : "Medición guardada.");
 });
 
-function grafico(){
-  const datos = S.cuerpo.filter(x => x.peso != null).slice(0, 16).reverse();
-  const cont = $("#tarjGrafico");
-  if(datos.length < 2){
-    cont.innerHTML = '<p style="margin:0;font-size:.86rem;color:var(--acero)">' +
-      'La gráfica de peso aparece con <strong>dos mediciones o más</strong>. ' +
-      (datos.length ? "Te falta una." : "Añade la primera arriba.") + '</p>';
-    return;
-  }
-  const W = 600, H = 150, mx = 34, my = 16;
-  const vals = datos.map(d => d.peso);
-  let min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
-  if(max - min < 2){ const c = (max+min)/2; min = c-1; max = c+1; }
-  const px = i => mx + i*(W-mx-8)/(datos.length-1);
-  const py = v => my + (max-v)/(max-min)*(H-my*2);
-  const linea = datos.map((d,i) => (i ? "L" : "M") + px(i).toFixed(1) + " " + py(d.peso).toFixed(1)).join(" ");
-  const area = linea + " L" + px(datos.length-1).toFixed(1) + " " + (H-my) + " L" + px(0).toFixed(1) + " " + (H-my) + " Z";
-  const dif = vals[vals.length-1] - vals[0];
+/* Serie temporal de una medida, ordenada de antigua a reciente. */
+function serie(campo){
+  return S.cuerpo.filter(x => x[campo] != null).slice(0, 20).reverse()
+                 .map(x => ({f:x.f, v:x[campo]}));
+}
 
-  cont.innerHTML =
-    '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px">' +
-      '<strong style="font-size:.95rem">Evolución del peso</strong>' +
-      '<span class="num" style="font-size:.85rem;color:' + (dif > 0 ? "var(--descanso)" : dif < 0 ? "var(--hecho)" : "var(--acero)") + '">' +
-        (dif > 0 ? "+" : "") + dif.toFixed(1) + ' kg en ' + datos.length + ' mediciones</span></div>' +
-    '<svg class="grafico" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" ' +
-      'aria-label="Evolución del peso, de ' + vals[0].toFixed(1) + ' a ' + vals[vals.length-1].toFixed(1) + ' kilos">' +
-      '<line x1="' + mx + '" y1="' + my + '" x2="' + W + '" y2="' + my + '" stroke="var(--linea-2)" stroke-width="1"/>' +
-      '<line x1="' + mx + '" y1="' + (H-my) + '" x2="' + W + '" y2="' + (H-my) + '" stroke="var(--linea-2)" stroke-width="1"/>' +
-      '<text x="2" y="' + (my+4) + '" font-size="11" fill="var(--acero)">' + max.toFixed(1) + '</text>' +
-      '<text x="2" y="' + (H-my+4) + '" font-size="11" fill="var(--acero)">' + min.toFixed(1) + '</text>' +
+/* Una gráfica por medida. Nunca las dos juntas: dos escalas en un mismo eje
+   hacen que las líneas parezcan decir cosas que no dicen. */
+function miniGrafica(campo, titulo, unidad, decimales){
+  const d = serie(campo);
+  const cab = '<h4>' + titulo;
+  if(d.length < 2){
+    return '<div class="mini">' + cab + '</h4><div class="nada">' +
+      (d.length ? "Con una segunda medición aparece la línea." : "Sin mediciones todavía.") +
+      '</div></div>';
+  }
+  const vals = d.map(x => x.v);
+  const dif = vals[vals.length-1] - vals[0];
+  const signo = dif > 0 ? "+" : "";
+  const color = dif < 0 ? "var(--hecho)" : dif > 0 ? "var(--descanso)" : "var(--acero)";
+
+  const W = 260, H = 88, mx = 6, arriba = 12, abajo = 14;
+  let min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+  const holgura = Math.max((max - min) * 0.18, decimales ? 0.4 : 1);
+  min -= holgura; max += holgura;
+  const px = i => mx + i * (W - mx*2 - 30) / (d.length - 1);
+  const py = v => arriba + (max - v) / (max - min) * (H - arriba - abajo);
+
+  const linea = d.map((x,i) => (i ? "L" : "M") + px(i).toFixed(1) + " " + py(x.v).toFixed(1)).join(" ");
+  const area  = linea + " L" + px(d.length-1).toFixed(1) + " " + (H-abajo) +
+                " L" + px(0).toFixed(1) + " " + (H-abajo) + " Z";
+  const puntos = d.map((x,i) =>
+    '<circle cx="' + px(i).toFixed(1) + '" cy="' + py(x.v).toFixed(1) + '" r="4.5" ' +
+    'fill="var(--panel)" stroke="var(--agua)" stroke-width="2"><title>' +
+    x.f + ": " + x.v.toFixed(decimales) + " " + unidad + '</title></circle>').join("");
+  const ult = d[d.length-1];
+
+  return '<div class="mini">' + cab +
+    '<span style="color:' + color + '">' + signo + dif.toFixed(decimales) + " " + unidad + '</span></h4>' +
+    '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + titulo + ', de ' +
+      vals[0].toFixed(decimales) + ' a ' + ult.v.toFixed(decimales) + ' ' + unidad + '">' +
+      '<line x1="' + mx + '" y1="' + (H-abajo) + '" x2="' + (W-30) + '" y2="' + (H-abajo) +
+        '" stroke="var(--linea-2)" stroke-width="1"/>' +
       '<path d="' + area + '" fill="var(--agua)" opacity=".10"/>' +
-      '<path d="' + linea + '" fill="none" stroke="var(--agua)" stroke-width="2.5" ' +
-        'stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>' +
-      '<circle cx="' + px(datos.length-1).toFixed(1) + '" cy="' + py(vals[vals.length-1]).toFixed(1) + '" r="4" fill="var(--agua)"/>' +
+      '<path d="' + linea + '" fill="none" stroke="var(--agua)" stroke-width="2" ' +
+        'stroke-linejoin="round" stroke-linecap="round"/>' +
+      puntos +
+      '<text x="' + (px(d.length-1)+9).toFixed(1) + '" y="' + (py(ult.v)+4).toFixed(1) +
+        '" font-size="12" font-weight="700" fill="var(--tinta)" font-family="ui-monospace,monospace">' +
+        ult.v.toFixed(decimales) + '</text>' +
     '</svg>' +
-    '<div style="display:flex;justify-content:space-between;font-size:.74rem;color:var(--acero)" class="num">' +
-      '<span>' + datos[0].f + '</span><span>' + datos[datos.length-1].f + '</span></div>';
+    '<div class="rango"><span>' + d[0].f.slice(5) + '</span><span>' + ult.f.slice(5) + '</span></div>' +
+    '</div>';
 }
 function pintarCuerpo(){
-  grafico();
+  const pes = serie("peso"), cin = serie("cintura");
+  const alt = num(S.perfil.altura);
+  const diana = alt ? Math.round(alt / 2 * 10) / 10 : null;   // cintura < mitad de la altura
+
+  /* --- Números grandes con el cambio desde el principio --- */
+  const tile = (et, arr, ud, dec) => {
+    if(!arr.length) return '<div class="heroT"><div class="et">' + et + '</div>' +
+      '<div class="val">—</div><div class="delta igual">Sin medir<span class="desde">' +
+      'apúntalo abajo</span></div></div>';
+    const ahora = arr[arr.length-1].v, ini = arr[0].v, dif = ahora - ini;
+    const cls = arr.length < 2 ? "igual" : dif < 0 ? "baja" : dif > 0 ? "sube" : "igual";
+    const txt = arr.length < 2 ? "Primera medición"
+      : (dif > 0 ? "▲ +" : dif < 0 ? "▼ " : "= ") + dif.toFixed(dec) + " " + ud;
+    return '<div class="heroT"><div class="et">' + et + '</div>' +
+      '<div class="val">' + ahora.toFixed(dec) + ' <small>' + ud + '</small></div>' +
+      '<div class="delta ' + cls + '">' + txt +
+      '<span class="desde">' + (arr.length < 2 ? "el " + arr[0].f : "desde el " + arr[0].f) +
+      '</span></div></div>';
+  };
+  $("#heroCuerpo").innerHTML = '<div class="hero">' +
+    tile("Peso", pes, "kg", 1) + tile("Cintura", cin, "cm", 0) + '</div>';
+
+  /* --- Cuánto queda hasta la diana de cintura --- */
+  let prog = "";
+  if(cin.length && diana){
+    const ini = cin[0].v, ahora = cin[cin.length-1].v;
+    const total = ini - diana, hecho = ini - ahora;
+    const pct = total > 0 ? Math.max(0, Math.min(100, hecho/total*100)) : 100;
+    prog = '<div class="progT"><div class="cabP"><b>Camino hasta ' + diana + ' cm de cintura</b>' +
+      '<span>' + Math.round(pct) + '%</span></div>' +
+      '<div class="rielG"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
+      '<div class="pies"><span>' + ini + ' cm</span>' +
+      '<span>' + (ahora > diana ? "faltan " + (ahora - diana).toFixed(0) + " cm" : "conseguido") +
+      '</span><span>' + diana + ' cm</span></div>' +
+      '<p style="font-size:.78rem;color:var(--acero);margin:9px 0 0">La diana es la mitad de tu ' +
+      'altura. Es mejor referencia que el peso: mide dónde está la grasa, no cuánto pesas.</p></div>';
+  }
+  $("#progresoCuerpo").innerHTML = prog;
+
+  /* --- Evolución: una gráfica por medida, cada una con su escala --- */
+  $("#graficasCuerpo").innerHTML = '<div class="gemelas">' +
+    miniGrafica("peso", "Peso", "kg", 1) + miniGrafica("cintura", "Cintura", "cm", 0) + '</div>';
+
+  /* --- Dónde caes en la escala cintura/altura --- */
+  let ind = "";
+  if(cin.length && alt){
+    const r = cin[cin.length-1].v / alt;
+    const MIN = 0.38, MAX = 0.70;
+    const pos = Math.max(0, Math.min(100, (r - MIN) / (MAX - MIN) * 100));
+    const zona = r < 0.50 ? ["Buena señal", "var(--hecho)"]
+              : r < 0.60 ? ["Conviene vigilar", "var(--descanso)"]
+                         : ["Conviene actuar", "var(--alerta)"];
+    const anchoV = (0.50 - MIN) / (MAX - MIN) * 100;
+    const anchoA = (0.60 - 0.50) / (MAX - MIN) * 100;
+    ind = '<div class="indT">' +
+      '<div class="cabP" style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">' +
+      '<b style="font-size:.92rem">Cintura entre altura</b>' +
+      '<span style="font-family:var(--mono);font-weight:700;color:' + zona[1] + '">' +
+      r.toFixed(2) + ' · ' + zona[0] + '</span></div>' +
+      '<div class="escala"><i style="width:' + anchoV.toFixed(1) + '%;background:var(--hecho)"></i>' +
+      '<i style="width:' + anchoA.toFixed(1) + '%;background:var(--descanso)"></i>' +
+      '<i style="flex:1;background:var(--alerta)"></i>' +
+      '<span class="marca" style="left:calc(' + pos.toFixed(1) + '% - 1.5px)"></span></div>' +
+      '<div class="zonas"><span style="width:' + anchoV.toFixed(1) + '%">bien</span>' +
+      '<span style="width:' + anchoA.toFixed(1) + '%">vigilar</span>' +
+      '<span style="flex:1">actuar</span></div></div>';
+  }
+  $("#indicadorCuerpo").innerHTML = ind;
+
   $("#listaCuerpo").innerHTML = S.cuerpo.length
     ? S.cuerpo.slice(0,24).map(c =>
         '<div class="hfila"><div class="lin1"><span class="hf">' + esc(c.f) + '</span>' +
@@ -2205,6 +2344,10 @@ function pintarComida(){
     : '<div class="vacio">Nada apuntado todavía. Empieza por tus comidas del plan, que son un toque.</div>';
 
   $("#comPasos").value = S.pasos[comDia] || "";
+  const pesoAct = ultimoPeso(), nPasos = S.pasos[comDia] || 0;
+  $("#pasosKcal").textContent = nPasos && pesoAct != null
+    ? "≈ " + Math.round(nPasos * pesoAct * 0.0004) + " kcal"
+    : (nPasos ? "" : "sin apuntar");
 
   const dias = Object.keys(S.comidas).filter(f => comidasDe(f).length).sort().reverse().slice(0, 10);
   $("#comHist").innerHTML = dias.length
@@ -2275,10 +2418,20 @@ $("#mAdd").addEventListener("click", () => {
   $("#mNombre").value = ""; $("#mKcal").value = ""; $("#mProt").value = "";
   $("#alManualCaja").hidden = true;
 });
-$("#comPasos").addEventListener("change", e => {
-  const v = num(e.target.value);
-  if(v == null || v <= 0) delete S.pasos[comDia]; else S.pasos[comDia] = Math.round(v);
-  guardar(); pintarComida(); pintarInicio();
+/* Con "input" también: si tecleas y cambias de pantalla sin salir del campo,
+   el evento change no llega a saltar y el dato se perdería. */
+["input","change"].forEach(ev => {
+  $("#comPasos").addEventListener(ev, e => {
+    const v = num(e.target.value);
+    if(v == null || v <= 0) delete S.pasos[comDia]; else S.pasos[comDia] = Math.round(v);
+    guardar();
+    if(ev === "change"){ pintarComida(); pintarInicio(); }
+    else{
+      const p = ultimoPeso(), n = S.pasos[comDia] || 0;
+      $("#pasosKcal").textContent = n && p != null
+        ? "≈ " + Math.round(n * p * 0.0004) + " kcal" : (n ? "" : "sin apuntar");
+    }
+  });
 });
 $("#comAyer").addEventListener("click", () => {
   if(comDia !== hoyISO()){ comDia = hoyISO(); pintarComida(); return; }
