@@ -518,10 +518,23 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
   <p id="estadoDatos" style="font-size:.87rem;margin-top:0">—</p>
   <div class="acciones">
     <button class="bt p" id="btnCopiar">Copiar datos</button>
+    <button class="bt p" id="btnPegar">Pegar datos</button>
     <button class="bt" id="btnExportar">Exportar a archivo</button>
-    <button class="bt" id="btnImportar">Importar</button>
+    <button class="bt" id="btnImportar">Importar archivo</button>
     <button class="bt mal" id="btnBorrar" style="border-color:var(--alerta)">Borrar todo</button>
-    <input type="file" id="ficheroImp" accept="application/json,.json" hidden>
+    <input type="file" id="ficheroImp" hidden>
+  </div>
+  <div id="cajaPegar" hidden style="margin-top:12px">
+    <div class="campo">
+      <label for="areaPegar">Pega aquí tus datos</label>
+      <textarea id="areaPegar" rows="4" placeholder='{"v":2,"exportado":…' style="font-family:var(--mono);font-size:.78rem"></textarea>
+    </div>
+    <div class="acciones" style="margin-top:10px">
+      <button class="bt p" id="pegarOk">Cargar</button>
+      <button class="bt" id="pegarCancel">Cancelar</button>
+    </div>
+    <p style="font-size:.8rem;color:var(--acero);margin:8px 0 0">
+      Copia el texto de tus datos y pégalo aquí. Sin archivos, sin buscar en carpetas.</p>
   </div>
   <p style="font-size:.8rem;color:var(--acero);margin-top:10px">
     <strong>Copiar datos</strong> es lo más cómodo desde el móvil: un toque y lo tienes en el
@@ -1898,54 +1911,80 @@ $("#btnExportar").addEventListener("click", () => {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   aviso("Datos exportados. Guarda el archivo en sitio seguro.");
 });
+/* Carga datos vengan de donde vengan: de un archivo o de texto pegado.
+   Enseña siempre qué trae antes de tocar nada. */
+function cargarDatos(texto, origen){
+  let g;
+  try{
+    g = JSON.parse(texto);
+    if(!g || typeof g !== "object" || Array.isArray(g)) throw new Error("formato");
+  }catch(err){
+    aviso("Eso no son datos válidos de la app. Tiene que empezar por { y acabar por }.", true);
+    return false;
+  }
+  const nS = Array.isArray(g.hist)   ? g.hist.length   : 0;
+  const nM = Array.isArray(g.cuerpo) ? g.cuerpo.length : 0;
+  const nC = g.comidas ? Object.keys(g.comidas).length : 0;
+  const perf = (g.perfil && g.perfil.altura) ? "sí" : "no";
+  const yaS = S.hist.length, yaM = S.cuerpo.length;
+
+  let msg = origen + "\n\n  " + nS + " sesiones\n  " + nM + " mediciones\n  " +
+    nC + " días de comida\n  perfil con altura: " + perf + "\n\n" +
+    "AHORA TIENES: " + yaS + " sesiones y " + yaM + " mediciones.\n\n";
+  if(nS === 0 && nM === 0 && perf === "no"){
+    msg += "⚠ ESTO ESTÁ VACÍO.\n";
+    msg += (yaS || yaM)
+      ? "Si sigues, PERDERÁS lo que tienes. Seguramente no es lo que querías cargar.\n\n"
+      : "Comprueba que has elegido lo correcto.\n\n";
+  }
+  msg += "¿Sustituir tus datos por estos?";
+  if(!confirm(msg)){ aviso("Cancelado. No se ha tocado nada."); return false; }
+
+  S.pesos  = g.pesos  || {};
+  S.hist   = Array.isArray(g.hist)   ? g.hist   : [];
+  S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
+  S.comidas = (g.comidas && typeof g.comidas === "object") ? g.comidas : {};
+  S.pasos   = (g.pasos   && typeof g.pasos   === "object") ? g.pasos   : {};
+  S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
+  if(typeof g.fase === "number") S.fase = g.fase;
+  if(g.inicio) S.inicio = g.inicio;
+  guardar();
+  pintarHoy(); pintarPerfil(); pintarCuerpo(); pintarSemana(); pintarComida(); pintarInicio();
+  aviso("Cargado: " + nS + " sesiones, " + nM + " mediciones.");
+  return true;
+}
+
 $("#btnImportar").addEventListener("click", () => $("#ficheroImp").click());
 $("#ficheroImp").addEventListener("change", e => {
   const f = e.target.files && e.target.files[0];
   if(!f) return;
   const lector = new FileReader();
-  lector.onload = () => {
-    try{
-      const g = JSON.parse(lector.result);
-      if(!g || typeof g !== "object") throw new Error("formato");
-
-      // Enseña qué trae el archivo ANTES de tocar nada: con nombres parecidos
-      // es facilísimo importar el equivocado y quedarte sin datos.
-      const nS = Array.isArray(g.hist)   ? g.hist.length   : 0;
-      const nM = Array.isArray(g.cuerpo) ? g.cuerpo.length : 0;
-      const nC = g.comidas ? Object.keys(g.comidas).length : 0;
-      const perf = (g.perfil && g.perfil.altura) ? "sí" : "no";
-      const yaS = S.hist.length, yaM = S.cuerpo.length;
-
-      let texto = "ARCHIVO: " + f.name + "\n\n" +
-        "  " + nS + " sesiones\n  " + nM + " mediciones\n  " + nC + " días de comida\n" +
-        "  perfil con altura: " + perf + "\n\n" +
-        "AHORA TIENES: " + yaS + " sesiones y " + yaM + " mediciones.\n\n";
-      if(nS === 0 && nM === 0 && perf === "no"){
-        texto += "⚠ ESTE ARCHIVO ESTÁ VACÍO.\n";
-        if(yaS || yaM) texto += "Si sigues, PERDERÁS lo que tienes. Seguramente no es el archivo que querías.\n\n";
-        else texto += "Comprueba que has elegido el archivo correcto.\n\n";
-      }
-      texto += "¿Sustituir tus datos por los de este archivo?";
-      if(!confirm(texto)) { aviso("Importación cancelada. No se ha tocado nada."); e.target.value = ""; return; }
-
-      S.pesos  = g.pesos  || {};
-      S.hist   = Array.isArray(g.hist)   ? g.hist   : [];
-      S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
-      S.comidas = (g.comidas && typeof g.comidas === "object") ? g.comidas : {};
-      S.pasos   = (g.pasos   && typeof g.pasos   === "object") ? g.pasos   : {};
-      S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
-      if(typeof g.fase === "number") S.fase = g.fase;
-      if(g.inicio) S.inicio = g.inicio;
-      guardar(); pintarHoy(); pintarPerfil(); pintarCuerpo(); pintarSemana();
-      pintarComida(); pintarInicio();
-      aviso("Importado de " + f.name + ": " + nS + " sesiones, " + nM + " mediciones.");
-    }catch(err){
-      aviso("Ese archivo no es un export válido de la app.", true);
-    }
-    e.target.value = "";
-  };
+  lector.onload = () => { cargarDatos(lector.result, "ARCHIVO: " + f.name); e.target.value = ""; };
   lector.onerror = () => { aviso("No se ha podido leer el archivo.", true); e.target.value = ""; };
   lector.readAsText(f);
+});
+
+/* Pegar texto: evita por completo el selector de archivos del móvil. */
+$("#btnPegar").addEventListener("click", async () => {
+  const c = $("#cajaPegar");
+  c.hidden = !c.hidden;
+  if(c.hidden) return;
+  $("#areaPegar").value = "";
+  try{
+    if(navigator.clipboard && navigator.clipboard.readText){
+      const t = await navigator.clipboard.readText();
+      if(t && t.trim().charAt(0) === "{"){ $("#areaPegar").value = t.trim(); }
+    }
+  }catch(err){ /* sin permiso de lectura: lo pega él a mano */ }
+  $("#areaPegar").focus();
+});
+$("#pegarCancel").addEventListener("click", () => {
+  $("#cajaPegar").hidden = true; $("#areaPegar").value = "";
+});
+$("#pegarOk").addEventListener("click", () => {
+  const t = $("#areaPegar").value.trim();
+  if(!t){ aviso("Pega primero el texto de tus datos.", true); return; }
+  if(cargarDatos(t, "DATOS PEGADOS")){ $("#cajaPegar").hidden = true; $("#areaPegar").value = ""; }
 });
 $("#btnBorrar").addEventListener("click", () => {
   if(!confirm("Se borra TODO: perfil, mediciones, pesos e historial. No hay vuelta atrás.\n\n¿Has exportado antes?")) return;
