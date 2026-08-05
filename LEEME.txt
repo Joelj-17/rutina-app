@@ -3,16 +3,17 @@ RUTINA — app de entrenamiento
 
 QUÉ HAY AQUÍ
 ------------
-index.html              La app. Es el archivo que abres.
-manifest.webmanifest    Datos de instalación (nombre, icono, colores).
-sw.js                   Service worker: hace que funcione sin conexión.
-_headers                Cabeceras de seguridad y "no me indexes".
-robots.txt              Prohíbe a los buscadores rastrear el sitio.
-icon-192.png            Iconos de la app.
-icon-512.png
-apple-touch-icon.png
-menu-diario.pdf         El menú y la lista de la compra.
-datos-iniciales.json    Tus datos de partida, para importar en la app.
+publico/     LO QUE SE PUBLICA EN INTERNET
+             index.html  · la app
+             sw.js · manifest.webmanifest · iconos
+             _headers · robots.txt  (seguridad y "no me indexes")
+
+personal/    NO SE PUBLICA NUNCA. NO ESTÁ EN EL REPOSITORIO.
+             menu-diario.pdf       (lleva tu altura y tu peso)
+             datos-iniciales.json  (altura, peso, cintura)
+
+  >>> REGLA: en publico/ no puede haber NADA personal. Todo lo que esté
+      ahí lo puede descargar cualquiera que sepa la dirección del sitio.
 
 
 ===================================================
@@ -20,7 +21,7 @@ datos-iniciales.json    Tus datos de partida, para importar en la app.
 ===================================================
 
 1. Entra en   https://app.netlify.com/drop
-2. Arrastra ESTA CARPETA ENTERA (la carpeta "Rutina", no los archivos sueltos).
+2. Arrastra la carpeta "publico"  <-- SOLO ESA, no la carpeta Rutina entera.
 3. Netlify te da una dirección tipo   https://algo-aleatorio.netlify.app
 
 Abre esa dirección en el móvil y añádela a la pantalla de inicio:
@@ -67,3 +68,24 @@ Cuando cambie el index.html, vuelve a arrastrar la carpeta a Netlify Drop
 (o al mismo sitio, si lo has creado con cuenta). El service worker va en modo
 "red primero" para el HTML, así que verás la versión nueva al recargar con
 conexión.
+
+
+===================================================
+ DESPLIEGUE AUTOMÁTICO CON GIT  (lo dejamos montado)
+===================================================
+
+Esta carpeta ya es un repositorio git. Falta conectarlo:
+
+1. En GitHub, crea un repositorio PRIVADO y VACÍO (sin README, sin .gitignore).
+   Nombre sugerido: rutina-app
+
+2. Dime la dirección y yo hago el primer push.
+
+3. En Netlify: "Add new site" > "Import an existing project" > GitHub >
+   eliges rutina-app. La carpeta a publicar ya está configurada en
+   netlify.toml (publico), no tienes que escribir nada.
+
+A partir de ahí: yo edito, hago push, y tu móvil tiene la versión nueva
+al recargar. Sin arrastrar carpetas nunca más.
+
+IMPORTANTE: repositorio SEPARADO del de la web de praxioma.es. No mezclar.
