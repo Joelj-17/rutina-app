@@ -1,0 +1,69 @@
+RUTINA — app de entrenamiento
+=============================
+
+QUÉ HAY AQUÍ
+------------
+index.html              La app. Es el archivo que abres.
+manifest.webmanifest    Datos de instalación (nombre, icono, colores).
+sw.js                   Service worker: hace que funcione sin conexión.
+_headers                Cabeceras de seguridad y "no me indexes".
+robots.txt              Prohíbe a los buscadores rastrear el sitio.
+icon-192.png            Iconos de la app.
+icon-512.png
+apple-touch-icon.png
+menu-diario.pdf         El menú y la lista de la compra.
+datos-iniciales.json    Tus datos de partida, para importar en la app.
+
+
+===================================================
+ PONERLA EN EL MÓVIL  (3 pasos, 2 minutos, gratis)
+===================================================
+
+1. Entra en   https://app.netlify.com/drop
+2. Arrastra ESTA CARPETA ENTERA (la carpeta "Rutina", no los archivos sueltos).
+3. Netlify te da una dirección tipo   https://algo-aleatorio.netlify.app
+
+Abre esa dirección en el móvil y añádela a la pantalla de inicio:
+
+   Android (Chrome):  saldrá un aviso de instalar, o menú ⋮ > "Instalar aplicación".
+                      También hay un botón en la pestaña GUÍA de la app.
+   iPhone (Safari):   botón Compartir > "Añadir a pantalla de inicio".
+
+Queda con su icono, a pantalla completa y funcionando sin cobertura.
+
+
+IMPORTANTE: es una cuenta y un sitio SEPARADOS de praxioma.es.
+No subas esto al repositorio de la web de Praxioma.
+
+
+¿Y LA PRIVACIDAD?
+-----------------
+La app NO tiene servidor. Todo lo que guardas —perfil, peso, cintura, historial,
+pesos de cada ejercicio— vive solo en el navegador de tu móvil.
+
+Lo que se sube a internet son únicamente los archivos del programa. Si alguien
+diera con la dirección, vería una app VACÍA: sin sesiones, sin peso, sin nada.
+
+Además, el archivo _headers y el robots.txt le dicen a Google y compañía que no
+indexen ni rastreen el sitio. Sin enlaces apuntando a él y sin estar indexado,
+nadie va a llegar por casualidad.
+
+Lo que de verdad protege tus datos es el PIN o la huella de tu móvil.
+
+
+TUS DATOS: PASARLOS DE UN SITIO A OTRO
+--------------------------------------
+El ordenador y el móvil son almacenes distintos. Para llevártelo todo:
+
+   En el origen:  pestaña CUERPO > "Exportar mis datos"   (genera un .json)
+   En el destino: pestaña CUERPO > "Importar"
+
+Exporta de vez en cuando. Si borras los datos del navegador, se pierde todo.
+
+
+ACTUALIZAR LA APP
+-----------------
+Cuando cambie el index.html, vuelve a arrastrar la carpeta a Netlify Drop
+(o al mismo sitio, si lo has creado con cuenta). El service worker va en modo
+"red primero" para el HTML, así que verás la versión nueva al recargar con
+conexión.

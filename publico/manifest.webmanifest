@@ -1,0 +1,18 @@
+{
+  "name": "Rutina — entrenamiento diario",
+  "short_name": "Rutina",
+  "description": "Rutina diaria con cronómetro, control de series, descansos automáticos y registro corporal.",
+  "lang": "es",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f1f4f4",
+  "theme_color": "#0d6e78",
+  "categories": ["health", "fitness", "lifestyle"],
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

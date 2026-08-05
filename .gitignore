@@ -1,0 +1,19 @@
+# Nada de esta carpeta sale de tu ordenador: lleva altura, peso y cintura.
+personal/
+
+# Copias de seguridad que exportes desde la app
+rutina-datos-*.json
+
+# Archivos temporales de pruebas
+p1.html
+p2.html
+cap.html
+vtest.html
+swtest.html
+captura.html
+*.tmp
+
+# Basura del sistema
+Thumbs.db
+desktop.ini
+.DS_Store

@@ -1,0 +1,6 @@
+# Netlify solo publica la carpeta "publico".
+# Todo lo que esté fuera de ella (la carpeta "personal") NUNCA se sube a internet.
+
+[build]
+  publish = "publico"
+  command = ""
