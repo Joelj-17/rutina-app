@@ -1,0 +1,13 @@
+# Normaliza los archivos de texto, pero NO toca los binarios:
+# sin esto git puede corromper iconos y PDFs al convertir saltos de línea.
+* text=auto eol=lf
+
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.webp binary
+*.woff  binary
+*.woff2 binary
