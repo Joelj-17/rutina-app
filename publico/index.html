@@ -153,6 +153,62 @@ svg.esq{width:100%;max-width:340px;height:108px;color:var(--tinta);display:block
 .dosis .acl{grid-column:1/-1;font-size:.82rem;color:var(--agua);font-weight:600;
             border-top:1px solid var(--linea);padding-top:8px;margin-top:4px;line-height:1.4}
 
+/* ---- Comida ---- */
+.medidor{margin-bottom:14px}
+.medidor:last-child{margin-bottom:0}
+.medidor .cab{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+              font-size:.82rem;margin-bottom:5px}
+.medidor .cab b{font-family:var(--mono);font-size:1.05rem;font-variant-numeric:tabular-nums}
+.medidor .cab span{color:var(--acero)}
+.riel{height:9px;background:var(--fondo);border-radius:99px;overflow:hidden;position:relative}
+.riel i{display:block;height:100%;background:var(--agua);border-radius:99px;transition:width .3s}
+.riel i.lleno{background:var(--hecho)}
+.riel i.pasado{background:var(--alerta)}
+.balance{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;padding-top:13px;
+         border-top:1px solid var(--linea-2)}
+.balance div{flex:1;min-width:92px}
+.balance b{display:block;font-family:var(--mono);font-size:1.25rem;font-variant-numeric:tabular-nums}
+.balance span{font-size:.67rem;text-transform:uppercase;letter-spacing:.07em;color:var(--acero);font-weight:700}
+.balance .def b{color:var(--hecho)}
+.balance .sup b{color:var(--alerta)}
+.platos{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:6px}
+.plato{background:var(--panel);border:1.5px solid var(--linea);border-radius:10px;padding:11px 12px;
+       text-align:left;box-shadow:var(--sombra)}
+.plato b{display:block;font-size:.9rem;margin-bottom:2px}
+.plato span{font-size:.76rem;color:var(--acero);display:block}
+.plato .mn{font-family:var(--mono);font-size:.78rem;color:var(--agua);font-weight:700;margin-top:4px;display:block}
+.plato.puesto{border-color:var(--hecho);background:var(--agua-claro)}
+.plato.puesto .mn{color:var(--hecho)}
+.previa{font-family:var(--mono);font-size:.92rem;font-weight:600;padding:8px 0;color:var(--agua)}
+.comfila{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--linea);
+         border-radius:9px;padding:9px 12px;font-size:.87rem}
+.comfila b{flex:1;font-weight:600}
+.comfila .mn{font-family:var(--mono);font-size:.8rem;color:var(--acero);white-space:nowrap}
+.comfila button{color:var(--alerta);font-size:1.1rem;line-height:1;padding:2px 5px}
+
+/* ---- Portada ---- */
+.portada{padding:26px 0 40px}
+.portada h1{font-size:1.9rem;margin:0 0 2px;letter-spacing:-.025em}
+.portada .hoy{color:var(--acero);font-size:.92rem;margin:0 0 22px}
+.menu{display:grid;gap:11px}
+.tarjMenu{display:block;width:100%;text-align:left;background:var(--panel);border:1px solid var(--linea);
+          border-radius:14px;padding:18px 20px;box-shadow:var(--sombra);position:relative;
+          transition:border-color .15s,transform .1s}
+.tarjMenu:active{transform:scale(.99)}
+.tarjMenu.grande{border-width:2px;border-color:var(--agua)}
+.tarjMenu .ico{font-size:1.5rem;line-height:1;margin-bottom:9px;display:block}
+.tarjMenu h2{margin:0 0 3px;font-size:1.2rem;letter-spacing:-.01em}
+.tarjMenu p{margin:0;font-size:.87rem;color:var(--acero)}
+.tarjMenu .cifras2{display:flex;gap:20px;margin-top:12px;padding-top:11px;border-top:1px solid var(--linea-2)}
+.tarjMenu .cifras2 b{display:block;font-family:var(--mono);font-size:1.15rem;font-variant-numeric:tabular-nums;
+                     color:var(--tinta)}
+.tarjMenu .cifras2 span{font-size:.66rem;text-transform:uppercase;letter-spacing:.07em;color:var(--acero);font-weight:700}
+.tarjMenu .flechita{position:absolute;top:20px;right:20px;color:var(--acero);font-size:1.1rem}
+.volver{background:none;color:var(--agua);font-weight:700;font-size:.88rem;padding:9px 10px 10px 0;
+        border-bottom:2px solid transparent;white-space:nowrap}
+.fichaCab{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.fichaCab h3{margin:0;font-size:1.05rem;letter-spacing:-.01em}
+
 #barraAbajo{position:fixed;inset:auto 0 0 0;z-index:50;color:#fff;display:none;
             padding:16px 14px calc(16px + env(safe-area-inset-bottom));background:var(--descanso)}
 #barraAbajo.on{display:block}
@@ -267,17 +323,54 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
   <div class="barra"><i id="barra" style="width:0%"></i></div>
 </header>
 
-<div class="env">
+<div class="env" id="barraNav" hidden>
   <nav role="tablist">
+    <button class="volver" id="btnVolver" aria-label="Volver al menú">‹ Menú</button>
     <button role="tab" aria-selected="true"  data-t="hoy">HOY</button>
+    <button role="tab" aria-selected="false" data-t="comida">COMIDA</button>
     <button role="tab" aria-selected="false" data-t="cuerpo">CUERPO</button>
     <button role="tab" aria-selected="false" data-t="semana">SEMANA</button>
     <button role="tab" aria-selected="false" data-t="guia">GUÍA</button>
   </nav>
 </div>
 
+<!-- ============ PORTADA ============ -->
+<main class="env portada" id="p-inicio">
+  <h1>Rutina</h1>
+  <p class="hoy" id="portadaHoy">—</p>
+  <div class="menu">
+    <button class="tarjMenu grande" data-ir="hoy">
+      <span class="flechita">›</span>
+      <span class="ico">🏋</span>
+      <h2>Entrenamiento</h2>
+      <p id="mEntrenoSub">—</p>
+      <div class="cifras2" id="mEntrenoCifras"></div>
+    </button>
+    <button class="tarjMenu" data-ir="comida">
+      <span class="flechita">›</span>
+      <span class="ico">🍽</span>
+      <h2>Comida</h2>
+      <p id="mComidaSub">—</p>
+      <div class="cifras2" id="mComidaCifras"></div>
+    </button>
+    <button class="tarjMenu" data-ir="cuerpo">
+      <span class="flechita">›</span>
+      <span class="ico">📏</span>
+      <h2>Cuerpo</h2>
+      <p id="mCuerpoSub">—</p>
+      <div class="cifras2" id="mCuerpoCifras"></div>
+    </button>
+    <button class="tarjMenu" data-ir="guia">
+      <span class="flechita">›</span>
+      <span class="ico">📖</span>
+      <h2>Guía</h2>
+      <p>Cómo se hace cada ejercicio, cómo progresar y los avisos importantes.</p>
+    </button>
+  </div>
+</main>
+
 <!-- ============ HOY ============ -->
-<main class="env" id="p-hoy">
+<main class="env" id="p-hoy" hidden>
   <div class="dia-cab">
     <div><h1 id="diaNom">—</h1><div class="dia-sub" id="diaSub">—</div></div>
     <span class="chip" id="diaChip">—</span>
@@ -299,11 +392,71 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
   <div class="lista" id="lista"></div>
 </main>
 
+<!-- ============ COMIDA ============ -->
+<main class="env panel-sec" id="p-comida" hidden>
+  <div class="dia-cab" style="padding-top:6px">
+    <div><h1 id="comFecha">Hoy</h1><div class="dia-sub" id="comSub">—</div></div>
+    <button class="enlace" id="comAyer">ver otro día</button>
+  </div>
+
+  <div class="tarj" id="comResumen"></div>
+
+  <h2 class="sec">Tus comidas del plan</h2>
+  <p style="font-size:.86rem;color:var(--acero);margin-top:0">Un toque y se apunta. Si ese día cambiaste algo, lo ajustas abajo.</p>
+  <div class="platos" id="comPlan"></div>
+
+  <h2 class="sec">Añadir otra cosa</h2>
+  <div class="tarj">
+    <div class="rejilla">
+      <div class="campo" style="grid-column:1/-1"><label for="alBusca">Alimento</label>
+        <input id="alBusca" list="listaAlimentos" placeholder="Escribe: pollo, arroz, manzana…" autocomplete="off">
+        <datalist id="listaAlimentos"></datalist></div>
+      <div class="campo"><label for="alCant" id="alCantLab">Cantidad (g)</label>
+        <input id="alCant" type="number" inputmode="decimal" step="1" min="1" placeholder="200"></div>
+      <div class="campo"><label>Saldría</label>
+        <div id="alPrevia" class="previa">—</div></div>
+    </div>
+    <div class="acciones" style="margin-top:12px">
+      <button class="bt p" id="alAdd">Añadir</button>
+      <button class="bt" id="alManual">No está en la lista</button>
+    </div>
+    <div id="alManualCaja" hidden style="margin-top:12px">
+      <div class="rejilla">
+        <div class="campo"><label for="mNombre">Qué es</label><input id="mNombre" placeholder="Pizza del bar"></div>
+        <div class="campo"><label for="mKcal">Calorías</label><input id="mKcal" type="number" inputmode="numeric" placeholder="650"></div>
+        <div class="campo"><label for="mProt">Proteína (g)</label><input id="mProt" type="number" inputmode="decimal" placeholder="28"></div>
+      </div>
+      <div class="acciones" style="margin-top:10px">
+        <button class="bt p" id="mAdd">Añadir a mano</button>
+      </div>
+      <p style="font-size:.8rem;color:var(--acero);margin:8px 0 0">Los datos vienen en el envase, por 100 g. Multiplica por lo que te comas.</p>
+    </div>
+  </div>
+
+  <h2 class="sec">Lo que llevas hoy</h2>
+  <div class="hist" id="comLista"></div>
+
+  <h2 class="sec">Movimiento del día</h2>
+  <div class="tarj">
+    <div class="rejilla">
+      <div class="campo"><label for="comPasos">Pasos (de tu app de paseo)</label>
+        <input id="comPasos" type="number" inputmode="numeric" step="100" min="0" placeholder="8500"></div>
+    </div>
+    <p style="font-size:.82rem;color:var(--acero);margin:10px 0 0">
+      Hay que meterlos a mano: una web no puede leer los datos de otras apps del móvil.
+      Con eso ajusto el gasto estimado del día.</p>
+  </div>
+
+  <h2 class="sec">Últimos días</h2>
+  <div class="hist" id="comHist"></div>
+</main>
+
 <!-- ============ CUERPO ============ -->
 <main class="env panel-sec" id="p-cuerpo" hidden>
   <h2 class="sec">Tu perfil</h2>
-  <p style="font-size:.86rem;color:var(--acero);margin-top:0">Datos que no cambian o cambian poco. Sirven para interpretar el resto.</p>
-  <div class="tarj">
+  <div class="tarj" id="fichaPerfil"></div>
+  <div class="tarj" id="formPerfil" hidden>
+    <p style="font-size:.86rem;color:var(--acero);margin:0 0 12px">Datos que no cambian o cambian poco. Sirven para interpretar el resto.</p>
     <div class="rejilla">
       <div class="campo"><label for="pAltura">Altura (cm)</label>
         <input id="pAltura" type="number" inputmode="numeric" min="120" max="230" placeholder="180"></div>
@@ -333,7 +486,9 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
           <option value="postura">Corregir postura y desequilibrios</option>
         </select></div>
     </div>
-    <div class="metricas" id="metricas"></div>
+    <div class="acciones" style="margin-top:12px">
+      <button class="bt p" id="pCerrar">Guardar y cerrar</button>
+    </div>
   </div>
 
   <h2 class="sec">Registro corporal</h2>
@@ -794,6 +949,7 @@ let S = {
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
   t0:null, pausadoEn:null, acumPausa:0, latido:null,
   hechos:{}, pesos:{}, marcas:{}, hist:[],
+  comidas:{}, pasos:{},
   perfil:{altura:"", nacim:"", sexo:"", nivel:"", objetivo:""},
   cuerpo:[]
 };
@@ -842,6 +998,8 @@ function cargar(){
     S.pesos  = g.pesos  || {};
     S.hist   = Array.isArray(g.hist)   ? g.hist   : [];
     S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
+    S.comidas = (g.comidas && typeof g.comidas === "object") ? g.comidas : {};
+    S.pasos   = (g.pasos   && typeof g.pasos   === "object") ? g.pasos   : {};
     S.perfil = Object.assign(S.perfil, g.perfil || {});
     S.faseManual = (typeof g.faseManual === "number") ? g.faseManual : null;
     S.diaManual  = (typeof g.diaManual  === "number") ? g.diaManual  : null;
@@ -873,6 +1031,7 @@ function paquete(){
     material:S.material,
     pesos:S.pesos, hist:S.hist.slice(0,200),
     perfil:S.perfil, cuerpo:S.cuerpo.slice(0,500),
+    comidas:S.comidas, pasos:S.pasos,
     sesion: S.t0 ? {fecha:hoyISO(), dia:S.dia, t0:S.t0, acumPausa:S.acumPausa,
                     pausadoEn:S.pausadoEn, hechos:S.hechos, marcas:S.marcas,
                     latido:S.latido || Date.now()} : null
@@ -1526,16 +1685,56 @@ function pintarPerfil(){
   if(cint.length && alt){
     m.push({b:(cint[0].cintura/alt).toFixed(2), s:"Cintura/altura"});
   }
-  $("#metricas").innerHTML = m.length
-    ? m.map(x => '<div class="metrica"><b>' + esc(x.b) + '</b><span>' + esc(x.s) + '</span></div>').join("")
-      + (alt && pes != null
-         ? '<p style="flex-basis:100%;font-size:.8rem;color:var(--acero);margin:6px 0 0">'
-           + 'El IMC no distingue músculo de grasa, así que con hueso grueso y pierna grande sale algo inflado. '
-           + 'Solo algo: no anula un valor alto. El mejor indicador es la <strong>cintura dividida entre la altura</strong> — '
-           + 'por debajo de <strong>0,50</strong> es buena señal; por encima de 0,60 conviene actuar.</p>'
-         : "")
-    : '<p style="font-size:.85rem;color:var(--acero);margin:0">Rellena altura y añade una medición de peso para ver tus métricas.</p>';
+  const SEXOS   = {h:"Hombre", m:"Mujer", o:"Otro"};
+  const NIVELES = {parado:"Años sin entrenar", vuelta:"Volviendo tras un parón",
+                   activo:"Entreno con regularidad"};
+  const OBJS    = {masa:"Ganar músculo", fuerza:"Ganar fuerza", grasa:"Perder grasa",
+                   salud:"Salud y hábito", postura:"Corregir postura y desequilibrios"};
+
+  const relleno = !!(S.perfil.altura || S.perfil.nacim || S.perfil.sexo);
+  let ficha = '<div class="fichaCab"><h3>' + (relleno ? "Tus datos" : "Perfil sin rellenar") + '</h3>' +
+              '<button class="bt" id="pEditar">' + (relleno ? "Editar" : "Rellenar") + '</button></div>';
+
+  if(relleno){
+    const filas = [
+      ["Altura",           alt ? alt + " cm" : null],
+      ["Edad",             ed != null ? ed + " años" : null],
+      ["Sexo",             SEXOS[S.perfil.sexo]],
+      ["Punto de partida", NIVELES[S.perfil.nivel]],
+      ["Objetivo",         OBJS[S.perfil.objetivo]]
+    ].filter(f => f[1]);
+    ficha += '<dl class="dosis" style="margin:0">' +
+      filas.map(f => '<dt>' + f[0] + '</dt><dd>' + esc(f[1]) + '</dd>').join("") + '</dl>';
+    if(m.length){
+      ficha += '<div class="metricas">' +
+        m.map(x => '<div class="metrica"><b>' + esc(x.b) + '</b><span>' + esc(x.s) + '</span></div>').join("") +
+        (alt && pes != null
+          ? '<p style="flex-basis:100%;font-size:.8rem;color:var(--acero);margin:6px 0 0">'
+            + 'El IMC no distingue músculo de grasa, así que con hueso grueso y pierna grande sale algo inflado. '
+            + 'Solo algo: no anula un valor alto. El mejor indicador es la <strong>cintura dividida entre la altura</strong> — '
+            + 'por debajo de <strong>0,50</strong> es buena señal; por encima de 0,60 conviene actuar.</p>'
+          : "") + '</div>';
+    }else{
+      ficha += '<p style="font-size:.84rem;color:var(--acero);margin:12px 0 0">' +
+               'Añade una medición de peso abajo y aquí te salen IMC y cintura/altura.</p>';
+    }
+  }else{
+    ficha += '<p style="font-size:.87rem;color:var(--acero);margin:0">' +
+             'Sin altura, edad y peso no puedo calcular tu gasto diario ni interpretar tu progreso. ' +
+             'Son dos minutos.</p>';
+  }
+  $("#fichaPerfil").innerHTML = ficha;
+  $("#pEditar").addEventListener("click", () => {
+    const f = $("#formPerfil");
+    f.hidden = !f.hidden;
+    if(!f.hidden) f.scrollIntoView({behavior:"smooth", block:"nearest"});
+  });
 }
+$("#pCerrar").addEventListener("click", () => {
+  $("#formPerfil").hidden = true;
+  pintarPerfil(); pintarComida(); pintarInicio();
+  aviso("Perfil guardado.");
+});
 ["pAltura","pNacim","pSexo","pNivel","pObjetivo"].forEach(id => {
   const campo = {pAltura:"altura", pNacim:"nacim", pSexo:"sexo", pNivel:"nivel", pObjetivo:"objetivo"}[id];
   document.getElementById(id).addEventListener("change", e => {
@@ -1663,6 +1862,8 @@ $("#ficheroImp").addEventListener("change", e => {
       S.pesos  = g.pesos  || {};
       S.hist   = Array.isArray(g.hist)   ? g.hist   : [];
       S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
+      S.comidas = (g.comidas && typeof g.comidas === "object") ? g.comidas : {};
+      S.pasos   = (g.pasos   && typeof g.pasos   === "object") ? g.pasos   : {};
       S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
       if(typeof g.fase === "number") S.fase = g.fase;
       guardar(); pintarHoy(); pintarPerfil(); pintarCuerpo(); pintarSemana();
@@ -1788,17 +1989,251 @@ $("#fichas").innerHTML = Object.keys(EJ)
     '</div>';
 }).join("");
 
-/* ============ PESTAÑAS Y SELECTORES ============ */
-const PESTANAS = ["hoy","cuerpo","semana","guia"];
-document.querySelectorAll('nav button').forEach(b => {
-  b.addEventListener("click", () => {
-    document.querySelectorAll('nav button').forEach(x => x.setAttribute("aria-selected", String(x === b)));
-    PESTANAS.forEach(t => { $("#p-"+t).hidden = (t !== b.dataset.t); });
-    if(b.dataset.t === "semana") pintarSemana();
-    if(b.dataset.t === "cuerpo"){ pintarPerfil(); pintarCuerpo(); }
-    window.scrollTo({top:0, behavior:"smooth"});
-  });
+/* ============ COMIDA ============ */
+/* Valores por 100 g salvo los marcados "ud" (por unidad). */
+const ALIMENTOS = [
+  ["Pollo, pechuga (crudo)",110,23], ["Pavo, pechuga (crudo)",105,24],
+  ["Ternera picada 5%",130,21], ["Ternera picada mixta",250,17],
+  ["Ternera, filete",150,21], ["Lomo de cerdo",130,22], ["Cerdo, panceta",500,10],
+  ["Atún al natural (escurrido)",110,25], ["Atún en aceite (escurrido)",190,24],
+  ["Merluza",85,18], ["Bacalao",82,18], ["Salmón",200,20], ["Gambas",85,20],
+  ["Huevo",72,6.3,"ud"], ["Clara de huevo",52,11],
+  ["Yogur griego 0%",60,10], ["Yogur natural",60,4], ["Queso fresco batido 0%",55,11],
+  ["Leche semidesnatada",46,3.2], ["Queso curado",390,25], ["Queso fresco",180,12],
+  ["Jamón cocido",110,18], ["Jamón serrano",240,30], ["Fuet / salchichón",420,25],
+  ["Chorizo",450,24], ["Pavo en lonchas",95,17],
+  ["Arroz (crudo)",360,7], ["Arroz (cocido)",130,2.7],
+  ["Pasta (cruda)",360,12], ["Pasta (cocida)",130,5],
+  ["Pan blanco",265,8], ["Pan integral",240,9], ["Pan de molde",250,8],
+  ["Patata (cruda)",77,2], ["Patatas fritas de bolsa",540,6],
+  ["Lentejas cocidas (bote)",115,9], ["Garbanzos cocidos (bote)",120,8],
+  ["Alubias cocidas (bote)",110,7], ["Avena",380,13],
+  ["Aceite de oliva",900,0], ["Mantequilla",750,0.6], ["Mayonesa",680,1],
+  ["Almendras",580,21], ["Cacahuetes",570,25], ["Aguacate",160,2],
+  ["Manzana",52,0.3], ["Plátano",90,1.1], ["Naranja",47,0.9], ["Uvas",70,0.6],
+  ["Fresas",32,0.7], ["Sandía",30,0.6], ["Melón",34,0.8], ["Kiwi",61,1.1], ["Pera",57,0.4],
+  ["Tomate",18,0.9], ["Lechuga",15,1.4], ["Pepino",15,0.7], ["Pimiento",26,1],
+  ["Cebolla",40,1.1], ["Calabacín",17,1.2], ["Berenjena",25,1], ["Brócoli",34,2.8],
+  ["Judías verdes",31,1.8], ["Espinacas",23,2.9], ["Champiñones",22,3], ["Zanahoria",41,0.9],
+  ["Tomate frito de bote",90,1.4], ["Tomate triturado",22,1.1], ["Encurtidos",15,0.6],
+  ["Café solo",2,0.1,"ud"], ["Café con leche",90,5,"ud"], ["Azúcar (cucharadita)",20,0,"ud"],
+  ["Refresco zero",0,0,"ud"], ["Cerveza (caña)",90,1,"ud"], ["Vino (copa)",120,0,"ud"],
+  ["Chocolate negro",550,7], ["Galletas",450,7], ["Helado",200,3.5],
+  ["Pizza",260,11], ["Hamburguesa completa",250,13], ["Croquetas",230,7]
+];
+
+const PLATOS = [
+  {id:"des", n:"Desayuno", d:"Tortilla francesa de 3 huevos",       kcal:260, prot:19},
+  {id:"com", n:"Comida",   d:"200 g de pollo + 70 g de arroz",      kcal:560, prot:51},
+  {id:"mer", n:"Merienda", d:"200 g de yogur griego + fruta",       kcal:190, prot:21},
+  {id:"cen", n:"Cena",     d:"200 g de pollo + 250 g de lentejas",  kcal:600, prot:68}
+];
+const OBJ = PLATOS.reduce((a,p) => ({kcal:a.kcal+p.kcal, prot:a.prot+p.prot}), {kcal:0, prot:0});
+
+let comDia = hoyISO();
+
+function comidasDe(f){ return S.comidas[f] || []; }
+function totalDe(f){
+  return comidasDe(f).reduce((a,c) => ({kcal:a.kcal + c.kcal, prot:a.prot + c.prot}),
+                             {kcal:0, prot:0});
+}
+/* Gasto estimado del día: metabolismo basal + vida normal + pasos + entrenamiento. */
+function gastoDe(f){
+  const alt = num(S.perfil.altura), pes = ultimoPeso(), ed = edad();
+  if(!alt || pes == null || ed == null) return null;
+  const tmb = 10*pes + 6.25*alt - 5*ed + (S.perfil.sexo === "m" ? -161 : 5);
+  const pasos = (S.pasos[f] || 0) * pes * 0.0004;
+  const entreno = S.hist.some(h => h.f === f) ? 280 : 0;
+  return Math.round(tmb * 1.25 + pasos + entreno);
+}
+function medidor(et, val, obj, ud){
+  const pct = Math.min(100, obj ? val/obj*100 : 0);
+  const cls = val > obj*1.05 ? "pasado" : (val >= obj*0.9 ? "lleno" : "");
+  return '<div class="medidor"><div class="cab"><span>' + et + '</span>' +
+    '<span><b>' + Math.round(val) + '</b> / ' + Math.round(obj) + ' ' + ud + '</span></div>' +
+    '<div class="riel"><i class="' + cls + '" style="width:' + pct.toFixed(1) + '%"></i></div></div>';
+}
+
+function pintarComida(){
+  const esHoy = comDia === hoyISO();
+  const t = totalDe(comDia), gasto = gastoDe(comDia);
+  $("#comFecha").textContent = esHoy ? "Hoy" : comDia;
+  $("#comSub").textContent = comidasDe(comDia).length + " apuntes" +
+    (esHoy ? "" : " · " + DIAS[new Date(comDia+"T00:00:00").getDay()].n);
+  $("#comAyer").textContent = esHoy ? "ver otro día" : "volver a hoy";
+
+  let html = medidor("Calorías", t.kcal, OBJ.kcal, "kcal") +
+             medidor("Proteína", t.prot, OBJ.prot, "g");
+  if(gasto){
+    const bal = Math.round(t.kcal - gasto);
+    html += '<div class="balance">' +
+      '<div><b>' + gasto + '</b><span>Gasto estimado</span></div>' +
+      '<div><b>' + Math.round(t.kcal) + '</b><span>Comido</span></div>' +
+      '<div class="' + (bal < 0 ? "def" : "sup") + '"><b>' + (bal > 0 ? "+" : "") + bal +
+      '</b><span>' + (bal < 0 ? "Déficit" : "Superávit") + '</span></div></div>' +
+      '<p style="font-size:.78rem;color:var(--acero);margin:9px 0 0">Estimación: metabolismo basal + ' +
+      'vida normal' + ((S.pasos[comDia]||0) ? " + " + S.pasos[comDia] + " pasos" : "") +
+      (S.hist.some(h => h.f === comDia) ? " + entrenamiento" : "") + '.</p>';
+  }else{
+    html += '<p style="font-size:.82rem;color:var(--acero);margin:12px 0 0">Rellena altura, ' +
+            'fecha de nacimiento y una medición de peso en <strong>Cuerpo</strong> y aquí te calculo ' +
+            'también el gasto del día.</p>';
+  }
+  $("#comResumen").innerHTML = html;
+
+  const puestos = comidasDe(comDia).map(c => c.plato).filter(Boolean);
+  $("#comPlan").innerHTML = PLATOS.map(p =>
+    '<button class="plato' + (puestos.indexOf(p.id) >= 0 ? " puesto" : "") + '" data-plato="' + p.id + '">' +
+    '<b>' + p.n + (puestos.indexOf(p.id) >= 0 ? " ✓" : "") + '</b><span>' + p.d + '</span>' +
+    '<span class="mn">' + p.kcal + ' kcal · ' + p.prot + ' g</span></button>').join("");
+
+  const l = comidasDe(comDia);
+  $("#comLista").innerHTML = l.length
+    ? l.map((c, i) => '<div class="comfila"><b>' + esc(c.n) + '</b>' +
+        '<span class="mn">' + Math.round(c.kcal) + ' kcal · ' + c.prot.toFixed(0) + ' g</span>' +
+        '<button data-borra="' + i + '" aria-label="Quitar">✕</button></div>').join("")
+    : '<div class="vacio">Nada apuntado todavía. Empieza por tus comidas del plan, que son un toque.</div>';
+
+  $("#comPasos").value = S.pasos[comDia] || "";
+
+  const dias = Object.keys(S.comidas).filter(f => comidasDe(f).length).sort().reverse().slice(0, 10);
+  $("#comHist").innerHTML = dias.length
+    ? dias.map(f => {
+        const tt = totalDe(f), g = gastoDe(f);
+        return '<div class="comfila"><span class="mn">' + f + '</span><b style="margin-left:10px">' +
+          Math.round(tt.kcal) + ' kcal</b><span class="mn">' + Math.round(tt.prot) + ' g prot' +
+          (g ? " · " + (tt.kcal - g > 0 ? "+" : "") + Math.round(tt.kcal - g) : "") + '</span></div>';
+      }).join("")
+    : '<div class="vacio">Aquí se irán acumulando los días.</div>';
+}
+
+function anotar(c){
+  if(!S.comidas[comDia]) S.comidas[comDia] = [];
+  S.comidas[comDia].push(c);
+  guardar(); pintarComida(); pintarInicio();
+}
+
+$("#comPlan").addEventListener("click", e => {
+  const b = e.target.closest("[data-plato]");
+  if(!b) return;
+  const p = PLATOS.find(x => x.id === b.dataset.plato);
+  const ya = comidasDe(comDia).findIndex(c => c.plato === p.id);
+  if(ya >= 0){ S.comidas[comDia].splice(ya, 1); guardar(); pintarComida(); pintarInicio(); }
+  else anotar({n:p.n + " — " + p.d, kcal:p.kcal, prot:p.prot, plato:p.id});
 });
+$("#comLista").addEventListener("click", e => {
+  const b = e.target.closest("[data-borra]");
+  if(!b) return;
+  S.comidas[comDia].splice(Number(b.dataset.borra), 1);
+  guardar(); pintarComida(); pintarInicio();
+});
+
+$("#listaAlimentos").innerHTML = ALIMENTOS
+  .map(a => '<option value="' + esc(a[0]) + '">').join("");
+
+function alimentoElegido(){
+  const v = $("#alBusca").value.trim().toLowerCase();
+  return ALIMENTOS.find(a => a[0].toLowerCase() === v) ||
+         ALIMENTOS.find(a => a[0].toLowerCase().indexOf(v) === 0 && v.length > 2) || null;
+}
+function previa(){
+  const a = alimentoElegido(), c = num($("#alCant").value);
+  $("#alCantLab").textContent = a && a[3] === "ud" ? "Cantidad (unidades)" : "Cantidad (g)";
+  if(!a || c == null || c <= 0){ $("#alPrevia").textContent = "—"; return null; }
+  const f = a[3] === "ud" ? c : c/100;
+  const r = {n:a[0] + " · " + c + (a[3] === "ud" ? " ud" : " g"),
+             kcal:Math.round(a[1]*f), prot:Math.round(a[2]*f*10)/10};
+  $("#alPrevia").textContent = r.kcal + " kcal · " + r.prot + " g";
+  return r;
+}
+$("#alBusca").addEventListener("input", previa);
+$("#alCant").addEventListener("input", previa);
+$("#alAdd").addEventListener("click", () => {
+  const r = previa();
+  if(!r){ aviso("Elige un alimento de la lista y pon la cantidad.", true); return; }
+  anotar(r);
+  $("#alBusca").value = ""; $("#alCant").value = ""; previa();
+});
+$("#alManual").addEventListener("click", () => {
+  const c = $("#alManualCaja");
+  c.hidden = !c.hidden;
+});
+$("#mAdd").addEventListener("click", () => {
+  const n = $("#mNombre").value.trim(), k = num($("#mKcal").value), p = num($("#mProt").value);
+  if(!n || k == null){ aviso("Pon al menos el nombre y las calorías.", true); return; }
+  anotar({n:n, kcal:Math.round(k), prot:p || 0});
+  $("#mNombre").value = ""; $("#mKcal").value = ""; $("#mProt").value = "";
+  $("#alManualCaja").hidden = true;
+});
+$("#comPasos").addEventListener("change", e => {
+  const v = num(e.target.value);
+  if(v == null || v <= 0) delete S.pasos[comDia]; else S.pasos[comDia] = Math.round(v);
+  guardar(); pintarComida(); pintarInicio();
+});
+$("#comAyer").addEventListener("click", () => {
+  if(comDia !== hoyISO()){ comDia = hoyISO(); pintarComida(); return; }
+  const f = prompt("¿Qué día quieres ver? (AAAA-MM-DD)", hoyISO());
+  if(f && /^\d{4}-\d{2}-\d{2}$/.test(f)){ comDia = f; pintarComida(); }
+});
+
+/* ============ PORTADA ============ */
+function pintarInicio(){
+  const d = DIAS[S.dia], ids = listaEj();
+  const hoy = new Date();
+  const nombresMes = ["enero","febrero","marzo","abril","mayo","junio","julio",
+                      "agosto","septiembre","octubre","noviembre","diciembre"];
+  $("#portadaHoy").textContent = d.n + ", " + hoy.getDate() + " de " + nombresMes[hoy.getMonth()] +
+    (S.inicio ? " · día " + (diasDesdeInicio()+1) + " del plan" : "");
+
+  const hechos = ids.filter(estaHecho).length;
+  const series = ids.reduce((a,i) => { const p = plan(i); return a + (p ? p.series : 0); }, 0);
+  $("#mEntrenoSub").textContent = S.t0
+    ? (siguienteId() ? "Sesión en marcha · vas por " + EJ[siguienteId()].n : "Sesión completada")
+    : d.et + " · " + (S.hist.some(h => h.f === hoyISO()) ? "hecha hoy" : "sin empezar");
+  $("#mEntrenoCifras").innerHTML =
+    '<div><b>' + (S.t0 ? hechos + "/" + ids.length : ids.length) + '</b><span>Ejercicios</span></div>' +
+    '<div><b>' + series + '</b><span>Series</span></div>' +
+    '<div><b>' + (S.t0 ? mmss(transcurrido()) : (S.fase === 0 ? "50" : S.fase === 1 ? "60" : "70") + " min") +
+    '</b><span>' + (S.t0 ? "Llevas" : "Duración") + '</span></div>';
+
+  const t = totalDe(hoyISO());
+  $("#mComidaSub").textContent = comidasDe(hoyISO()).length
+    ? "Objetivo del día: " + OBJ.kcal + " kcal y " + OBJ.prot + " g de proteína"
+    : "Sin apuntar nada hoy todavía";
+  $("#mComidaCifras").innerHTML =
+    '<div><b>' + Math.round(t.kcal) + '</b><span>de ' + OBJ.kcal + ' kcal</span></div>' +
+    '<div><b>' + Math.round(t.prot) + '</b><span>de ' + OBJ.prot + ' g prot</span></div>' +
+    (S.pasos[hoyISO()] ? '<div><b>' + S.pasos[hoyISO()] + '</b><span>Pasos</span></div>' : "");
+
+  const pes = ultimoPeso(), cint = S.cuerpo.filter(x => x.cintura != null)[0];
+  $("#mCuerpoSub").textContent = pes != null
+    ? "Última medición: " + S.cuerpo[0].f
+    : "Sin mediciones. Apunta peso y cintura para tener referencia";
+  $("#mCuerpoCifras").innerHTML = pes != null
+    ? '<div><b>' + pes.toFixed(1) + '</b><span>kg</span></div>' +
+      (cint ? '<div><b>' + cint.cintura + '</b><span>cm cintura</span></div>' : "") +
+      '<div><b>' + S.hist.length + '</b><span>Sesiones</span></div>'
+    : "";
+}
+
+/* ============ PESTAÑAS Y SELECTORES ============ */
+const PESTANAS = ["inicio","hoy","comida","cuerpo","semana","guia"];
+function irA(t){
+  PESTANAS.forEach(x => { $("#p-"+x).hidden = (x !== t); });
+  $("#barraNav").hidden = (t === "inicio");
+  document.querySelectorAll('nav button[data-t]').forEach(b =>
+    b.setAttribute("aria-selected", String(b.dataset.t === t)));
+  if(t === "inicio") pintarInicio();
+  if(t === "comida") pintarComida();
+  if(t === "semana") pintarSemana();
+  if(t === "cuerpo"){ pintarPerfil(); pintarCuerpo(); }
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+document.querySelectorAll('[data-ir]').forEach(b =>
+  b.addEventListener("click", () => irA(b.dataset.ir)));
+$("#btnVolver").addEventListener("click", () => irA("inicio"));
+document.querySelectorAll('nav button[data-t]').forEach(b =>
+  b.addEventListener("click", () => irA(b.dataset.t)));
 $("#selDia").innerHTML = [1,2,3,4,5,6,0]
   .map(i => '<option value="' + i + '">' + DIAS[i].n + ' · ' + DIAS[i].et + '</option>').join("");
 $("#selDia").addEventListener("change", e => {
@@ -1866,6 +2301,10 @@ pintarHoy();
 pintarPerfil();
 pintarCuerpo();
 pintarSemana();
+pintarComida();
+pintarInicio();
+/* Si hay una sesión a medias, entra directo al entrenamiento. */
+irA(S.t0 ? "hoy" : "inicio");
 </script>
 </body>
 </html>
