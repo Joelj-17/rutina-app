@@ -208,6 +208,7 @@ svg.esq{width:100%;max-width:340px;height:108px;color:var(--tinta);display:block
         border-bottom:2px solid transparent;white-space:nowrap}
 .fichaCab{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
 .fichaCab h3{margin:0;font-size:1.05rem;letter-spacing:-.01em}
+.avisoAlmacen{background:var(--alerta);color:#fff;padding:11px 16px;font-size:.86rem;line-height:1.4}
 
 #barraAbajo{position:fixed;inset:auto 0 0 0;z-index:50;color:#fff;display:none;
             padding:16px 14px calc(16px + env(safe-area-inset-bottom));background:var(--descanso)}
@@ -514,10 +515,7 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
   <div class="hist" id="listaCuerpo"></div>
 
   <h2 class="sec">Tus datos</h2>
-  <div class="nota">
-    <p>Todo lo que guardas —perfil, pesos, historial— <strong>vive solo en este navegador</strong>. No sale de aquí y no hay servidor.</p>
-    <p>Eso tiene una pega: si abres la app en el móvil, empieza vacía. Usa <strong>Exportar</strong> aquí y <strong>Importar</strong> allí para llevártelo todo.</p>
-  </div>
+  <p id="estadoDatos" style="font-size:.87rem;margin-top:0">—</p>
   <div class="acciones">
     <button class="bt p" id="btnCopiar">Copiar datos</button>
     <button class="bt" id="btnExportar">Exportar a archivo</button>
@@ -525,9 +523,10 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
     <button class="bt mal" id="btnBorrar" style="border-color:var(--alerta)">Borrar todo</button>
     <input type="file" id="ficheroImp" accept="application/json,.json" hidden>
   </div>
-  <p style="font-size:.82rem;color:var(--acero);margin-top:9px">
-    <strong>Copiar datos</strong> es lo más cómodo desde el móvil: un toque y lo tienes
-    en el portapapeles para pegarlo donde quieras, sin buscar archivos.</p>
+  <p style="font-size:.8rem;color:var(--acero);margin-top:10px">
+    <strong>Copiar datos</strong> es lo más cómodo desde el móvil: un toque y lo tienes en el
+    portapapeles. Solo hace falta para llevar los datos de un dispositivo a otro o para
+    enviármelos — en el día a día no tienes que tocar nada.</p>
   <p id="msgDatos" style="font-size:.85rem;color:var(--hecho);font-weight:600;margin-top:10px" hidden></p>
 </main>
 
@@ -1037,9 +1036,34 @@ function paquete(){
                     latido:S.latido || Date.now()} : null
   };
 }
+/* Si el navegador no deja guardar, hay que decirlo: perder datos en silencio
+   es el peor fallo posible en una app como esta. */
+let guardadoRoto = false;
 function guardar(){
-  try{ localStorage.setItem(LS, JSON.stringify(paquete())); }
-  catch(e){ /* almacenamiento lleno o bloqueado: la sesión sigue en memoria */ }
+  try{
+    localStorage.setItem(LS, JSON.stringify(paquete()));
+    if(guardadoRoto){ guardadoRoto = false; pintarAvisoAlmacen(); }
+  }catch(e){
+    if(!guardadoRoto){ guardadoRoto = true; pintarAvisoAlmacen(e && e.name); }
+  }
+}
+function pintarAvisoAlmacen(motivo){
+  let b = document.getElementById("avisoAlmacen");
+  if(!guardadoRoto){ if(b) b.remove(); return; }
+  if(!b){
+    b = document.createElement("div");
+    b.id = "avisoAlmacen"; b.className = "avisoAlmacen";
+    document.body.insertBefore(b, document.body.firstChild);
+  }
+  b.innerHTML = '<strong>No se están guardando tus datos.</strong> El navegador no lo permite' +
+    (motivo === "QuotaExceededError" ? " porque no queda espacio" : "") +
+    '. Si estás en modo incógnito, sal de él. Exporta lo de hoy antes de cerrar.';
+}
+/* Pide al navegador que no borre los datos por falta de uso. */
+if(navigator.storage && navigator.storage.persist){
+  navigator.storage.persisted()
+    .then(ok => ok ? null : navigator.storage.persist())
+    .catch(() => {});
 }
 
 /* ============ UTILIDADES ============ */
@@ -1735,11 +1759,15 @@ $("#pCerrar").addEventListener("click", () => {
   pintarPerfil(); pintarComida(); pintarInicio();
   aviso("Perfil guardado.");
 });
+/* Guarda con cada tecla, no solo al salir del campo: en el móvil es muy fácil
+   cambiar de pestaña sin que el campo pierda el foco, y así se perdía el dato. */
 ["pAltura","pNacim","pSexo","pNivel","pObjetivo"].forEach(id => {
   const campo = {pAltura:"altura", pNacim:"nacim", pSexo:"sexo", pNivel:"nivel", pObjetivo:"objetivo"}[id];
-  document.getElementById(id).addEventListener("change", e => {
-    S.perfil[campo] = e.target.value; guardar(); pintarPerfil();
-  });
+  const el = document.getElementById(id);
+  const grabar = e => { S.perfil[campo] = e.target.value; guardar(); };
+  el.addEventListener("input", grabar);
+  el.addEventListener("change", e => { grabar(e); pintarPerfil(); pintarComida(); });
+  el.addEventListener("blur",  () => { pintarPerfil(); pintarComida(); });
 });
 
 $("#cGuardar").addEventListener("click", () => {
@@ -1806,6 +1834,27 @@ function pintarCuerpo(){
         '<span class="hf">' + (c.cintura != null ? "cintura " + c.cintura + " cm" : "") + '</span></div>' +
         (c.nota ? '<div class="lin2">' + esc(c.nota) + '</div>' : "") + '</div>').join("")
     : '<div class="vacio">Sin mediciones todavía. La primera es la referencia de todo lo demás — hazla esta semana.</div>';
+  pintarEstadoDatos();
+}
+/* Que se vea de un vistazo que sí está guardado: era la duda razonable. */
+function pintarEstadoDatos(){
+  const p = $("#estadoDatos");
+  if(!p) return;
+  if(guardadoRoto){
+    p.innerHTML = '<span style="color:var(--alerta);font-weight:700">⚠ No se está pudiendo guardar.</span> ' +
+                  'Exporta tus datos ahora mismo.';
+    return;
+  }
+  const trozos = [];
+  if(S.hist.length)   trozos.push(S.hist.length + (S.hist.length === 1 ? " sesión" : " sesiones"));
+  if(S.cuerpo.length) trozos.push(S.cuerpo.length + (S.cuerpo.length === 1 ? " medición" : " mediciones"));
+  const dcom = Object.keys(S.comidas).filter(f => comidasDe(f).length).length;
+  if(dcom) trozos.push(dcom + (dcom === 1 ? " día de comida" : " días de comida"));
+  if(S.perfil.altura && S.perfil.nacim) trozos.push("perfil completo");
+  p.innerHTML = '<span style="color:var(--hecho);font-weight:700">✓ Guardado en este dispositivo.</span> ' +
+    (trozos.length ? trozos.join(" · ") + '. ' : "Todavía sin nada apuntado. ") +
+    '<span style="color:var(--acero)">Se queda aquí solo, sin servidor. Al abrir la app está todo — ' +
+    'no hay que cargar nada.</span>';
 }
 function aviso(t, malo){
   const p = $("#msgDatos");
@@ -1858,7 +1907,27 @@ $("#ficheroImp").addEventListener("change", e => {
     try{
       const g = JSON.parse(lector.result);
       if(!g || typeof g !== "object") throw new Error("formato");
-      if(!confirm("Vas a sustituir los datos de este navegador por los del archivo. ¿Seguir?")) return;
+
+      // Enseña qué trae el archivo ANTES de tocar nada: con nombres parecidos
+      // es facilísimo importar el equivocado y quedarte sin datos.
+      const nS = Array.isArray(g.hist)   ? g.hist.length   : 0;
+      const nM = Array.isArray(g.cuerpo) ? g.cuerpo.length : 0;
+      const nC = g.comidas ? Object.keys(g.comidas).length : 0;
+      const perf = (g.perfil && g.perfil.altura) ? "sí" : "no";
+      const yaS = S.hist.length, yaM = S.cuerpo.length;
+
+      let texto = "ARCHIVO: " + f.name + "\n\n" +
+        "  " + nS + " sesiones\n  " + nM + " mediciones\n  " + nC + " días de comida\n" +
+        "  perfil con altura: " + perf + "\n\n" +
+        "AHORA TIENES: " + yaS + " sesiones y " + yaM + " mediciones.\n\n";
+      if(nS === 0 && nM === 0 && perf === "no"){
+        texto += "⚠ ESTE ARCHIVO ESTÁ VACÍO.\n";
+        if(yaS || yaM) texto += "Si sigues, PERDERÁS lo que tienes. Seguramente no es el archivo que querías.\n\n";
+        else texto += "Comprueba que has elegido el archivo correcto.\n\n";
+      }
+      texto += "¿Sustituir tus datos por los de este archivo?";
+      if(!confirm(texto)) { aviso("Importación cancelada. No se ha tocado nada."); e.target.value = ""; return; }
+
       S.pesos  = g.pesos  || {};
       S.hist   = Array.isArray(g.hist)   ? g.hist   : [];
       S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
@@ -1866,8 +1935,10 @@ $("#ficheroImp").addEventListener("change", e => {
       S.pasos   = (g.pasos   && typeof g.pasos   === "object") ? g.pasos   : {};
       S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
       if(typeof g.fase === "number") S.fase = g.fase;
+      if(g.inicio) S.inicio = g.inicio;
       guardar(); pintarHoy(); pintarPerfil(); pintarCuerpo(); pintarSemana();
-      aviso("Datos importados: " + S.hist.length + " sesiones y " + S.cuerpo.length + " mediciones.");
+      pintarComida(); pintarInicio();
+      aviso("Importado de " + f.name + ": " + nS + " sesiones, " + nM + " mediciones.");
     }catch(err){
       aviso("Ese archivo no es un export válido de la app.", true);
     }
