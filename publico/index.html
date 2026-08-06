@@ -547,6 +547,10 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
 .puente{font-size:.83rem;color:var(--acero);margin-top:22px;padding-top:14px;
         border-top:1px solid var(--linea-2)}
 
+.quitarMed{margin-left:8px;color:var(--acero);font-size:.85rem;padding:0 4px;
+           background:none;border:none;line-height:1}
+.quitarMed:active{color:var(--alerta)}
+
 /* ---- Barras de pasos por dia ----
    Una barra por dia natural, huecos incluidos: si un dia no apuntaste, se ve.
    Esconder los huecos haria que la media pareciera mejor de lo que es. */
@@ -824,10 +828,22 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
   <div id="indicadorCuerpo"></div>
 
   <h2 class="sec">Nueva medición</h2>
-  <p style="font-size:.86rem;color:var(--acero);margin-top:0">Una vez por semana, mismo día, recién levantado y en ayunas. El peso diario oscila 1-2 kg por agua y comida: pesarte a diario solo mete ruido.</p>
+  <p style="font-size:.86rem;color:var(--acero);margin-top:0">
+    Puedes apuntar <strong>varias al día</strong> —al despertar, antes y después de entrenar,
+    por la noche— y también <strong>días pasados</strong>. Para seguir el progreso vale la de
+    recién levantado y en ayunas: el resto oscila 1-2 kg por agua y comida.</p>
   <div class="tarj">
     <div class="rejilla">
       <div class="campo"><label for="cFecha">Fecha</label><input id="cFecha" type="date"></div>
+      <div class="campo"><label for="cHora">Hora</label><input id="cHora" type="time"></div>
+      <div class="campo"><label for="cMomento">Momento</label>
+        <select id="cMomento">
+          <option value="">Sin indicar</option>
+          <option value="despertar">Al despertar, en ayunas</option>
+          <option value="antes">Antes de entrenar</option>
+          <option value="despues">Después de entrenar</option>
+          <option value="noche">Por la noche</option>
+        </select></div>
       <div class="campo"><label for="cPeso">Peso (kg)</label>
         <input id="cPeso" type="number" inputmode="decimal" step="0.1" min="30" max="250" placeholder="98"></div>
       <div class="campo"><label for="cCintura">Cintura (cm)</label>
@@ -905,6 +921,20 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
   <p style="font-size:.79rem;color:var(--acero);margin:-4px 0 0">
     Apúntalos al final del día, cuando ya no vayas a andar más. Míralos en la app
     de tu móvil y tecléalos: una web no puede leerlos sola.</p>
+
+  <h2 class="sec">Apuntar otro día</h2>
+  <div class="tarj">
+    <p style="font-size:.85rem;color:var(--acero);margin:0 0 12px">
+      Si un día se te pasó, ponlo aquí. Vale cualquier fecha anterior.</p>
+    <div class="rejilla">
+      <div class="campo"><label for="pasFecha">Día</label><input id="pasFecha" type="date"></div>
+      <div class="campo"><label for="pasValor">Pasos</label>
+        <input id="pasValor" type="number" inputmode="numeric" step="100" min="0" placeholder="8500"></div>
+    </div>
+    <div class="acciones" style="margin-top:12px">
+      <button class="bt p" id="pasAdd">Guardar ese día</button>
+    </div>
+  </div>
 
   <h2 class="sec">Cómo vas</h2>
   <div class="rachas" id="pasosCifras"></div>
@@ -1475,7 +1505,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-06 · 15";
+const VERSION = "2026-08-06 · 16";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -2255,9 +2285,28 @@ function edad(){
   if(m < 0 || (m === 0 && h.getDate() < n.getDate())) a--;
   return (a >= 0 && a < 120) ? a : null;
 }
+function horaAhora(){
+  const d = new Date();
+  return String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+}
+/* De la mas reciente a la mas antigua. Con varias el mismo dia, la hora
+   desempata; las que no la traen se consideran de primera hora. */
+function ordenaCuerpo(){
+  S.cuerpo.sort((a,b) => (b.f + "T" + (b.h || "00:00")).localeCompare(a.f + "T" + (a.h || "00:00")));
+}
+const MOMENTOS = {despertar:"Al despertar", antes:"Antes de entrenar",
+                  despues:"Después de entrenar", noche:"Por la noche"};
+
+/* El peso de referencia: la MEDIA del último día con pesadas, no la última
+   pesada suelta. Con varias al día, entre la de recién levantado y la de
+   después de cenar hay un kilo largo de diferencia, y el gasto estimado
+   saltaría durante el día sin que hayas cambiado nada. */
 function ultimoPeso(){
   const c = S.cuerpo.filter(x => x.peso != null);
-  return c.length ? c[0].peso : null;
+  if(!c.length) return null;
+  const dia = c[0].f;
+  const delDia = c.filter(x => x.f === dia).map(x => x.peso);
+  return Math.round(delDia.reduce((a,b) => a+b, 0) / delDia.length * 10) / 10;
 }
 function pintarPerfil(){
   $("#pAltura").value   = S.perfil.altura || "";
@@ -2340,6 +2389,20 @@ $("#pCerrar").addEventListener("click", () => {
   el.addEventListener("blur",  () => { pintarPerfil(); pintarComida(); });
 });
 
+/* Quitar una medición suelta. Deja constancia de la baja: si no, el otro
+   dispositivo te la devuelve en la siguiente sincronización. */
+$("#listaCuerpo").addEventListener("click", e => {
+  const b = e.target.closest("[data-med]");
+  if(!b) return;
+  const i = Number(b.dataset.med), c = S.cuerpo[i];
+  if(!c) return;
+  if(!confirm("¿Quitar la medición del " + fechaCorta(c.f) + (c.h ? " a las " + c.h : "") +
+              (c.peso != null ? " (" + c.peso + " kg)" : "") + "?")) return;
+  S.cuerpo.splice(i, 1);
+  if(c.id) S.bajas[c.id] = new Date().toISOString();
+  guardar(); pintarCuerpo(); pintarPerfil(); pintarInicio();
+});
+
 $("#cGuardar").addEventListener("click", () => {
   const f = $("#cFecha").value || hoyISO();
   const peso = num($("#cPeso").value), cintura = num($("#cCintura").value);
@@ -2347,20 +2410,32 @@ $("#cGuardar").addEventListener("click", () => {
   if(peso == null && cintura == null && !nota){
     aviso("Escribe al menos un peso o una medida antes de guardar.", true); return;
   }
-  const i = S.cuerpo.findIndex(x => x.f === f);
-  const reg = {f:f, peso:peso, cintura:cintura, nota:nota};
-  if(i >= 0) S.cuerpo[i] = reg; else S.cuerpo.push(reg);
-  S.cuerpo.sort((a,b) => b.f.localeCompare(a.f));
+  /* Se AÑADE, no se sustituye: puede haber varias el mismo día y cada una es
+     un dato distinto —al despertar no pesas lo mismo que después de cenar—.
+     Antes la fecha era la identidad de la medición y solo cabía una. */
+  const reg = {id:idNuevo(), f:f, h:($("#cHora").value || horaAhora()),
+               momento:$("#cMomento").value || "",
+               peso:peso, cintura:cintura, nota:nota, ts:new Date().toISOString()};
+  S.cuerpo.push(reg);
+  ordenaCuerpo();
   guardar();
   $("#cPeso").value = ""; $("#cCintura").value = ""; $("#cNota").value = "";
-  pintarCuerpo(); pintarPerfil();
-  aviso(i >= 0 ? "Medición del " + f + " actualizada." : "Medición guardada.");
+  $("#cHora").value = horaAhora();
+  pintarCuerpo(); pintarPerfil(); pintarInicio();
+  aviso("Medición guardada.");
 });
 
 /* Serie temporal de una medida, ordenada de antigua a reciente. */
+/* Un punto por DIA, con la media de ese dia. Si te pesas al despertar y
+   despues de cenar, la diferencia es agua y comida, no grasa: pintar las dos
+   como puntos sueltos haria una sierra que no significa nada. */
 function serie(campo){
-  return S.cuerpo.filter(x => x[campo] != null).slice(0, 20).reverse()
-                 .map(x => ({f:x.f, v:x[campo]}));
+  const por = {};
+  S.cuerpo.filter(x => x[campo] != null).forEach(x => {
+    (por[x.f] = por[x.f] || []).push(x[campo]);
+  });
+  return Object.keys(por).sort().slice(-20)
+    .map(f => ({f:f, v:por[f].reduce((a,b) => a+b, 0) / por[f].length}));
 }
 
 /* Una gráfica por medida. Nunca las dos juntas: dos escalas en un mismo eje
@@ -2482,11 +2557,19 @@ function pintarCuerpo(){
   $("#indicadorCuerpo").innerHTML = ind;
 
   $("#listaCuerpo").innerHTML = S.cuerpo.length
-    ? S.cuerpo.slice(0,24).map(c =>
-        '<div class="hfila"><div class="lin1"><span class="hf">' + esc(c.f) + '</span>' +
+    ? S.cuerpo.slice(0,40).map((c, i) =>
+        '<div class="hfila"><div class="lin1"><span class="hf">' + esc(fechaCorta(c.f)) +
+        (c.h ? " · " + esc(c.h) : "") + '</span>' +
         '<b>' + (c.peso != null ? c.peso.toFixed(1) + " kg" : "—") + '</b>' +
-        '<span class="hf">' + (c.cintura != null ? "cintura " + c.cintura + " cm" : "") + '</span></div>' +
-        (c.nota ? '<div class="lin2">' + esc(c.nota) + '</div>' : "") + '</div>').join("")
+        '<span class="hf">' + (c.cintura != null ? "cintura " + c.cintura + " cm" : "") + '</span>' +
+        '<button class="quitarMed" data-med="' + i + '" aria-label="Quitar esta medición">✕</button>' +
+        '</div>' +
+        ((c.momento && MOMENTOS[c.momento]) || c.nota
+          ? '<div class="lin2">' +
+            (c.momento && MOMENTOS[c.momento] ? '<b>' + MOMENTOS[c.momento] + '</b>' : "") +
+            (c.momento && MOMENTOS[c.momento] && c.nota ? " · " : "") +
+            (c.nota ? esc(c.nota) : "") + '</div>'
+          : "") + '</div>').join("")
     : '<div class="vacio">Sin mediciones todavía. La primera es la referencia de todo lo demás — hazla esta semana.</div>';
   pintarEstadoDatos();
 }
@@ -2747,6 +2830,9 @@ function sellarLegado(g){
 
   (g.cuerpo || []).forEach(m => {
     if(!m || typeof m !== "object") return;
+    // Identificador a partir del contenido: las que ya existian eran una por
+    // dia, asi que la fecha basta para que los dos dispositivos coincidan.
+    if(!m.id) m.id = "v" + claveDe("med|" + (m.f || "") + "|" + (m.peso == null ? "" : m.peso));
     if(!m.ts) m.ts = finDe(m.f);
   });
 
@@ -2838,16 +2924,20 @@ function fundir(mio, otro){
     .sort((x, y) => (y.f || "").localeCompare(x.f || ""))
     .slice(0, 200);
 
-  // Mediciones: una por día, gana la retocada más tarde.
+  /* Mediciones: una por IDENTIFICADOR, no por dia. Puede haber varias el
+     mismo dia —al despertar, despues de entrenar— y son datos distintos.
+     Cuando esto iba por fecha, la segunda del dia tapaba a la primera. */
   const ms = {};
   (a.cuerpo || []).concat(b.cuerpo || []).forEach(m => {
     if(!m || !m.f) return;
-    const y = ms[m.f];
-    if(!y || masNuevo(m.ts, y.ts)) ms[m.f] = m;
+    const k = m.id || ("f|" + m.f);
+    const y = ms[k];
+    if(!y || masNuevo(m.ts, y.ts)) ms[k] = m;
   });
   r.cuerpo = Object.keys(ms).map(k => ms[k])
-    .filter(m => !(bajas["med|" + m.f] && masNuevo(bajas["med|" + m.f], m.ts)))
-    .sort((x, y) => (y.f || "").localeCompare(x.f || ""))
+    .filter(m => !(bajas[m.id] && masNuevo(bajas[m.id], m.ts)))
+    .sort((x, y) => ((y.f || "") + "T" + (y.h || "00:00"))
+                    .localeCompare((x.f || "") + "T" + (x.h || "00:00")))
     .slice(0, 500);
 
   // Valores sueltos.
@@ -3756,7 +3846,8 @@ function pintarDiario(){
   $("#diarioLista").innerHTML = dias.length ? dias.slice(0, 60).map(f => {
     const ses = S.hist.find(h => h.f === f);
     const t = totalDe(f), gasto = gastoDe(f);
-    const med = S.cuerpo.find(c => c.f === f);
+    const meds = S.cuerpo.filter(c => c.f === f);
+    const med = meds[meds.length - 1];   // la primera del día, que es la de referencia
     const pas = S.pasos[f], ag = S.agua[f], su = S.sueno[f], an = S.animo[f];
     const bal = (gasto && t.kcal > 0) ? Math.round(t.kcal - gasto) : null;
 
@@ -3977,6 +4068,18 @@ function ponPasos(valor, dia){
 ["input","change"].forEach(ev => {
   const e = $("#pasHoy");
   if(e) e.addEventListener(ev, x => ponPasos(x.target.value));
+});
+
+/* Un día pasado que se quedó sin apuntar. Sin esto, un despiste deja un hueco
+   para siempre y la media queda coja. */
+$("#pasAdd").addEventListener("click", () => {
+  const f = $("#pasFecha").value, v = num($("#pasValor").value);
+  if(!f){ aviso("Elige el día.", true); return; }
+  if(f > hoyISO()){ aviso("Ese día todavía no ha llegado.", true); return; }
+  if(v == null || v <= 0){ aviso("Escribe cuántos pasos.", true); return; }
+  ponPasos(v, f);
+  $("#pasValor").value = "";
+  aviso("Apuntados " + Math.round(v).toLocaleString("es-ES") + " pasos del " + fechaCorta(f) + ".");
 });
 
 /* ============ COMIDA ============ */
