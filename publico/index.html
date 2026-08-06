@@ -507,6 +507,14 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
 /* Sitio para que el menú no tape el final de ninguna pantalla. */
 body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
 
+/* ---- Copias de seguridad: una lista sobria, no una alarma ---- */
+.copia{display:flex;align-items:center;gap:12px;background:var(--panel);
+       border:1px solid var(--linea);border-radius:10px;padding:11px 13px;margin-bottom:7px}
+.copiaTx{flex:1;min-width:0}
+.copiaTx b{display:block;font-size:.86rem;font-weight:600}
+.copiaTx span{display:block;font-size:.77rem;color:var(--acero);margin-top:2px}
+.copia .bt{flex:0 0 auto}
+
 /* ---- Estado de la sincronización, siempre a la vista ---- */
 #estadoSync{background:var(--panel);border-bottom:1px solid var(--linea)}
 .esync{display:flex;align-items:center;gap:9px;padding:7px 14px;font-size:.78rem}
@@ -829,6 +837,13 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
     </div>
   </div>
   <p id="syncMsg" style="font-size:.85rem;font-weight:600;margin-top:10px" hidden></p>
+
+  <h2 class="sec">Copias de seguridad</h2>
+  <p style="font-size:.83rem;color:var(--acero);margin-top:0">
+    La app guarda sola una copia antes de cada cosa que pueda machacar tus datos,
+    y una al día. <strong>La sincronización no las toca</strong>: si algo sale mal
+    ahí, esto sigue aquí.</p>
+  <div id="listaCopias"></div>
 
   <h2 class="sec">Tus datos</h2>
   <p id="estadoDatos" style="font-size:.87rem;margin-top:0">—</p>
@@ -1406,7 +1421,12 @@ function paquete(){
 let guardadoRoto = false;
 let marcandoCambio = true;   // se apaga cuando el propio sincronizador escribe
 function guardar(){
-  if(marcandoCambio) S.cambiadoEn = new Date().toISOString();
+  if(marcandoCambio){
+    S.cambiadoEn = new Date().toISOString();
+    // Una copia al día, la primera vez que guardas algo. Es barata y el día
+    // que haga falta vale su peso en oro.
+    if(typeof copiaSeguridad === "function") copiaSeguridad("del día");
+  }
   try{
     localStorage.setItem(LS, JSON.stringify(paquete()));
     if(guardadoRoto){ guardadoRoto = false; pintarAvisoAlmacen(); }
@@ -2566,6 +2586,7 @@ async function bajarDatos(){
                 "¿Sustituir lo de este dispositivo por lo de la nube?")){
       syncAviso("Cancelado. No se ha tocado nada."); return false;
     }
+    copiaSeguridad("antes de traer de la nube");
     S.pesos  = g.pesos  || {};
     S.hist   = Array.isArray(g.hist)   ? g.hist   : [];
     S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
@@ -2627,7 +2648,9 @@ function pintarSync(){
   $("#syncSalir").addEventListener("click", () => {
     if(!confirm("Se olvida la frase en este dispositivo. Tus datos locales se quedan como están " +
                 "y lo de la nube tampoco se borra.\n\n¿Desconectar?")) return;
-    syncFrase = null; syncLlave = null; S.syncId = null; guardar(); pintarSync();
+    syncFrase = null; syncLlave = null; S.syncId = null;
+    cerrarSesion();              // desconectar cierra también la sesión abierta
+    guardar(); pintarSync();
     syncAviso("Desconectado de este dispositivo.");
   });
 }
@@ -2742,6 +2765,110 @@ window.addEventListener("pagehide", guardarAlSalir);
 document.addEventListener("visibilitychange", () => { if(document.hidden) guardarAlSalir(); });
 
 /* ============ LOGIN ============ */
+/* ============ COPIAS DE SEGURIDAD ============
+   Red de seguridad propia del dispositivo. Vive en su propia clave del
+   almacén, aparte de los datos de trabajo, y **la sincronización no la toca
+   nunca**: ni la sube, ni la baja, ni la sobreescribe. Ese es todo el
+   propósito. Si un día la nube trae basura, o un fallo mío borra el
+   historial, esto sigue aquí.
+
+   Se guarda copia antes de cada operación que pueda machacar datos —traer de
+   la nube, importar, aplicar lo que llega— y una vez al día sin más.        */
+const COPIAS = "rutina.copias";
+const COPIAS_MAX = 10;
+
+function leerCopias(){
+  try{ const l = JSON.parse(localStorage.getItem(COPIAS) || "[]");
+       return Array.isArray(l) ? l : []; }
+  catch(e){ return []; }
+}
+
+/* Nunca guardamos una copia vacía: taparía las buenas al ir rotando. */
+function copiaSeguridad(motivo){
+  try{
+    if(!hayAlgoQueAportar()) return;
+    const datos = paraSubir();
+    const r = retrato(datos);
+    const lista = leerCopias();
+
+    // Una automática por día; las de antes de una operación van siempre.
+    if(motivo === "del día"){
+      const hoy = hoyISO();
+      if(lista.some(c => c.motivo === "del día" && (c.f || "").slice(0,10) === hoy)) return;
+    }
+    lista.unshift({f:new Date().toISOString(), motivo:motivo, r:r, datos:datos});
+
+    // Si el almacén se queja, vamos soltando las más viejas antes de rendirnos.
+    let n = Math.min(lista.length, COPIAS_MAX);
+    while(n > 0){
+      try{ localStorage.setItem(COPIAS, JSON.stringify(lista.slice(0, n))); return; }
+      catch(e){ n--; }
+    }
+  }catch(e){ /* una copia que falla no puede tumbar lo que estabas haciendo */ }
+}
+
+function pintarCopias(){
+  const c = $("#listaCopias");
+  if(!c) return;
+  const lista = leerCopias();
+  if(!lista.length){
+    c.innerHTML = '<p class="vacio" style="font-size:.85rem">Todavía no hay ninguna. ' +
+      'Se hará sola en cuanto haya algo que guardar.</p>';
+    return;
+  }
+  c.innerHTML = lista.map((x, i) => {
+    const d = new Date(x.f);
+    const trozos = [
+      x.r.sesiones   ? x.r.sesiones + (x.r.sesiones === 1 ? " sesión" : " sesiones") : "",
+      x.r.mediciones ? x.r.mediciones + (x.r.mediciones === 1 ? " medición" : " mediciones") : "",
+      x.r.comida     ? x.r.comida + (x.r.comida === 1 ? " día de comida" : " días de comida") : ""
+    ].filter(Boolean);
+    return '<div class="copia">' +
+      '<div class="copiaTx"><b>' + d.toLocaleString("es-ES") + '</b>' +
+      '<span>' + (trozos.join(" · ") || "sin registros") + ' · ' + x.motivo + '</span></div>' +
+      '<button class="bt" data-copia="' + i + '">Restaurar</button></div>';
+  }).join("");
+}
+
+/* ---- Sesión desbloqueada ----
+   Pedir el PIN en cada recarga convierte el candado en un peaje, y un candado
+   que estorba acaba quitándose. Una vez abierto, se queda abierto un rato.
+
+   Dónde se guarda importa: en sessionStorage, que **se borra al cerrar la
+   app**, no en el almacén permanente. Así la frase no queda escrita en el
+   dispositivo de un día para otro. Y aun dentro de la sesión caduca sola tras
+   un rato sin tocar nada, contando desde la última vez que hiciste algo. */
+const SESION = "rutina.sesion";
+const SESION_MIN = 30;
+
+function abrirSesion(frase){
+  try{
+    sessionStorage.setItem(SESION,
+      JSON.stringify({f:frase, hasta:Date.now() + SESION_MIN*60000}));
+  }catch(e){ /* si el navegador no deja, simplemente pedirá el PIN */ }
+}
+function cerrarSesion(){
+  try{ sessionStorage.removeItem(SESION); }catch(e){}
+}
+function leerSesion(){
+  try{
+    const s = JSON.parse(sessionStorage.getItem(SESION) || "null");
+    if(!s || typeof s.f !== "string") return null;
+    if(!(s.hasta > Date.now())){ cerrarSesion(); return null; }
+    return s.f;
+  }catch(e){ return null; }
+}
+/* Cada vez que haces algo, el reloj de la caducidad vuelve a empezar. */
+let ultimaRenovacion = 0;
+function renovarSesion(){
+  const ahora = Date.now();
+  if(ahora - ultimaRenovacion < 20000) return;   // no reescribir en cada toque
+  ultimaRenovacion = ahora;
+  if(syncFrase && leerSesion()) abrirSesion(syncFrase);
+}
+["click","keydown"].forEach(ev =>
+  document.addEventListener(ev, renovarSesion, {passive:true}));
+
 let pinActual = "";
 
 function loginVisible(v){
@@ -2770,7 +2897,8 @@ async function probarPin(){
     const frase = await abrirCofre(pinActual, S.cofre);
     syncLlave = await abrirLlave(frase);
     syncFrase = frase;
-    S.pinFallos = 0; guardar();
+    abrirSesion(frase);          // abierto: no lo volvemos a pedir en un rato
+    S.pinFallos = 0; guardarSinMarcar();
     pinActual = ""; pintarPuntos(); loginError("");
     loginVisible(false);
     pintarSync();
@@ -2791,6 +2919,7 @@ async function probarPin(){
 
 /* Al entrar, mira si hay algo más nuevo en la nube sin dar la lata. */
 function aplicarDatos(g, ts){
+  copiaSeguridad("antes de traer de la nube");
   S.pesos = g.pesos || {};
   S.hist = Array.isArray(g.hist) ? g.hist : [];
   S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
@@ -2886,6 +3015,7 @@ async function entrarConFrase(){
     // como cambio, un aparato recién estrenado se creería que tiene algo que
     // aportar y subiría su vacío encima de lo bueno.
     guardarSinMarcar();
+    abrirSesion(f);              // abierto: no lo volvemos a pedir en un rato
     $("#loginFrase").value = "";
     loginVisible(false);
     pintarSync();
@@ -3022,6 +3152,7 @@ function cargarDatos(texto, origen){
   msg += "¿Sustituir tus datos por estos?";
   if(!confirm(msg)){ aviso("Cancelado. No se ha tocado nada."); return false; }
 
+  copiaSeguridad("antes de importar");
   S.pesos  = g.pesos  || {};
   S.hist   = Array.isArray(g.hist)   ? g.hist   : [];
   S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
@@ -3038,6 +3169,40 @@ function cargarDatos(texto, origen){
   aviso("Cargado: " + nS + " sesiones, " + nM + " mediciones.");
   return true;
 }
+
+/* Restaurar una copia. Antes de pisar nada, se guarda copia de lo que hay
+   ahora: restaurar por error tampoco puede ser un camino de ida. */
+$("#listaCopias").addEventListener("click", e => {
+  const b = e.target.closest("[data-copia]");
+  if(!b) return;
+  const c = leerCopias()[Number(b.dataset.copia)];
+  if(!c) return;
+  const r = c.r;
+  const SL = String.fromCharCode(10);
+  if(!confirm("Restaurar la copia del " + new Date(c.f).toLocaleString("es-ES") + SL + SL +
+      "Tiene: " + r.sesiones + " sesiones, " + r.mediciones + " mediciones, " +
+      r.comida + " días de comida." + SL +
+      "Ahora tienes: " + S.hist.length + " sesiones y " + S.cuerpo.length + " mediciones." + SL + SL +
+      "Se guardará copia de lo de ahora antes de sustituirlo." + SL + SL +
+      "¿Restaurar?")) return;
+
+  copiaSeguridad("antes de restaurar");
+  const g = c.datos;
+  S.pesos  = g.pesos  || {};
+  S.hist   = Array.isArray(g.hist)   ? g.hist   : [];
+  S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
+  ["comidas","pasos","agua","sueno","siesta","animo"].forEach(k => {
+    S[k] = (g[k] && typeof g[k] === "object") ? g[k] : {};
+  });
+  S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
+  if(typeof g.fase === "number") S.fase = g.fase;
+  if(g.inicio) S.inicio = g.inicio;
+  guardar();
+  pintarHoy(); pintarPerfil(); pintarCuerpo(); pintarSemana();
+  pintarComida(); pintarDiario(); pintarInicio(); pintarCopias();
+  aviso("Restaurada: " + r.sesiones + " sesiones, " + r.mediciones + " mediciones. " +
+        "Si querías esto en los demás dispositivos, dale a «Subir ahora».");
+});
 
 $("#btnImportar").addEventListener("click", () => $("#ficheroImp").click());
 $("#ficheroImp").addEventListener("change", e => {
@@ -3299,8 +3464,12 @@ const OBJ = PLATOS.reduce((a,p) => ({kcal:a.kcal+p.kcal, prot:a.prot+p.prot}), {
 let comDia = hoyISO();
 
 function comidasDe(f){ return S.comidas[f] || []; }
+/* Una comida importada, vieja o metida a mano puede venir sin algún campo.
+   Eso no puede convertirse en NaN por toda la pantalla ni tumbar nada. */
+function nDe(x){ const n = Number(x); return isFinite(n) ? n : 0; }
+
 function totalDe(f){
-  return comidasDe(f).reduce((a,c) => ({kcal:a.kcal + c.kcal, prot:a.prot + c.prot}),
+  return comidasDe(f).reduce((a,c) => ({kcal:a.kcal + nDe(c.kcal), prot:a.prot + nDe(c.prot)}),
                              {kcal:0, prot:0});
 }
 /* Gasto estimado del día: metabolismo basal + vida normal + pasos + entrenamiento. */
@@ -3356,7 +3525,7 @@ function pintarComida(){
   const l = comidasDe(comDia);
   $("#comLista").innerHTML = l.length
     ? l.map((c, i) => '<div class="comfila"><b>' + esc(c.n) + '</b>' +
-        '<span class="mn">' + Math.round(c.kcal) + ' kcal · ' + c.prot.toFixed(0) + ' g</span>' +
+        '<span class="mn">' + Math.round(nDe(c.kcal)) + ' kcal · ' + Math.round(nDe(c.prot)) + ' g</span>' +
         '<button data-borra="' + i + '" aria-label="Quitar">✕</button></div>').join("")
     : '<div class="vacio">Nada apuntado todavía. Empieza por tus comidas del plan, que son un toque.</div>';
 
@@ -3717,7 +3886,7 @@ function irA(t){
   if(t === "comida") pintarComida();
   if(t === "diario") pintarDiario();
   if(t === "semana") pintarSemana();
-  if(t === "cuerpo"){ pintarPerfil(); pintarCuerpo(); pintarSync(); }
+  if(t === "cuerpo"){ pintarPerfil(); pintarCuerpo(); pintarSync(); pintarCopias(); }
   window.scrollTo({top:0, behavior:"smooth"});
 }
 /* Delegado en el documento: los destinos del mapa se dibujan cada vez que se
@@ -3801,7 +3970,29 @@ pintarInicio();
 pintarSync();
 pintarLogin();
 pintarEstadoSync();
+/* Si hay una sesión abierta y sin caducar, se entra sin pedir nada. Si no,
+   la puerta cerrada. Se enseña cerrada mientras se comprueba: nunca se ve el
+   panel de alguien antes de saber que puede verlo. */
 loginVisible(true);
+(async function arrancarAcceso(){
+  const guardada = leerSesion();
+  if(!guardada){ pintarLogin(); return; }
+  loginError("Abriendo…");
+  try{
+    syncLlave = await abrirLlave(guardada);
+    syncFrase = guardada;
+    abrirSesion(guardada);            // se renueva por haber vuelto
+    loginError("");
+    loginVisible(false);
+    pintarSync();
+    await alEntrar();
+  }catch(e){
+    cerrarSesion();
+    loginError("");
+    pintarLogin();
+  }
+})();
+
 /* Si hay una sesión a medias, entra directo al entrenamiento. */
 irA(S.t0 ? "hoy" : "inicio");
 </script>

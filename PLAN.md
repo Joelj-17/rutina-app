@@ -133,31 +133,32 @@ Eso llega con el empaquetado nativo (Capacitor). Hasta entonces: a mano.
 
 ---
 
-# Cosas concretas que hay que arreglar
+# Cosas ya arregladas (6 de agosto de 2026)
 
-**Un dispositivo recién estrenado sube su vacío encima de todo.** Pasó el 6 de
-agosto de 2026: abrió la app en la dirección nueva desde el móvil, entró con
-la frase, y como en ese teléfono no había nada todavía, la subida automática
-mandó un estado vacío a la nube y tapó lo que había. Hubo que rescatar los
-datos de los archivos internos del navegador del PC.
+**Un dispositivo vacío ya no puede pisar la copia buena.** Pasó dos veces ese
+día. La causa real no era la lógica de subida: el **service worker cacheaba
+`/api/sync`**, así que el móvil leía una nube vacía que ya no existía, y a
+partir de ahí subía su vacío encima. Ahora el service worker se aparta de
+`/api/` por completo, cada consulta lleva marca distinta, y la protección vive
+dentro de `subirDatos()`, que es el único punto donde se escribe en la nube.
 
-Existe la comprobación `nubeMasPobre`, pero solo protege al **bajar**. Falta
-la simétrica: **no subir automáticamente cuando lo local está vacío y en la
-nube hay algo**. Que en ese caso pregunte, o directamente que solo baje. La
-subida automática solo debería dispararse tras un cambio real del usuario.
+**El PIN dura media hora.** Se pedía en cada recarga y eso lo convertía en un
+peaje. La sesión abierta vive en `sessionStorage` —se borra al cerrar la app,
+así que la frase no queda escrita de un día para otro— y caduca a los 30
+minutos sin tocar nada, contando desde la última interacción. Desconectar la
+borra. Salió de usarlo él: *«tendría que ser sesión que perdure ciertos
+minutos sin cerrarse»*.
 
+**Copias de seguridad locales.** Se guarda copia antes de cada operación que
+pueda machacar datos —traer de la nube, importar, restaurar— y una al día. Van
+en su propia clave del almacén y **la sincronización no las toca nunca**, que
+es todo el propósito. Se restauran desde CUERPO, y restaurar también hace
+copia de lo que había. Esto es lo que convierte «confía en que no la vuelvo a
+liar» en «da igual, se recupera».
 
-**El PIN se pide en cada recarga.** Hoy la sesión muere al recargar la página,
-y eso convierte el PIN en un peaje constante en vez de una protección. Debe
-durar un rato —del orden de 15-30 minutos de inactividad— y solo entonces
-volver a pedirlo. Sale de usarlo él: *«al recargar la página se tiene que
-poner el PIN; tendría que ser sesión que perdure ciertos minutos»*
-(6 de agosto de 2026).
-
-Al hacerlo, cuidado con dónde se guarda esa sesión: en memoria se pierde al
-recargar (que es justo el problema), así que hay que guardarla con su hora de
-caducidad y comprobarla al abrir. Y que un cierre de sesión explícito la borre
-de verdad.
+**Un dato que falte ya no tumba una pantalla.** Una comida sin el campo de
+proteína reventaba COMIDA entera. Ahora los números que llegan mal se tratan
+como cero en vez de propagar el fallo.
 
 # Por dónde empezar
 
