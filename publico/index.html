@@ -400,6 +400,13 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
 .accionGrande.suave{background:transparent;color:var(--acero);border:1px solid var(--linea);
                     font-weight:600}
 
+/* Subetiqueta dentro de un apartado. "Apuntar algo" tiene tres formas de
+   hacerlo y cada una necesita nombre, pero ninguna merece un título grande:
+   con tres títulos parecían tres secciones distintas para lo mismo. */
+.subet{font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;font-weight:700;
+       color:var(--acero);margin:14px 0 7px}
+.subet:first-of-type{margin-top:2px}
+
 /* ---- "Lo de siempre": lo que repites, a un toque ---- */
 .sueles{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:6px}
 .suele{display:flex;align-items:baseline;gap:7px;max-width:100%;
@@ -729,25 +736,23 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
 
   <div class="tarj" id="comResumen"></div>
 
-  <div class="tarj filaPasos">
-    <label for="comPasos">👟 Pasos de hoy</label>
-    <input id="comPasos" type="number" inputmode="numeric" step="100" min="0" placeholder="8500">
-    <span id="pasosKcal">—</span>
-  </div>
-  <p style="font-size:.79rem;color:var(--acero);margin:-4px 0 0">
-    Míralos en tu app de paseo y tecléalos. Una web no puede leerlos sola, pero con ese número
-    el gasto del día te sale ajustado.</p>
+  <!-- Primero lo que has comido: es la pregunta que te trae a esta
+       pantalla. Antes estaba al final, detras de cuatro apartados. -->
+  <h2 class="sec">Lo que llevas hoy</h2>
+  <div class="hist" id="comLista"></div>
 
-  <h2 class="sec">Tus comidas del plan</h2>
-  <p style="font-size:.86rem;color:var(--acero);margin-top:0">Un toque y se apunta. Si ese día cambiaste algo, lo ajustas abajo.</p>
+  <!-- Todas las formas de apuntar, bajo un solo titulo. Eran tres
+       apartados distintos para lo mismo: meter comida. -->
+  <h2 class="sec">Apuntar algo</h2>
+  <p class="subet">Del plan · un toque</p>
   <div class="platos" id="comPlan"></div>
 
   <!-- Lo que repites sale de tu propio historial: teclear cada día el mismo
        café es la fricción que hace que uno deje de apuntar. -->
-  <h2 class="sec" id="tituloSueles" hidden>Lo de siempre</h2>
+  <p class="subet" id="tituloSueles" hidden>Lo de siempre</p>
   <div class="sueles" id="sueles"></div>
 
-  <h2 class="sec">Añadir otra cosa</h2>
+  <p class="subet">Cualquier otra cosa</p>
   <div class="tarj">
     <div class="rejilla">
       <div class="campo" style="grid-column:1/-1"><label for="alBusca">Alimento</label>
@@ -775,11 +780,21 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
     </div>
   </div>
 
-  <h2 class="sec">Lo que llevas hoy</h2>
-  <div class="hist" id="comLista"></div>
-
   <h2 class="sec">Últimos días</h2>
   <div class="hist" id="comHist"></div>
+
+  <!-- Los pasos no son comida, pero es lo que ajusta el gasto del dia,
+       asi que se quedan aqui abajo en vez de partir la pantalla en dos. -->
+  <h2 class="sec">Pasos de hoy</h2>
+  <div class="tarj filaPasos">
+    <label for="comPasos">👟 Pasos de hoy</label>
+    <input id="comPasos" type="number" inputmode="numeric" step="100" min="0" placeholder="8500">
+    <span id="pasosKcal">—</span>
+  </div>
+  <p style="font-size:.79rem;color:var(--acero);margin:-4px 0 0">
+    Míralos en tu app de paseo y tecléalos. Una web no puede leerlos sola, pero con ese número
+    el gasto del día te sale ajustado.</p>
+
 </main>
 
 <!-- ============ CUERPO ============ -->
@@ -1411,7 +1426,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-06 · 11";
+const VERSION = "2026-08-06 · 12";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
