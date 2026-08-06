@@ -359,6 +359,57 @@ tr:last-child td{border-bottom:none}
 td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
 .tabla-env{overflow-x:auto;margin-bottom:14px}
 footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px solid var(--linea);margin-top:26px}
+/* ---- El diario de hoy, todo a un toque desde la portada ---- */
+.bloque{background:var(--panel);border:1px solid var(--linea);border-radius:14px;
+        padding:16px 17px;box-shadow:var(--sombra);margin-bottom:11px}
+.bloque.destaca{border-width:2px;border-color:var(--agua)}
+.bloqueCab{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:11px}
+.bloqueCab h2{margin:0;font-size:.72rem;text-transform:uppercase;letter-spacing:.11em;
+              color:var(--acero);font-weight:700}
+.bloqueCab .dato{font-family:var(--mono);font-size:.83rem;font-weight:700;color:var(--agua)}
+.bloque .linea1{font-size:1.02rem;font-weight:600;margin:0 0 3px}
+.bloque .linea2{font-size:.84rem;color:var(--acero);margin:0 0 12px}
+.accionGrande{width:100%;background:var(--agua);color:#fff;padding:14px;border-radius:11px;
+              font-size:.98rem;font-weight:700}
+.accionGrande:active{transform:translateY(1px)}
+.accionGrande.hecho{background:var(--hecho)}
+.accionGrande.suave{background:var(--fondo);color:var(--agua);border:1.5px solid var(--agua)}
+
+.platosMini{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
+.pmini{padding:10px 3px;border-radius:10px;border:1.5px solid var(--linea);background:var(--panel);
+       font-size:.7rem;font-weight:700;color:var(--tinta-2);line-height:1.25}
+.pmini b{display:block;font-family:var(--mono);font-size:.66rem;color:var(--acero);font-weight:700;margin-top:2px}
+.pmini.ok{background:var(--hecho);border-color:var(--hecho);color:#fff}
+.pmini.ok b{color:rgba(255,255,255,.85)}
+
+.vida{display:flex;flex-direction:column;gap:2px}
+.vidaF{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--linea-2)}
+.vidaF:last-child{border-bottom:none}
+.vidaF .ic{font-size:1.15rem;width:24px;text-align:center;flex:0 0 24px}
+.vidaF .nom{flex:1;font-size:.88rem;font-weight:600}
+.vidaF input{width:82px;text-align:center;font-family:var(--mono);font-weight:700;font-size:.95rem;
+             padding:6px 4px}
+.vidaF .sufijo{font-family:var(--mono);font-size:.76rem;color:var(--agua);font-weight:700;
+               min-width:64px;text-align:right}
+.vasos{display:flex;gap:4px}
+.vaso{width:21px;height:21px;border-radius:50%;border:2px solid var(--linea);background:transparent;padding:0}
+.vaso.lleno{background:var(--agua);border-color:var(--agua)}
+.caras{display:flex;gap:5px}
+.cara{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--linea);background:var(--panel);
+      font-size:1.05rem;line-height:1;padding:0;filter:grayscale(1);opacity:.5}
+.cara.sel{filter:none;opacity:1;border-color:var(--agua);background:var(--agua-claro);border-width:2px}
+
+.balanceDia{display:flex;gap:14px;justify-content:space-between;text-align:center}
+.balanceDia div{flex:1}
+.balanceDia b{display:block;font-family:var(--mono);font-size:1.2rem;font-variant-numeric:tabular-nums}
+.balanceDia span{font-size:.64rem;text-transform:uppercase;letter-spacing:.07em;color:var(--acero);font-weight:700}
+.balanceDia .def b{color:var(--hecho)} .balanceDia .sup b{color:var(--alerta)}
+
+.atajos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+.atajo{background:var(--panel);border:1px solid var(--linea);border-radius:11px;padding:12px 6px;
+       font-size:.78rem;font-weight:700;color:var(--tinta-2)}
+.atajo span{display:block;font-size:1.1rem;margin-bottom:3px;filter:grayscale(.3)}
+
 [hidden]{display:none!important}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -392,34 +443,55 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
 <main class="env portada" id="p-inicio">
   <h1>Rutina</h1>
   <p class="hoy" id="portadaHoy">—</p>
-  <div class="menu">
-    <button class="tarjMenu grande" data-ir="hoy">
-      <span class="flechita">›</span>
-      <span class="ico">🏋</span>
-      <h2>Entrenamiento</h2>
-      <p id="mEntrenoSub">—</p>
-      <div class="cifras2" id="mEntrenoCifras"></div>
-    </button>
-    <button class="tarjMenu" data-ir="comida">
-      <span class="flechita">›</span>
-      <span class="ico">🍽</span>
-      <h2>Comida</h2>
-      <p id="mComidaSub">—</p>
-      <div class="cifras2" id="mComidaCifras"></div>
-    </button>
-    <button class="tarjMenu" data-ir="cuerpo">
-      <span class="flechita">›</span>
-      <span class="ico">📏</span>
-      <h2>Cuerpo</h2>
-      <p id="mCuerpoSub">—</p>
-      <div class="cifras2" id="mCuerpoCifras"></div>
-    </button>
-    <button class="tarjMenu" data-ir="guia">
-      <span class="flechita">›</span>
-      <span class="ico">📖</span>
-      <h2>Guía</h2>
-      <p>Cómo se hace cada ejercicio, cómo progresar y los avisos importantes.</p>
-    </button>
+  <!-- Entrenamiento -->
+  <div class="bloque destaca">
+    <div class="bloqueCab"><h2>Entrenamiento</h2><span class="dato" id="pEntDato"></span></div>
+    <p class="linea1" id="pEntTit">—</p>
+    <p class="linea2" id="pEntSub">—</p>
+    <button class="accionGrande" id="pEntBtn">Empezar la sesión</button>
+  </div>
+
+  <!-- Comida -->
+  <div class="bloque">
+    <div class="bloqueCab"><h2>Comida</h2><span class="dato" id="pComDato"></span></div>
+    <div id="pComBarras"></div>
+    <div class="platosMini" id="pComPlatos"></div>
+    <button class="accionGrande suave" data-ir="comida">+ Añadir otra cosa</button>
+  </div>
+
+  <!-- El día -->
+  <div class="bloque">
+    <div class="bloqueCab"><h2>El día</h2></div>
+    <div class="vida">
+      <div class="vidaF">
+        <span class="ic">👟</span><span class="nom">Pasos</span>
+        <input id="vPasos" type="number" inputmode="numeric" step="500" min="0" placeholder="8500">
+        <span class="sufijo" id="vPasosKcal"></span>
+      </div>
+      <div class="vidaF">
+        <span class="ic">💧</span><span class="nom">Agua</span>
+        <div class="vasos" id="vAgua"></div>
+        <span class="sufijo" id="vAguaTxt"></span>
+      </div>
+      <div class="vidaF">
+        <span class="ic">😴</span><span class="nom">Sueño</span>
+        <input id="vSueno" type="number" inputmode="decimal" step="0.5" min="0" max="16" placeholder="7.5">
+        <span class="sufijo">horas</span>
+      </div>
+      <div class="vidaF">
+        <span class="ic">🙂</span><span class="nom">Ánimo</span>
+        <div class="caras" id="vAnimo"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Balance -->
+  <div class="bloque" id="pBalance" hidden></div>
+
+  <div class="atajos">
+    <button class="atajo" data-ir="cuerpo"><span>📏</span>Cuerpo</button>
+    <button class="atajo" data-ir="semana"><span>📊</span>Semana</button>
+    <button class="atajo" data-ir="guia"><span>📖</span>Guía</button>
   </div>
 </main>
 
@@ -1016,7 +1088,7 @@ let S = {
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
   t0:null, pausadoEn:null, acumPausa:0, latido:null,
   hechos:{}, pesos:{}, marcas:{}, hist:[],
-  comidas:{}, pasos:{},
+  comidas:{}, pasos:{}, agua:{}, sueno:{}, animo:{},
   perfil:{altura:"", nacim:"", sexo:"", nivel:"", objetivo:""},
   cuerpo:[]
 };
@@ -1067,6 +1139,9 @@ function cargar(){
     S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
     S.comidas = (g.comidas && typeof g.comidas === "object") ? g.comidas : {};
     S.pasos   = (g.pasos   && typeof g.pasos   === "object") ? g.pasos   : {};
+    S.agua    = (g.agua    && typeof g.agua    === "object") ? g.agua    : {};
+    S.sueno   = (g.sueno   && typeof g.sueno   === "object") ? g.sueno   : {};
+    S.animo   = (g.animo   && typeof g.animo   === "object") ? g.animo   : {};
     S.perfil = Object.assign(S.perfil, g.perfil || {});
     S.faseManual = (typeof g.faseManual === "number") ? g.faseManual : null;
     S.diaManual  = (typeof g.diaManual  === "number") ? g.diaManual  : null;
@@ -1098,7 +1173,7 @@ function paquete(){
     material:S.material,
     pesos:S.pesos, hist:S.hist.slice(0,200),
     perfil:S.perfil, cuerpo:S.cuerpo.slice(0,500),
-    comidas:S.comidas, pasos:S.pasos,
+    comidas:S.comidas, pasos:S.pasos, agua:S.agua, sueno:S.sueno, animo:S.animo,
     sesion: S.t0 ? {fecha:hoyISO(), dia:S.dia, t0:S.t0, acumPausa:S.acumPausa,
                     pausadoEn:S.pausadoEn, hechos:S.hechos, marcas:S.marcas,
                     latido:S.latido || Date.now()} : null
@@ -2084,6 +2159,9 @@ function cargarDatos(texto, origen){
   S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
   S.comidas = (g.comidas && typeof g.comidas === "object") ? g.comidas : {};
   S.pasos   = (g.pasos   && typeof g.pasos   === "object") ? g.pasos   : {};
+  S.agua    = (g.agua    && typeof g.agua    === "object") ? g.agua    : {};
+  S.sueno   = (g.sueno   && typeof g.sueno   === "object") ? g.sueno   : {};
+  S.animo   = (g.animo   && typeof g.animo   === "object") ? g.animo   : {};
   S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
   if(typeof g.fase === "number") S.fase = g.fase;
   if(g.inicio) S.inicio = g.inicio;
@@ -2439,45 +2517,138 @@ $("#comAyer").addEventListener("click", () => {
   if(f && /^\d{4}-\d{2}-\d{2}$/.test(f)){ comDia = f; pintarComida(); }
 });
 
-/* ============ PORTADA ============ */
+/* ============ PORTADA: el diario de hoy ============ */
+const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio",
+               "agosto","septiembre","octubre","noviembre","diciembre"];
+const CARAS = [{v:1,e:"😞",t:"Mal"},{v:2,e:"😐",t:"Regular"},
+               {v:3,e:"🙂",t:"Bien"},{v:4,e:"😄",t:"Muy bien"}];
+const VASOS = 8;
+
 function pintarInicio(){
-  const d = DIAS[S.dia], ids = listaEj();
-  const hoy = new Date();
-  const nombresMes = ["enero","febrero","marzo","abril","mayo","junio","julio",
-                      "agosto","septiembre","octubre","noviembre","diciembre"];
-  $("#portadaHoy").textContent = d.n + ", " + hoy.getDate() + " de " + nombresMes[hoy.getMonth()] +
+  const f = hoyISO(), d = DIAS[S.dia], ids = listaEj(), hoy = new Date();
+  $("#portadaHoy").textContent = d.n + ", " + hoy.getDate() + " de " + MESES[hoy.getMonth()] +
     (S.inicio ? " · día " + (diasDesdeInicio()+1) + " del plan" : "");
 
+  /* --- Entrenamiento --- */
   const hechos = ids.filter(estaHecho).length;
-  const series = ids.reduce((a,i) => { const p = plan(i); return a + (p ? p.series : 0); }, 0);
-  $("#mEntrenoSub").textContent = S.t0
-    ? (siguienteId() ? "Sesión en marcha · vas por " + EJ[siguienteId()].n : "Sesión completada")
-    : d.et + " · " + (S.hist.some(h => h.f === hoyISO()) ? "hecha hoy" : "sin empezar");
-  $("#mEntrenoCifras").innerHTML =
-    '<div><b>' + (S.t0 ? hechos + "/" + ids.length : ids.length) + '</b><span>Ejercicios</span></div>' +
-    '<div><b>' + series + '</b><span>Series</span></div>' +
-    '<div><b>' + (S.t0 ? mmss(transcurrido()) : (S.fase === 0 ? "50" : S.fase === 1 ? "60" : "70") + " min") +
-    '</b><span>' + (S.t0 ? "Llevas" : "Duración") + '</span></div>';
+  const yaHecha = S.hist.some(h => h.f === f);
+  const btn = $("#pEntBtn");
+  btn.className = "accionGrande";
+  if(S.t0 && siguienteId()){
+    $("#pEntTit").textContent = "Vas por " + EJ[siguienteId()].n;
+    $("#pEntSub").textContent = hechos + " de " + ids.length + " ejercicios";
+    $("#pEntDato").textContent = mmss(transcurrido());
+    btn.textContent = "▶ Seguir";
+  }else if(S.t0){
+    $("#pEntTit").textContent = "Sesión terminada";
+    $("#pEntSub").textContent = "Falta valorar cómo ha ido";
+    $("#pEntDato").textContent = mmss(transcurrido());
+    btn.textContent = "Cerrar la sesión"; btn.className = "accionGrande hecho";
+  }else if(yaHecha){
+    const h = S.hist.find(x => x.f === f);
+    $("#pEntTit").textContent = "✓ Hecha hoy";
+    $("#pEntSub").textContent = d.et + " · " + mmss(h.seg) + " · " + h.ej + " ejercicios";
+    $("#pEntDato").textContent = "";
+    btn.textContent = "Ver la sesión"; btn.className = "accionGrande suave";
+  }else{
+    $("#pEntTit").textContent = d.et;
+    $("#pEntSub").textContent = ids.length + " ejercicios · " +
+      (S.fase === 0 ? "50" : S.fase === 1 ? "60" : "70") + " min";
+    $("#pEntDato").textContent = "Fase " + (S.fase+1);
+    btn.textContent = "▶ Empezar la sesión";
+  }
 
-  const t = totalDe(hoyISO());
-  $("#mComidaSub").textContent = comidasDe(hoyISO()).length
-    ? "Objetivo del día: " + OBJ.kcal + " kcal y " + OBJ.prot + " g de proteína"
-    : "Sin apuntar nada hoy todavía";
-  $("#mComidaCifras").innerHTML =
-    '<div><b>' + Math.round(t.kcal) + '</b><span>de ' + OBJ.kcal + ' kcal</span></div>' +
-    '<div><b>' + Math.round(t.prot) + '</b><span>de ' + OBJ.prot + ' g prot</span></div>' +
-    (S.pasos[hoyISO()] ? '<div><b>' + S.pasos[hoyISO()] + '</b><span>Pasos</span></div>' : "");
+  /* --- Comida --- */
+  const t = totalDe(f);
+  $("#pComDato").textContent = Math.round(t.kcal) + " / " + OBJ.kcal + " kcal";
+  $("#pComBarras").innerHTML =
+    medidor("Calorías", t.kcal, OBJ.kcal, "kcal") + medidor("Proteína", t.prot, OBJ.prot, "g");
+  const puestos = comidasDe(f).map(c => c.plato).filter(Boolean);
+  $("#pComPlatos").innerHTML = PLATOS.map(p => {
+    const ok = puestos.indexOf(p.id) >= 0;
+    return '<button class="pmini' + (ok ? " ok" : "") + '" data-plato2="' + p.id + '">' +
+      (ok ? "✓ " : "") + p.n + '<b>' + p.kcal + '</b></button>';
+  }).join("");
 
-  const pes = ultimoPeso(), cint = S.cuerpo.filter(x => x.cintura != null)[0];
-  $("#mCuerpoSub").textContent = pes != null
-    ? "Última medición: " + S.cuerpo[0].f
-    : "Sin mediciones. Apunta peso y cintura para tener referencia";
-  $("#mCuerpoCifras").innerHTML = pes != null
-    ? '<div><b>' + pes.toFixed(1) + '</b><span>kg</span></div>' +
-      (cint ? '<div><b>' + cint.cintura + '</b><span>cm cintura</span></div>' : "") +
-      '<div><b>' + S.hist.length + '</b><span>Sesiones</span></div>'
-    : "";
+  /* --- El día --- */
+  $("#vPasos").value = S.pasos[f] || "";
+  const pes = ultimoPeso(), np = S.pasos[f] || 0;
+  $("#vPasosKcal").textContent = np && pes != null ? "≈ " + Math.round(np*pes*0.0004) + " kcal" : "";
+  const ag = S.agua[f] || 0;
+  $("#vAgua").innerHTML = Array.from({length:VASOS}, (_, i) =>
+    '<button class="vaso' + (i < ag ? " lleno" : "") + '" data-vaso="' + (i+1) +
+    '" aria-label="' + (i+1) + ' vasos"></button>').join("");
+  $("#vAguaTxt").textContent = ag ? ag + " / " + VASOS : "";
+  $("#vSueno").value = S.sueno[f] || "";
+  const an = S.animo[f] || 0;
+  $("#vAnimo").innerHTML = CARAS.map(c =>
+    '<button class="cara' + (an === c.v ? " sel" : "") + '" data-animo="' + c.v +
+    '" title="' + c.t + '" aria-label="' + c.t + '">' + c.e + '</button>').join("");
+
+  /* --- Balance --- */
+  const gasto = gastoDe(f);
+  const caja = $("#pBalance");
+  if(gasto && t.kcal > 0){
+    const bal = Math.round(t.kcal - gasto);
+    caja.hidden = false;
+    caja.innerHTML = '<div class="bloqueCab"><h2>Balance de hoy</h2></div>' +
+      '<div class="balanceDia">' +
+      '<div><b>' + gasto + '</b><span>Gastado</span></div>' +
+      '<div><b>' + Math.round(t.kcal) + '</b><span>Comido</span></div>' +
+      '<div class="' + (bal < 0 ? "def" : "sup") + '"><b>' + (bal > 0 ? "+" : "") + bal +
+      '</b><span>' + (bal < 0 ? "Déficit" : "Superávit") + '</span></div></div>';
+  }else{
+    caja.hidden = true;
+  }
 }
+
+/* --- Acciones de la portada --- */
+$("#pEntBtn").addEventListener("click", () => {
+  if(!S.t0 && !S.hist.some(h => h.f === hoyISO())) empezar();
+  irA("hoy");
+});
+$("#pComPlatos").addEventListener("click", e => {
+  const b = e.target.closest("[data-plato2]");
+  if(!b) return;
+  const p = PLATOS.find(x => x.id === b.dataset.plato2);
+  const ya = comidasDe(hoyISO()).findIndex(c => c.plato === p.id);
+  if(ya >= 0){ S.comidas[hoyISO()].splice(ya, 1); }
+  else{
+    if(!S.comidas[hoyISO()]) S.comidas[hoyISO()] = [];
+    S.comidas[hoyISO()].push({n:p.n + " — " + p.d, kcal:p.kcal, prot:p.prot, plato:p.id});
+  }
+  guardar(); pintarInicio(); pintarComida();
+});
+$("#vAgua").addEventListener("click", e => {
+  const b = e.target.closest("[data-vaso]");
+  if(!b) return;
+  const n = Number(b.dataset.vaso);
+  S.agua[hoyISO()] = (S.agua[hoyISO()] === n) ? n-1 : n;
+  if(!S.agua[hoyISO()]) delete S.agua[hoyISO()];
+  guardar(); pintarInicio();
+});
+$("#vAnimo").addEventListener("click", e => {
+  const b = e.target.closest("[data-animo]");
+  if(!b) return;
+  const v = Number(b.dataset.animo);
+  if(S.animo[hoyISO()] === v) delete S.animo[hoyISO()]; else S.animo[hoyISO()] = v;
+  guardar(); pintarInicio();
+});
+["input","change"].forEach(ev => {
+  $("#vPasos").addEventListener(ev, e => {
+    const v = num(e.target.value);
+    if(v == null || v <= 0) delete S.pasos[hoyISO()]; else S.pasos[hoyISO()] = Math.round(v);
+    guardar();
+    const p = ultimoPeso(), n = S.pasos[hoyISO()] || 0;
+    $("#vPasosKcal").textContent = n && p != null ? "≈ " + Math.round(n*p*0.0004) + " kcal" : "";
+    if(ev === "change"){ pintarInicio(); pintarComida(); }
+  });
+  $("#vSueno").addEventListener(ev, e => {
+    const v = num(e.target.value);
+    if(v == null || v <= 0) delete S.sueno[hoyISO()]; else S.sueno[hoyISO()] = v;
+    guardar();
+  });
+});
 
 /* ============ PESTAÑAS Y SELECTORES ============ */
 const PESTANAS = ["inicio","hoy","comida","cuerpo","semana","guia"];
