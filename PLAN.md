@@ -133,6 +133,20 @@ Eso llega con el empaquetado nativo (Capacitor). Hasta entonces: a mano.
 
 ---
 
+# Cosas concretas que hay que arreglar
+
+**El PIN se pide en cada recarga.** Hoy la sesión muere al recargar la página,
+y eso convierte el PIN en un peaje constante en vez de una protección. Debe
+durar un rato —del orden de 15-30 minutos de inactividad— y solo entonces
+volver a pedirlo. Sale de usarlo él: *«al recargar la página se tiene que
+poner el PIN; tendría que ser sesión que perdure ciertos minutos»*
+(6 de agosto de 2026).
+
+Al hacerlo, cuidado con dónde se guarda esa sesión: en memoria se pierde al
+recargar (que es justo el problema), así que hay que guardarla con su hora de
+caducidad y comprobarla al abrir. Y que un cierre de sesión explícito la borre
+de verdad.
+
 # Por dónde empezar
 
 1. **Rediseño visual y de organización** ← lo primero que pidió
