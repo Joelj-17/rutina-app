@@ -1329,7 +1329,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-06 · 7";
+const VERSION = "2026-08-06 · 8";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -3905,8 +3905,13 @@ function irA(t){
      mismo y quitarle sitio a lo que importa. */
   const tit = $("#tituloSec");
   const etiqueta = TITULOS[t] || "";
-  const propio = ($("#p-"+t).querySelector("h1") || {}).textContent || "";
-  const repetido = propio.trim().toLowerCase() === etiqueta.trim().toLowerCase();
+  const pantalla = $("#p-"+t);
+  // "La semana" y "Tu semana" son lo mismo: comparamos sin el artículo ni el
+  // posesivo de delante, que es lo único que cambia.
+  const pelar = x => (x || "").trim().toLowerCase()
+                       .replace(/^(el|la|los|las|tu|tus|mi|mis)\s+/, "");
+  const primeros = [pantalla.querySelector("h1"), pantalla.querySelector("h2.sec")];
+  const repetido = primeros.some(e => e && pelar(e.textContent) === pelar(etiqueta));
   tit.textContent = etiqueta;
   tit.hidden = (t === "inicio" || !etiqueta || repetido);
   ajustarCabecera();
@@ -3918,7 +3923,21 @@ function irA(t){
   if(t === "semana") pintarSemana();
   if(t === "cuerpo"){ pintarPerfil(); pintarCuerpo(); }
   if(t === "ajustes"){ pintarSync(); pintarCopias(); }
-  window.scrollTo({top:0, behavior:"smooth"});
+
+  /* Con la sesión en marcha, entrar en Entrenamiento y aparecer arriba del
+     todo obliga a buscar por dónde ibas entre diecisiete ejercicios. Se va
+     directo al que toca, dejando hueco para el reloj que está pegado. */
+  /* Sin "smooth": hay navegadores donde la animación no ocurre y la página
+     se queda donde estaba, así que cambiar de pestaña no te subía arriba y no
+     había forma de enterarse. Un salto seco siempre funciona. */
+  const activo = (t === "hoy" && S.t0) ? $("#lista .ej.activo") : null;
+  if(activo){
+    const hueco = ($("#cabecera") || {offsetHeight:0}).offsetHeight + 10;
+    const y = activo.getBoundingClientRect().top + window.scrollY - hueco;
+    window.scrollTo(0, Math.max(0, y));
+  }else{
+    window.scrollTo(0, 0);
+  }
 }
 /* Delegado en el documento: los destinos del mapa se dibujan cada vez que se
    pinta la portada, así que engancharlos uno a uno al arrancar no valdría. */
