@@ -440,6 +440,19 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
        font-size:.74rem;font-weight:600;color:var(--acero)}
 .atajo span{display:block;font-size:.95rem;margin-bottom:2px;filter:grayscale(1);opacity:.6}
 
+/* ---- Estado de la sincronización, siempre a la vista ---- */
+#estadoSync{position:sticky;top:0;z-index:35;background:var(--panel);
+            border-bottom:1px solid var(--linea)}
+.esync{display:flex;align-items:center;gap:9px;padding:7px 14px;font-size:.78rem}
+.esync .pip{width:7px;height:7px;border-radius:50%;background:var(--hecho);flex:0 0 7px}
+.esync.pendiente .pip{background:var(--descanso)}
+.esync.malo .pip{background:var(--alerta)}
+.esync .txt{flex:1;color:var(--acero);min-width:0;overflow:hidden;text-overflow:ellipsis;
+            white-space:nowrap}
+.esync button{background:var(--agua);color:#fff;border:none;border-radius:7px;padding:6px 13px;
+              font-size:.76rem;font-weight:700;white-space:nowrap}
+.esync button:disabled{background:transparent;color:var(--acero);font-weight:600}
+
 /* ---- Login ---- */
 #login{position:fixed;inset:0;z-index:200;background:var(--fondo);display:none;
        overflow-y:auto;padding:0 20px}
@@ -511,6 +524,14 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
   </div>
   <div class="barra"><i id="barra" style="width:0%"></i></div>
 </header>
+
+<div id="estadoSync" hidden>
+  <div class="env esync">
+    <span class="pip" id="esPip"></span>
+    <span class="txt" id="esTxt">—</span>
+    <button id="esBtn">Guardar</button>
+  </div>
+</div>
 
 <div class="env" id="barraNav" hidden>
   <nav role="tablist">
@@ -1203,7 +1224,7 @@ let S = {
   t0:null, pausadoEn:null, acumPausa:0, latido:null,
   hechos:{}, pesos:{}, marcas:{}, hist:[],
   comidas:{}, pasos:{}, agua:{}, sueno:{}, animo:{}, syncId:null, syncUlt:null,
-  cofre:null, pinFallos:0,
+  cofre:null, pinFallos:0, cambiadoEn:null,
   perfil:{altura:"", nacim:"", sexo:"", nivel:"", objetivo:""},
   cuerpo:[]
 };
@@ -1261,6 +1282,7 @@ function cargar(){
     S.syncUlt = g.syncUlt || null;
     S.cofre   = g.cofre || null;
     S.pinFallos = g.pinFallos || 0;
+    S.cambiadoEn = g.cambiadoEn || null;
     S.perfil = Object.assign(S.perfil, g.perfil || {});
     S.faseManual = (typeof g.faseManual === "number") ? g.faseManual : null;
     S.diaManual  = (typeof g.diaManual  === "number") ? g.diaManual  : null;
@@ -1294,6 +1316,7 @@ function paquete(){
     perfil:S.perfil, cuerpo:S.cuerpo.slice(0,500),
     comidas:S.comidas, pasos:S.pasos, agua:S.agua, sueno:S.sueno, animo:S.animo,
     syncId:S.syncId, syncUlt:S.syncUlt, cofre:S.cofre, pinFallos:S.pinFallos,
+    cambiadoEn:S.cambiadoEn,
     sesion: S.t0 ? {fecha:hoyISO(), dia:S.dia, t0:S.t0, acumPausa:S.acumPausa,
                     pausadoEn:S.pausadoEn, hechos:S.hechos, marcas:S.marcas,
                     latido:S.latido || Date.now()} : null
@@ -1302,13 +1325,22 @@ function paquete(){
 /* Si el navegador no deja guardar, hay que decirlo: perder datos en silencio
    es el peor fallo posible en una app como esta. */
 let guardadoRoto = false;
+let marcandoCambio = true;   // se apaga cuando el propio sincronizador escribe
 function guardar(){
+  if(marcandoCambio) S.cambiadoEn = new Date().toISOString();
   try{
     localStorage.setItem(LS, JSON.stringify(paquete()));
     if(guardadoRoto){ guardadoRoto = false; pintarAvisoAlmacen(); }
   }catch(e){
     if(!guardadoRoto){ guardadoRoto = true; pintarAvisoAlmacen(e && e.name); }
   }
+  if(typeof pintarEstadoSync === "function") pintarEstadoSync();
+  if(typeof syncAuto === "function") syncAuto();
+}
+/* Guardado interno del sincronizador: no cuenta como cambio del usuario. */
+function guardarSinMarcar(){
+  marcandoCambio = false;
+  try{ guardar(); } finally{ marcandoCambio = true; }
 }
 function pintarAvisoAlmacen(motivo){
   let b = document.getElementById("avisoAlmacen");
@@ -2310,21 +2342,76 @@ function syncAviso(t, tipo){
   p.hidden = false;
 }
 
-async function subirDatos(silencioso){
+/* Un retrato de los datos, para poder comparar dos versiones y contarle al
+   usuario qué ha cambiado en la otra sesión antes de pisar nada. */
+function retrato(g){
+  const dias = o => Object.keys(o || {}).length;
+  return {
+    sesiones: (g.hist || []).length,
+    mediciones: (g.cuerpo || []).length,
+    comida: Object.keys(g.comidas || {}).filter(f => (g.comidas[f] || []).length).length,
+    pasos: dias(g.pasos), agua: dias(g.agua), sueno: dias(g.sueno), animo: dias(g.animo),
+    pesos: dias(g.pesos),
+    altura: (g.perfil || {}).altura || ""
+  };
+}
+const ETIQUETAS = {sesiones:"sesiones", mediciones:"mediciones", comida:"días de comida",
+                   pasos:"días con pasos", agua:"días con agua", sueno:"días con sueño",
+                   animo:"días con ánimo", pesos:"pesos de ejercicios"};
+function diferencias(nube, aqui){
+  const l = [];
+  Object.keys(ETIQUETAS).forEach(k => {
+    if(nube[k] !== aqui[k]) l.push("  " + ETIQUETAS[k] + ": la nube " + nube[k] + " · aquí " + aqui[k]);
+  });
+  if(nube.altura !== aqui.altura) l.push("  altura: la nube " + (nube.altura||"—") + " · aquí " + (aqui.altura||"—"));
+  return l;
+}
+function paraSubir(){
+  const p = paquete();
+  delete p.cofre; delete p.pinFallos; delete p.syncId; delete p.syncUlt; delete p.cambiadoEn;
+  return p;
+}
+
+/* Sube, pero antes mira si otra sesión ha tocado la nube desde la última vez
+   que sincronizamos. Si es así, enseña exactamente qué difiere y pregunta. */
+async function subirDatos(silencioso, saltarAviso){
   if(!syncFrase || syncOcupado) return false;
   syncOcupado = true;
   try{
-    const p = paquete();
-    delete p.cofre; delete p.pinFallos; delete p.syncId; delete p.syncUlt;
-    const bloque = await cifrar(p);
-    const r = await fetch(API_SYNC + "?id=" + await idDe(syncFrase),
+    const id = await idDe(syncFrase);
+
+    if(!saltarAviso && S.syncUlt){
+      try{
+        const previo = await fetch(API_SYNC + "?id=" + id);
+        if(previo.ok){
+          const b = await previo.json();
+          if(b.ts && b.ts > S.syncUlt){
+            const otro = await descifrar(b);
+            const dif = diferencias(retrato(otro), retrato(paraSubir()));
+            const cuando = new Date(b.ts).toLocaleString("es-ES");
+            const msg = "OTRA SESIÓN HA GUARDADO DESPUÉS QUE TÚ\n\n" +
+              "Guardó el " + cuando + ".\n\n" +
+              (dif.length ? "Diferencias:\n" + dif.join("\n") + "\n\n"
+                          : "No he encontrado diferencias en el recuento.\n\n") +
+              "Si sigues, lo tuyo sustituye a lo de la nube.\n\n¿Subir de todas formas?";
+            if(!confirm(msg)){
+              syncAviso("No se ha subido. Usa «Traer de la nube» si quieres lo otro.", "info");
+              return false;
+            }
+          }
+        }
+      }catch(e){ /* si no se puede comprobar, seguimos: mejor guardar que perder */ }
+    }
+
+    const bloque = await cifrar(paraSubir());
+    const r = await fetch(API_SYNC + "?id=" + id,
       {method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(bloque)});
     if(!r.ok) throw new Error("HTTP " + r.status);
     const j = await r.json();
-    S.syncUlt = j.ts;
-    guardar();
-    if(!silencioso) syncAviso("Subido y cifrado. " + new Date(j.ts).toLocaleTimeString("es-ES"));
-    pintarSync();
+    S.syncUlt = j.ts; S.cambiadoEn = null;
+    guardarSinMarcar();
+    if(!silencioso) syncAviso("Guardado en la nube · " + new Date(j.ts).toLocaleTimeString("es-ES"));
+    pintarSync(); pintarEstadoSync();
     return true;
   }catch(e){
     if(!silencioso) syncAviso("No se ha podido subir: " + e.message, "mal");
@@ -2454,10 +2541,65 @@ $("#syncActivar").addEventListener("click", async () => {
 /* Sube sola al terminar algo importante, sin molestar si falla. */
 let syncPendiente = null;
 function syncAuto(){
-  if(!syncFrase) return;
+  if(!syncFrase || !S.cambiadoEn || syncOcupado) return;
   clearTimeout(syncPendiente);
-  syncPendiente = setTimeout(() => subirDatos(true), 4000);
+  syncPendiente = setTimeout(() => subirDatos(true, true), 3000);
 }
+
+/* ---- La barra de estado: qué está guardado y un botón para forzarlo ---- */
+function haceCuanto(iso){
+  if(!iso) return "";
+  const s = Math.round((Date.now() - new Date(iso)) / 1000);
+  if(s < 60)    return "hace un momento";
+  if(s < 3600)  return "hace " + Math.round(s/60) + " min";
+  if(s < 86400) return "hace " + Math.round(s/3600) + " h";
+  return "el " + new Date(iso).toLocaleDateString("es-ES");
+}
+function pintarEstadoSync(textoFijo){
+  const caja = $("#estadoSync"), fila = caja.querySelector(".esync");
+  if(!syncFrase){ caja.hidden = true; return; }
+  caja.hidden = false;
+  const btn = $("#esBtn");
+  if(textoFijo){
+    fila.className = "env esync"; $("#esTxt").textContent = textoFijo;
+    btn.disabled = true; btn.textContent = "…"; return;
+  }
+  if(syncOcupado){
+    fila.className = "env esync pendiente"; $("#esTxt").textContent = "Guardando…";
+    btn.disabled = true; btn.textContent = "…"; return;
+  }
+  if(S.cambiadoEn){
+    fila.className = "env esync pendiente";
+    $("#esTxt").textContent = "Cambios sin guardar en la nube";
+    btn.disabled = false; btn.textContent = "Guardar ahora";
+  }else{
+    fila.className = "env esync";
+    $("#esTxt").textContent = S.syncUlt ? "Todo guardado · " + haceCuanto(S.syncUlt) : "Todo guardado";
+    btn.disabled = false; btn.textContent = "Actualizar";
+  }
+}
+$("#esBtn").addEventListener("click", async () => {
+  if(S.cambiadoEn) await subirDatos(false);
+  else await alEntrar();
+});
+setInterval(() => { if(syncFrase && !syncOcupado) pintarEstadoSync(); }, 30000);
+
+/* Antes de cerrar o de irse a otra app, guarda lo que quede pendiente.
+   keepalive permite que la petición sobreviva al cierre de la pestaña.     */
+async function guardarAlSalir(){
+  if(!syncFrase || !S.cambiadoEn) return;
+  try{
+    const bloque = await cifrar(paraSubir());
+    await fetch(API_SYNC + "?id=" + await idDe(syncFrase), {
+      method:"PUT", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(bloque), keepalive:true
+    });
+    S.syncUlt = new Date().toISOString(); S.cambiadoEn = null;
+    guardarSinMarcar();
+  }catch(e){ /* si no llega, queda pendiente para la próxima vez */ }
+}
+window.addEventListener("pagehide", guardarAlSalir);
+document.addEventListener("visibilitychange", () => { if(document.hidden) guardarAlSalir(); });
 
 /* ============ LOGIN ============ */
 let pinActual = "";
@@ -2508,33 +2650,69 @@ async function probarPin(){
 }
 
 /* Al entrar, mira si hay algo más nuevo en la nube sin dar la lata. */
-async function bajarSilencioso(){
+function aplicarDatos(g, ts){
+  S.pesos = g.pesos || {};
+  S.hist = Array.isArray(g.hist) ? g.hist : [];
+  S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
+  ["comidas","pasos","agua","sueno","animo"].forEach(k => {
+    S[k] = (g[k] && typeof g[k] === "object") ? g[k] : {};
+  });
+  S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
+  if(typeof g.fase === "number") S.fase = g.fase;
+  if(g.inicio) S.inicio = g.inicio;
+  S.syncUlt = ts || null;
+  S.cambiadoEn = null;
+  guardarSinMarcar();
+  pintarHoy(); pintarPerfil(); pintarCuerpo(); pintarSemana();
+  pintarComida(); pintarDiario(); pintarInicio(); pintarEstadoSync();
+}
+
+/* Al entrar en cualquier dispositivo: carga sola la última copia guardada.
+   Solo pregunta si aquí hay cambios sin subir, que es el único caso en que
+   traerla podría perder algo.                                              */
+async function alEntrar(){
   if(!syncFrase) return;
+  pintarEstadoSync("Comprobando la nube…");
   try{
     const r = await fetch(API_SYNC + "?id=" + await idDe(syncFrase));
-    if(!r.ok) return;
+    if(r.status === 404){
+      await subirDatos(true, true);
+      pintarEstadoSync(); return;
+    }
+    if(!r.ok) throw new Error("HTTP " + r.status);
     const bloque = await r.json();
-    if(S.syncUlt && bloque.ts && bloque.ts <= S.syncUlt) return;   // no hay nada nuevo
+
+    if(S.syncUlt && bloque.ts && bloque.ts <= S.syncUlt){
+      // La nube no ha cambiado. Si aquí hay algo sin subir, se sube.
+      if(S.cambiadoEn) await subirDatos(true, true);
+      pintarEstadoSync(); return;
+    }
+
     const g = await descifrar(bloque);
-    const nS = Array.isArray(g.hist) ? g.hist.length : 0;
-    if(nS < S.hist.length) return;   // lo de aquí es más completo: no lo pisamos solos
-    if(nS === S.hist.length && !S.syncUlt) return;
-    if(!confirm("Hay datos más recientes en la nube (" + nS + " sesiones).\n\n¿Traerlos?")) return;
-    S.pesos = g.pesos || {};
-    S.hist = Array.isArray(g.hist) ? g.hist : [];
-    S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
-    ["comidas","pasos","agua","sueno","animo"].forEach(k => {
-      S[k] = (g[k] && typeof g[k] === "object") ? g[k] : {};
-    });
-    S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
-    if(typeof g.fase === "number") S.fase = g.fase;
-    if(g.inicio) S.inicio = g.inicio;
-    S.syncUlt = bloque.ts;
-    guardar();
-    pintarHoy(); pintarPerfil(); pintarCuerpo(); pintarSemana();
-    pintarComida(); pintarDiario(); pintarInicio();
-  }catch(e){ /* sin conexión: se sigue trabajando en local */ }
+    if(!S.cambiadoEn){
+      aplicarDatos(g, bloque.ts);
+      syncAviso("Cargada la última versión guardada · " +
+                new Date(bloque.ts).toLocaleString("es-ES"));
+      pintarEstadoSync();
+      return;
+    }
+    // Los dos lados han cambiado: se enseña la diferencia y decide él.
+    const dif = diferencias(retrato(g), retrato(paraSubir()));
+    const msg = "HAY UNA VERSIÓN MÁS NUEVA EN LA NUBE\n\n" +
+      "Guardada el " + new Date(bloque.ts).toLocaleString("es-ES") + " desde otro dispositivo.\n" +
+      "Aquí tienes cambios sin subir desde el " +
+      new Date(S.cambiadoEn).toLocaleString("es-ES") + ".\n\n" +
+      (dif.length ? "Diferencias:\n" + dif.join("\n") + "\n\n" : "") +
+      "ACEPTAR = quedarte con la de la nube (pierdes lo de aquí)\n" +
+      "CANCELAR = quedarte con lo de aquí (lo subirás al guardar)";
+    if(confirm(msg)){ aplicarDatos(g, bloque.ts); syncAviso("Cargada la versión de la nube."); }
+    else syncAviso("Te quedas con lo de este dispositivo.", "info");
+    pintarEstadoSync();
+  }catch(e){
+    pintarEstadoSync();
+  }
 }
+const bajarSilencioso = alEntrar;
 
 async function entrarConFrase(){
   const f = $("#loginFrase").value.trim().replace(/\s+/g, " ");
@@ -2548,7 +2726,7 @@ async function entrarConFrase(){
     $("#loginFrase").value = "";
     loginVisible(false);
     pintarSync();
-    await bajarDatos();
+    await alEntrar();
     if(confirm("¿Quieres guardar la frase en este dispositivo con un PIN?\n\n" +
                "Así entras con 4 números en vez de escribirla entera cada vez."))
       pedirPinNuevo();
@@ -3335,6 +3513,7 @@ pintarDiario();
 pintarInicio();
 pintarSync();
 pintarLogin();
+pintarEstadoSync();
 if(S.cofre || S.syncId){ loginVisible(true); }
 /* Si hay una sesión a medias, entra directo al entrenamiento. */
 irA(S.t0 ? "hoy" : "inicio");
