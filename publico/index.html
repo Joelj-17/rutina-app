@@ -412,7 +412,8 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
       font-size:.92rem;line-height:1;padding:0;filter:grayscale(1);opacity:.4}
 .cara.sel{filter:none;opacity:1;border-color:var(--acero)}
 
-.balanceDia{display:flex;gap:14px;justify-content:space-between;text-align:center}
+.balanceDia{display:flex;gap:14px;justify-content:space-between;text-align:center;
+            padding:12px 0 4px;margin-top:4px;border-top:1px solid var(--linea-2)}
 .balanceDia div{flex:1}
 .balanceDia b{display:block;font-family:var(--mono);font-size:1.05rem;font-variant-numeric:tabular-nums;
               color:var(--tinta-2);font-weight:600}
@@ -634,10 +635,12 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
   <!-- Anoche: se pregunta una vez y se resuelve -->
   <div class="bloque anoche" id="pAnoche"></div>
 
-  <!-- Comida -->
+  <!-- Comida y balance juntos: el balance HABLA de la comida. Tenerlos en dos
+       tarjetas separadas obligaba a cruzar números con la vista. -->
   <div class="bloque">
     <div class="bloqueCab"><h2>Comida de hoy</h2><span class="dato" id="pComDato"></span></div>
     <div id="pComBarras"></div>
+    <div id="pBalance" hidden></div>
     <div class="platosMini" id="pComPlatos"></div>
     <button class="accionGrande suave" data-ir="comida">+ Añadir otra cosa</button>
   </div>
@@ -662,9 +665,6 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
       </div>
     </div>
   </div>
-
-  <!-- Balance -->
-  <div class="bloque" id="pBalance" hidden></div>
 
   <!-- Lo de consulta y lo de configurar: no hace falta en el menú de abajo,
        pero sí tiene que verse que existe. -->
@@ -1329,7 +1329,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-06 · 5";
+const VERSION = "2026-08-06 · 6";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -3826,8 +3826,9 @@ function pintarInicio(){
   if(gasto && t.kcal > 0){
     const bal = Math.round(t.kcal - gasto);
     caja.hidden = false;
-    caja.innerHTML = '<div class="bloqueCab"><h2>Balance de hoy</h2></div>' +
-      '<div class="balanceDia">' +
+    // Va dentro de la tarjeta de comida, así que no repite cabecera: se lee
+    // como la conclusión de los números de arriba, que es lo que es.
+    caja.innerHTML = '<div class="balanceDia">' +
       '<div><b>' + gasto + '</b><span>Gastado</span></div>' +
       '<div><b>' + Math.round(t.kcal) + '</b><span>Comido</span></div>' +
       '<div class="' + (bal < 0 ? "def" : "sup") + '"><b>' + (bal > 0 ? "+" : "") + bal +
