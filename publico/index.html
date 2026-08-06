@@ -672,6 +672,29 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
   <h2 class="sec">Todas tus mediciones</h2>
   <div class="hist" id="listaCuerpo"></div>
 
+  <h2 class="sec">Sincronizar entre dispositivos</h2>
+  <div class="tarj" id="tarjSync"></div>
+  <div class="tarj" id="formSync" hidden>
+    <p style="font-size:.86rem;margin:0 0 12px">
+      Escribe tu frase de acceso. Con ella se cifran tus datos <strong>en este dispositivo</strong>
+      antes de subirlos: el servidor solo guarda un bloque ilegible.</p>
+    <div class="campo">
+      <label for="syncFrase">Frase de acceso</label>
+      <textarea id="syncFrase" rows="2" autocomplete="off" spellcheck="false"
+        placeholder="liga-botella-motor-cresta-harina-…"
+        style="font-family:var(--mono);font-size:.82rem"></textarea>
+    </div>
+    <div class="acciones" style="margin-top:11px">
+      <button class="bt p" id="syncActivar">Activar</button>
+      <button class="bt" id="syncCancelar">Cancelar</button>
+    </div>
+    <div class="nota rojo" style="margin:12px 0 0">
+      <p><strong>Si pierdes la frase, los datos no se recuperan.</strong> Ni yo, ni Netlify,
+      ni nadie: esa es exactamente la propiedad que la hace segura. Apúntala en papel antes de seguir.</p>
+    </div>
+  </div>
+  <p id="syncMsg" style="font-size:.85rem;font-weight:600;margin-top:10px" hidden></p>
+
   <h2 class="sec">Tus datos</h2>
   <p id="estadoDatos" style="font-size:.87rem;margin-top:0">—</p>
   <div class="acciones">
@@ -1125,7 +1148,7 @@ let S = {
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
   t0:null, pausadoEn:null, acumPausa:0, latido:null,
   hechos:{}, pesos:{}, marcas:{}, hist:[],
-  comidas:{}, pasos:{}, agua:{}, sueno:{}, animo:{},
+  comidas:{}, pasos:{}, agua:{}, sueno:{}, animo:{}, syncId:null, syncUlt:null,
   perfil:{altura:"", nacim:"", sexo:"", nivel:"", objetivo:""},
   cuerpo:[]
 };
@@ -1179,6 +1202,8 @@ function cargar(){
     S.agua    = (g.agua    && typeof g.agua    === "object") ? g.agua    : {};
     S.sueno   = (g.sueno   && typeof g.sueno   === "object") ? g.sueno   : {};
     S.animo   = (g.animo   && typeof g.animo   === "object") ? g.animo   : {};
+    S.syncId  = g.syncId || null;
+    S.syncUlt = g.syncUlt || null;
     S.perfil = Object.assign(S.perfil, g.perfil || {});
     S.faseManual = (typeof g.faseManual === "number") ? g.faseManual : null;
     S.diaManual  = (typeof g.diaManual  === "number") ? g.diaManual  : null;
@@ -1211,6 +1236,7 @@ function paquete(){
     pesos:S.pesos, hist:S.hist.slice(0,200),
     perfil:S.perfil, cuerpo:S.cuerpo.slice(0,500),
     comidas:S.comidas, pasos:S.pasos, agua:S.agua, sueno:S.sueno, animo:S.animo,
+    syncId:S.syncId, syncUlt:S.syncUlt,
     sesion: S.t0 ? {fecha:hoyISO(), dia:S.dia, t0:S.t0, acumPausa:S.acumPausa,
                     pausadoEn:S.pausadoEn, hechos:S.hechos, marcas:S.marcas,
                     latido:S.latido || Date.now()} : null
@@ -1736,7 +1762,7 @@ function marcarSerie(id){
                       pesos:usados, marcas:JSON.parse(JSON.stringify(S.marcas)),
                       orden:listaEj().slice(), detalle:detalle,
                       saltados:Object.keys(S.hechos).filter(k => S.hechos[k].saltado)});
-      guardar();
+      guardar(); syncAuto();
     }
   }
   pintarHoy();
@@ -2127,6 +2153,217 @@ function aviso(t, malo){
   p.hidden = false;
   clearTimeout(aviso._t);
   aviso._t = setTimeout(() => { p.hidden = true; }, 4000);
+}
+
+/* ============ SINCRONIZACIÓN CIFRADA ============
+   Todo el cifrado ocurre aquí, en tu navegador. Al servidor solo viaja un
+   bloque de bytes ilegibles y un identificador opaco.
+
+     identificador = SHA-256("rutina-id:" + frase)      → dónde se guarda
+     llave         = PBKDF2(frase, sal aleatoria, 600k) → con qué se cifra
+     cifrado       = AES-256-GCM con vector aleatorio
+
+   La sal y el vector viajan junto al bloque (no son secretos). La frase
+   nunca sale del dispositivo, ni se guarda en ningún sitio salvo aquí.     */
+
+const API_SYNC = "/api/sync";
+const ITERACIONES = 600000;
+let syncFrase = null;      // solo en memoria mientras la pestaña está abierta
+let syncLlave = null;      // llave ya derivada: el PBKDF2 se hace UNA vez
+let syncOcupado = false;
+
+const b64 = {
+  de: buf => btoa(String.fromCharCode(...new Uint8Array(buf))),
+  a:  s   => Uint8Array.from(atob(s), c => c.charCodeAt(0))
+};
+const bytes = t => new TextEncoder().encode(t);
+
+async function sha256hex(t){
+  const h = await crypto.subtle.digest("SHA-256", bytes(t));
+  return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+async function idDe(frase){ return sha256hex("rutina-id:" + frase); }
+
+/* La sal se deriva de la frase, así que es la misma en todos tus dispositivos.
+   Eso permite derivar la llave UNA sola vez por sesión en vez de en cada
+   subida: con 600.000 iteraciones, repetirlo cada vez congelaría el móvil.
+   Lo que sí cambia en cada cifrado es el vector de inicialización, que es
+   lo que de verdad importa para no repetir nunca el mismo cifrado.          */
+async function salDe(frase){
+  const h = await crypto.subtle.digest("SHA-256", bytes("rutina-sal:" + frase));
+  return new Uint8Array(h).slice(0, 16);
+}
+async function abrirLlave(frase){
+  const sal  = await salDe(frase);
+  const base = await crypto.subtle.importKey("raw", bytes(frase), "PBKDF2", false, ["deriveKey"]);
+  const k = await crypto.subtle.deriveKey(
+    {name:"PBKDF2", salt:sal, iterations:ITERACIONES, hash:"SHA-256"},
+    base, {name:"AES-GCM", length:256}, false, ["encrypt","decrypt"]);
+  return {llave:k, sal:sal};
+}
+async function cifrar(objeto){
+  if(!syncLlave) throw new Error("sin llave");
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({name:"AES-GCM", iv}, syncLlave.llave,
+                                         bytes(JSON.stringify(objeto)));
+  return {v:1, salt:b64.de(syncLlave.sal), iv:b64.de(iv), ct:b64.de(ct)};
+}
+async function descifrar(bloque){
+  if(!syncLlave) throw new Error("sin llave");
+  const pt = await crypto.subtle.decrypt({name:"AES-GCM", iv:b64.a(bloque.iv)},
+                                         syncLlave.llave, b64.a(bloque.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+function syncAviso(t, tipo){
+  const p = $("#syncMsg");
+  p.textContent = t;
+  p.style.color = tipo === "mal" ? "var(--alerta)" : tipo === "info" ? "var(--acero)" : "var(--hecho)";
+  p.hidden = false;
+}
+
+async function subirDatos(silencioso){
+  if(!syncFrase || syncOcupado) return false;
+  syncOcupado = true;
+  try{
+    const bloque = await cifrar(paquete());
+    const r = await fetch(API_SYNC + "?id=" + await idDe(syncFrase),
+      {method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(bloque)});
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    S.syncUlt = j.ts;
+    guardar();
+    if(!silencioso) syncAviso("Subido y cifrado. " + new Date(j.ts).toLocaleTimeString("es-ES"));
+    pintarSync();
+    return true;
+  }catch(e){
+    if(!silencioso) syncAviso("No se ha podido subir: " + e.message, "mal");
+    return false;
+  }finally{ syncOcupado = false; }
+}
+
+async function bajarDatos(){
+  if(!syncFrase) return false;
+  syncAviso("Descargando…", "info");
+  try{
+    const r = await fetch(API_SYNC + "?id=" + await idDe(syncFrase));
+    if(r.status === 404){ syncAviso("Todavía no hay nada guardado en la nube con esa frase.", "info"); return false; }
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    const bloque = await r.json();
+    let g;
+    try{ g = await descifrar(bloque); }
+    catch(e){ syncAviso("La frase no descifra estos datos. ¿La has escrito bien?", "mal"); return false; }
+
+    const nS = Array.isArray(g.hist) ? g.hist.length : 0;
+    const nM = Array.isArray(g.cuerpo) ? g.cuerpo.length : 0;
+    if(!confirm("En la nube hay:\n\n  " + nS + " sesiones\n  " + nM + " mediciones\n\n" +
+                "AQUÍ TIENES: " + S.hist.length + " sesiones y " + S.cuerpo.length + " mediciones.\n\n" +
+                "¿Sustituir lo de este dispositivo por lo de la nube?")){
+      syncAviso("Cancelado. No se ha tocado nada."); return false;
+    }
+    S.pesos  = g.pesos  || {};
+    S.hist   = Array.isArray(g.hist)   ? g.hist   : [];
+    S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
+    ["comidas","pasos","agua","sueno","animo"].forEach(k => {
+      S[k] = (g[k] && typeof g[k] === "object") ? g[k] : {};
+    });
+    S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
+    if(typeof g.fase === "number") S.fase = g.fase;
+    if(g.inicio) S.inicio = g.inicio;
+    S.syncUlt = bloque.ts;
+    guardar();
+    pintarHoy(); pintarPerfil(); pintarCuerpo(); pintarSemana(); pintarComida(); pintarDiario(); pintarInicio();
+    syncAviso("Descargado: " + nS + " sesiones y " + nM + " mediciones.");
+    return true;
+  }catch(e){
+    syncAviso("No se ha podido descargar: " + e.message, "mal");
+    return false;
+  }
+}
+
+function pintarSync(){
+  const c = $("#tarjSync");
+  if(!c) return;
+  if(!S.syncId){
+    c.innerHTML = '<div class="fichaCab"><h3>Sin sincronizar</h3>' +
+      '<button class="bt p" id="syncEmpezar">Activar</button></div>' +
+      '<p style="font-size:.87rem;color:var(--acero);margin:0">Tus datos viven solo en este ' +
+      'dispositivo. Activándola podrás entrenar en el móvil y verlo en el ordenador, con los ' +
+      'datos cifrados con tu frase antes de salir de aquí.</p>';
+    $("#syncEmpezar").addEventListener("click", () => {
+      $("#formSync").hidden = false; $("#syncFrase").value = ""; $("#syncFrase").focus();
+    });
+    return;
+  }
+  const abierta = !!syncFrase;
+  c.innerHTML = '<div class="fichaCab"><h3>' +
+    (abierta ? "Sincronización activa" : "Sincronización configurada") + '</h3>' +
+    '<button class="bt" id="syncSalir">Desconectar</button></div>' +
+    '<p style="font-size:.85rem;color:var(--acero);margin:0 0 12px">' +
+    (abierta
+      ? "Cifrada con tu frase. El servidor solo guarda un bloque ilegible."
+      : "Escribe tu frase para volver a conectar en este dispositivo.") +
+    (S.syncUlt ? "<br>Última subida: " + new Date(S.syncUlt).toLocaleString("es-ES") : "") + '</p>' +
+    '<div class="acciones">' +
+    (abierta
+      ? '<button class="bt p" id="syncSubir">Subir ahora</button>' +
+        '<button class="bt" id="syncBajar">Traer de la nube</button>'
+      : '<button class="bt p" id="syncAbrir">Escribir la frase</button>') +
+    '</div>';
+  if(abierta){
+    $("#syncSubir").addEventListener("click", () => subirDatos(false));
+    $("#syncBajar").addEventListener("click", bajarDatos);
+  }else{
+    $("#syncAbrir").addEventListener("click", () => {
+      $("#formSync").hidden = false; $("#syncFrase").value = ""; $("#syncFrase").focus();
+    });
+  }
+  $("#syncSalir").addEventListener("click", () => {
+    if(!confirm("Se olvida la frase en este dispositivo. Tus datos locales se quedan como están " +
+                "y lo de la nube tampoco se borra.\n\n¿Desconectar?")) return;
+    syncFrase = null; syncLlave = null; S.syncId = null; guardar(); pintarSync();
+    syncAviso("Desconectado de este dispositivo.");
+  });
+}
+
+$("#syncCancelar").addEventListener("click", () => {
+  $("#formSync").hidden = true; $("#syncFrase").value = "";
+});
+$("#syncActivar").addEventListener("click", async () => {
+  const f = $("#syncFrase").value.trim().replace(/\s+/g, " ");
+  if(f.length < 20){
+    syncAviso("Esa frase es demasiado corta. Usa la del generador.", "mal"); return;
+  }
+  syncAviso("Derivando la llave… (tarda un par de segundos, es a propósito)", "info");
+  try{
+    const id = await idDe(f);
+    syncLlave = await abrirLlave(f);
+    syncFrase = f;
+    S.syncId = id;
+    $("#formSync").hidden = true; $("#syncFrase").value = "";
+    guardar();
+    // Si ya hay algo en la nube con esta frase, se ofrece traerlo; si no, se sube esto.
+    const r = await fetch(API_SYNC + "?id=" + id);
+    if(r.status === 404){
+      await subirDatos(false);
+      syncAviso("Activada. Tus datos ya están cifrados en la nube.");
+    }else{
+      pintarSync();
+      await bajarDatos();
+    }
+    pintarSync();
+  }catch(e){
+    syncFrase = null; syncLlave = null; S.syncId = null;
+    syncAviso("No se ha podido activar: " + e.message, "mal");
+  }
+});
+
+/* Sube sola al terminar algo importante, sin molestar si falla. */
+let syncPendiente = null;
+function syncAuto(){
+  if(!syncFrase) return;
+  clearTimeout(syncPendiente);
+  syncPendiente = setTimeout(() => subirDatos(true), 4000);
 }
 
 /* ---- Copiar / exportar / importar / borrar ---- */
@@ -2769,7 +3006,7 @@ function irA(t){
   if(t === "comida") pintarComida();
   if(t === "diario") pintarDiario();
   if(t === "semana") pintarSemana();
-  if(t === "cuerpo"){ pintarPerfil(); pintarCuerpo(); }
+  if(t === "cuerpo"){ pintarPerfil(); pintarCuerpo(); pintarSync(); }
   window.scrollTo({top:0, behavior:"smooth"});
 }
 document.querySelectorAll('[data-ir]').forEach(b =>
@@ -2847,6 +3084,7 @@ pintarSemana();
 pintarComida();
 pintarDiario();
 pintarInicio();
+pintarSync();
 /* Si hay una sesión a medias, entra directo al entrenamiento. */
 irA(S.t0 ? "hoy" : "inicio");
 </script>
