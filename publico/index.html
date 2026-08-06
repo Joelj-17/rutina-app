@@ -1249,7 +1249,37 @@ const POSES = {
   cal     :{cab:[46,16],cue:[46,27],cad:[46,55],rod:[38,73],pie:[36,90],pun:[29,90],
             rod2:[54,73],pie2:[56,90],pun2:[63,90],cod:[33,34],man:[29,19]},
   estir   :{cab:[50,16],cue:[50,27],cad:[52,55],rod:[50,73],pie:[48,90],pun:[57,90],
-            cod:[30,27],man:[22,14]}
+            cod:[30,27],man:[22,14]},
+
+  /* ---- Los cinco del calentamiento, uno por movimiento ----
+     Antes había un solo monigote genérico para cinco cosas distintas, que es
+     como no dibujar nada. */
+
+  // Rotaciones de hombro: codos pegados al cuerpo, antebrazos arriba.
+  cal_hombro:{cab:[46,16],cue:[46,27],cad:[46,55],rod:[40,73],pie:[38,90],pun:[31,90],
+              rod2:[52,73],pie2:[54,90],pun2:[61,90],
+              cod:[34,40],man:[34,25],cod2:[58,40],man2:[58,25]},
+
+  // Sentadilla sin peso: abajo, dos piernas a la vista y los brazos al frente.
+  // Con una sola pierna parecia que se sentaba en algo.
+  cal_sent:{cab:[44,26],cue:[45,35],cad:[36,58],rod:[57,68],pie:[49,90],pun:[58,90],
+            rod2:[51,70],pie2:[41,90],pun2:[50,90],
+            cod:[57,39],man:[71,38]},
+
+  // Jumping jack: piernas abiertas y brazos arriba en uve.
+  cal_jack:{cab:[46,14],cue:[46,25],cad:[46,52],rod:[32,72],pie:[26,90],pun:[19,90],
+            rod2:[60,72],pie2:[66,90],pun2:[73,90],
+            cod:[30,32],man:[18,15],cod2:[62,32],man2:[74,15]},
+
+  /* ---- Los dos estiramientos ---- */
+
+  // Pectoral: de lado al marco, el brazo atrás apoyado en él.
+  estir_pec:{cab:[56,16],cue:[55,27],cad:[52,55],rod:[51,73],pie:[49,90],pun:[58,90],
+             cod:[38,32],man:[19,20]},
+
+  // Dorsal: brazo arriba y cruzado, el tronco se inclina al lado contrario.
+  estir_dor:{cab:[54,16],cue:[52,27],cad:[46,55],rod:[45,73],pie:[44,90],pun:[53,90],
+             cod:[62,22],man:[76,13]}
 };
 
 function figura(p, ancho){
@@ -1287,7 +1317,10 @@ const APOYO = {
 };
 
 const ESQUEMAS = {
-  cal      :{a:"cal",      apoyo:"suelo",  arco:true},
+  cal      :{p:["cal","cal_hombro","cal_sent","zanc_b","cal_jack"],
+             lista:true, apoyo:"suelo", arco:true,
+             nombres:["Círculos de brazos","Rotaciones de hombro","Sentadillas",
+                      "Zancadas","Jumping jacks"]},
   dominada :{p:["dom_a","dom_m","dom_b"], apoyo:"barra"},
   remo     :{a:"remo_a", b:"remo_b", apoyo:"silla"},
   pajaro   :{a:"paj_a", b:"paj_b", apoyo:"suelo3"},
@@ -1305,33 +1338,55 @@ const ESQUEMAS = {
   planchaL :{p:["planchaL","-planchaL"], apoyo:"suelo3", reloj:true},
   bicho    :{p:["bicho_a","bicho_b"], apoyo:"suelo2"},
   paseo    :{a:"paseo",    apoyo:"suelo",  reloj:true},
-  estir    :{a:"estir",    apoyo:"puerta", reloj:true}
+  estir    :{p:["estir_pec","estir_dor"], lista:true, reloj:true,
+             apoyos:["puerta","suelo"],
+             nombres:["Pectoral en el marco","Dorsal, brazo arriba"]}
 };
 
-/* Dibuja una viñeta por paso: los movimientos con fase intermedia llevan tres. */
+/* Dibuja una viñeta por paso. Hay dos usos y conviene no confundirlos:
+
+   - PASOS de un mismo movimiento (lo normal): flecha entre viñetas, porque
+     una lleva a la siguiente.
+   - LISTA de movimientos distintos ({lista:true}), como el calentamiento o
+     los estiramientos: sin flechas —no se transforma uno en otro— y con el
+     nombre debajo de cada dibujo, que si no, no hay forma de saber cuál es.
+
+   El apoyo puede ir por viñeta ({apoyos:[…]}): en los estiramientos solo el
+   de pecho necesita el marco de la puerta. */
 function esquema(id){
   const e = ESQUEMAS[id];
   if(!e) return "";
   const pasos = e.p || (e.b ? [e.a, e.b] : [e.a]);
   const n = pasos.length, PITCH = 110;
   const W = n > 1 ? (n - 1) * PITCH + 100 : 110;
-  const anchoCaja = n >= 4 ? 600 : n === 3 ? 470 : n === 2 ? 340 : 200;
+  const lista = !!e.lista, nombres = e.nombres || [];
+  const H = lista ? 116 : 100;
+  const anchoCaja = n >= 5 ? 640 : n === 4 ? 600 : n === 3 ? 470 : n === 2 ? 340 : 200;
 
-  let s = '<svg class="esq" style="max-width:' + anchoCaja + 'px" viewBox="0 0 ' + W + ' 100" ' +
-          'role="img" aria-label="Esquema de cómo se hace el ejercicio, paso a paso">';
-  const ap = APOYO[e.apoyo];
+  let s = '<svg class="esq" style="max-width:' + anchoCaja + 'px" viewBox="0 0 ' + W + ' ' + H + '" ' +
+          'role="img" aria-label="' + (lista ? "Los movimientos del bloque, uno por dibujo"
+                                             : "Esquema de cómo se hace el ejercicio, paso a paso") + '">';
   pasos.forEach((nom, i) => {
     const x = i * PITCH;
+    const ap = APOYO[(e.apoyos && e.apoyos[i]) || e.apoyo];
     if(ap) s += ap(x);
     const esp = nom.charAt(0) === "-";
     const tr = esp ? 'translate(' + (x + 100) + ',0) scale(-1,1)' : 'translate(' + x + ',0)';
     s += '<g transform="' + tr + '">' + figura(POSES[esp ? nom.slice(1) : nom], 3) + '</g>';
-    if(i < n - 1) s += flecha(x + 101, 50, x + 117, 50);
+    if(!lista && i < n - 1) s += flecha(x + 101, 50, x + 117, 50);
     if(n > 2) s += '<text x="' + (x + 8) + '" y="14" font-size="12" font-weight="bold" ' +
                    'fill="var(--agua)" opacity=".75">' + (i + 1) + '</text>';
+    if(lista && nombres[i])
+      s += '<text x="' + (x + 50) + '" y="112" text-anchor="middle" font-size="9.5" ' +
+           'fill="currentColor" opacity=".62">' + nombres[i] + '</text>';
   });
-  if(e.arco) s += '<path d="M29 19 A 15 15 0 1 1 30 44" stroke="var(--agua)" ' +
-                  'stroke-width="2.2" fill="none" stroke-linecap="round"/>';
+  /* El círculo que hace la mano. Va alrededor del brazo levantado de la
+     primera viñeta, no encima del cuerpo: antes se dibujaba en un sitio fijo
+     pensado para cuando esto era un solo monigote. */
+  if(e.arco) s += '<path d="M42 11 A 13 13 0 1 1 23 27" stroke="var(--agua)" ' +
+                  'stroke-width="2" fill="none" stroke-linecap="round" opacity=".85"/>' +
+                  '<path d="M20 22 L23 28 L29 26" stroke="var(--agua)" stroke-width="2" ' +
+                  'fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/>';
   if(e.reloj) s += '<text x="' + (W - 12) + '" y="20" text-anchor="middle" font-size="15" ' +
                    'fill="var(--agua)">&#9203;</text>';
   s += '</svg>';
@@ -1344,7 +1399,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-06 · 9";
+const VERSION = "2026-08-06 · 10";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
