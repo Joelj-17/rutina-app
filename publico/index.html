@@ -357,7 +357,19 @@ h2.sec:first-child{margin-top:6px}
 .nota.ambar{border-left-color:var(--descanso)}
 .nota p{margin:0 0 8px}.nota p:last-child{margin:0}
 .nota ol,.nota ul{margin:0;padding-left:20px}
-.ficha{background:var(--panel);border:1px solid var(--linea);border-radius:10px;padding:13px 15px;margin-bottom:8px}
+.ficha{background:var(--panel);border:1px solid var(--linea);border-radius:10px;margin-bottom:7px}
+.ficha>summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:10px;
+               padding:13px 15px;font-size:.94rem;font-weight:600}
+.ficha>summary::-webkit-details-marker{display:none}
+.ficha>summary::after{content:"›";margin-left:auto;color:var(--acero);font-size:1rem;
+                      transition:transform .15s ease}
+.ficha[open]>summary::after{transform:rotate(90deg)}
+.ficha[open]>summary{border-bottom:1px solid var(--linea-2)}
+.ficha .fz{font-size:.74rem;font-weight:600;color:var(--acero);text-transform:uppercase;
+           letter-spacing:.06em}
+.ficha .fcuerpo{padding:12px 15px 14px}
+.ficha .fvid{margin:0 0 8px}
+.ficha .fvid a{font-size:.79rem;font-weight:600;color:var(--agua)}
 .ficha h3{margin:0 0 7px;font-size:.97rem;display:flex;justify-content:space-between;gap:10px;
           align-items:baseline;flex-wrap:wrap}
 .ficha h3 a{font-size:.76rem;font-weight:500;color:var(--agua);white-space:nowrap}
@@ -1399,7 +1411,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-06 · 10";
+const VERSION = "2026-08-06 · 11";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -3492,19 +3504,28 @@ function pintarSemana(){
 
 /* ============ GUÍA ============ */
 /* Solo la técnica de lo que puedes hacer: sin el material, no ensucia la guía. */
+/* La guía son diecinueve ejercicios seguidos: más de seis mil píxeles de
+   scroll para encontrar uno. Van plegados, con la zona que trabajan a la
+   vista, y se abre el que buscas. Usa <details>, que ya sabe hacer esto sin
+   JavaScript y funciona con el buscador del navegador. */
 $("#fichas").innerHTML = Object.keys(EJ)
   .filter(id => !EJ[id].material || S.material[EJ[id].material])
   .map(id => {
   const e = EJ[id];
-  return '<div class="ficha"><h3>' + esc(e.n) + (e.et ? ' <span class="et">' + e.et + '</span>' : "") +
-    ' <a target="_blank" rel="noopener" href="' + vid(e.v) + '">▶ vídeos</a></h3>' +
+  const pista = e.bloque ? e.dur : (e.zona || "");
+  return '<details class="ficha"><summary>' +
+    '<span class="fn">' + esc(e.n) + '</span>' +
+    (pista ? '<span class="fz">' + esc(pista) + '</span>' : "") +
+    '</summary>' +
+    '<div class="fcuerpo">' +
+    '<p class="fvid"><a target="_blank" rel="noopener" href="' + vid(e.v) + '">▶ ver vídeos</a></p>' +
     esquema(id) +
     (e.pos ? '<p><span class="et">Posición</span><br>' + e.pos + '</p>' : "") +
     (e.d   ? '<p>' + e.d + '</p>' : "") +
     (e.tip ? '<p>' + e.tip + '</p>' : "") +
     (e.alt ? '<p><span class="et">Alternativa</span><br>' + e.alt + '</p>' : "") +
     (e.err ? '<p class="mal"><span class="et" style="color:inherit">Error típico</span><br>' + e.err + '</p>' : "") +
-    '</div>';
+    '</div></details>';
 }).join("");
 
 /* ============ COMIDA ============ */
