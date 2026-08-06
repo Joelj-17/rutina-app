@@ -40,8 +40,14 @@ python -m http.server 8000
 
 ## Despliegue
 
-**Cloudflare Pages**, proyecto `rutina-app` → https://rutina-app.pages.dev
+**Cloudflare Pages**, proyecto `entreno-n53nldvu7x`
+→ https://entreno-n53nldvu7x.pages.dev
 Cada `git push` a `main` despliega automáticamente.
+
+El nombre lleva 10 caracteres al azar **a propósito**: la página es pública
+para quien sepa la dirección, así que la dirección no debe ser adivinable.
+Si algún día hace falta cambiarla, hay que **crear un proyecto nuevo** —
+renombrar el proyecto en Cloudflare no cambia la dirección.
 
 Configuración: sin orden de compilación, carpeta publicada `publico`.
 No hay `package.json` **a propósito**: sin dependencias no hay instalación,
