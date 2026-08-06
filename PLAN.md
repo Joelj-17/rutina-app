@@ -1,0 +1,131 @@
+# Plan del producto
+
+> Recogido el 6 de agosto de 2026. Es la visión del proyecto, no lo que hay
+> construido. Lo construido está en `README.md`.
+
+## La idea
+
+Una plataforma para llevar el control de la vida física: entrenamiento,
+comida, movimiento y descanso, en un solo sitio y sin complicaciones.
+
+**Principio de partida:** los datos son del usuario y viven en su móvil.
+La plataforma solo pone la herramienta.
+
+## Estructura: nodos de actividad
+
+La app no es «una rutina». Es un tronco con **nodos de actividad**, y cada
+uno aporta al mismo balance de calorías y al mismo historial.
+
+```
+INICIO — el diario de hoy
+├── ACTIVIDAD
+│   ├── Gimnasio        ← lo primero, es lo que hace falta ya
+│   ├── Correr / andar
+│   └── Otros deportes  (fútbol, básquet, lo que sea)
+├── COMIDA
+├── CUERPO
+└── DIARIO — historial unificado
+```
+
+**Modularidad obligatoria.** Alguien que solo quiera contar comidas tiene que
+poder usar solo eso. No se puede perder a un usuario por obligarle a rellenar
+lo que no le interesa.
+
+## Gimnasio: cómo debe funcionar
+
+**Rutinas guardadas.** El usuario crea las suyas y les pone nombre
+(«entrenamiento brazos», «pierna»). Se guardan y se reutilizan.
+
+**Calendario.** Puede dejarlas programadas por días, para quien lleve un plan
+estricto. Y puede añadir un día de gimnasio no programado.
+
+**Dos formas de registrar una sesión**, y las dos hacen falta:
+
+1. **Guiada** — navegando por los ejercicios con cronómetro y descansos, como
+   está ahora. Guarda tiempos, pesos, valoración y lo que se haya cambiado.
+2. **Rápida** — marcar la rutina como hecha, indicando si fue *exactamente lo
+   guardado*, *más* o *menos* (más repeticiones, se saltó algo, etc.).
+
+**Catálogo de ejercicios.** Con nombres alternativos, enlaces de búsqueda en
+YouTube y esquemas dibujados.
+
+## Movimiento y otros datos
+
+Vincular apps de pasos donde se pueda, y **siempre** permitir meter el dato a
+mano. Nunca depender de una integración para poder usar la app.
+
+## Modelo de negocio
+
+| | |
+|---|---|
+| **Gratis** | Un anuncio al entrar, con el aviso de que es por ser gratuito |
+| **Sin anuncios** | 1 € pago único |
+| **Premium** | 5 €/mes |
+
+**Qué da el Premium:** análisis de la semana completa —entrenamientos, carrera,
+pasos, comida y sueño— con recomendaciones según el plan de cada uno. Y
+consultas libres: ejercicios, sugerencias, alimentación, rutas para correr.
+
+**Datos del Premium:** el usuario cede ciertos datos para el análisis. **En
+ningún caso identidad ni documento identificativo.**
+
+---
+
+# Lo que hay que decidir antes de construir
+
+## 1. El catálogo de ejercicios: cuántos con dibujo
+
+Los esquemas actuales están dibujados a mano, pose a pose. Cientos de
+ejercicios con dibujo no es realista.
+
+**Propuesta:** un catálogo amplio de nombres y enlaces (sin límite práctico),
+y **80-120 ejercicios con esquema**, elegidos por cubrir todos los patrones de
+movimiento y el material habitual. El resto entra con nombre, músculo y enlace
+a vídeos, y se les va añadiendo dibujo con el tiempo.
+
+## 2. Anuncios contra privacidad — hay tensión real
+
+«Tus datos no salen de tu móvil» y «AdMob» no encajan del todo: las redes de
+anuncios recogen identificadores del dispositivo y en la UE obligan a una
+plataforma de consentimiento.
+
+**Hay que elegir**, y las dos son defendibles:
+
+- **Privacidad como argumento de venta** — sin anuncios, monetizar solo con el
+  euro y el Premium. Más coherente, ingresos más lentos.
+- **Anuncio al entrar** — asumiendo el aviso de consentimiento y matizando la
+  promesa: *tus registros* no salen del móvil, aunque el anuncio sí vea el
+  dispositivo.
+
+## 3. El Premium obliga a servidor
+
+Analizar la semana con IA implica que esos datos salgan del dispositivo.
+Se puede hacer bien: enviar solo lo necesario, sin nombre ni identificadores,
+con consentimiento explícito y acuerdo de tratamiento con el proveedor.
+Pero deja de ser «todo en tu móvil» para quien contrate el Premium, y hay que
+decirlo con claridad en el propio flujo de alta.
+
+## 4. Los pasos exigen app nativa
+
+Una web, aunque esté instalada, no puede leer Salud de Android ni Apple Health.
+Eso llega con el empaquetado nativo (Capacitor). Hasta entonces: a mano.
+
+---
+
+# Por dónde empezar
+
+1. **Rediseño visual y de organización** ← lo primero que pidió
+2. **Modelo de datos**: separar catálogo de ejercicios, rutinas y sesiones
+   (hoy están fundidos en el código)
+3. **Crear y guardar rutinas propias**
+4. **Calendario y las dos formas de registrar**
+5. **Catálogo ampliado de ejercicios**
+6. Nodos de correr y otros deportes
+7. Empaquetado nativo, anuncios y Premium
+
+## Nota sobre el estado actual
+
+Lo que hay construido funciona pero está **hecho a medida de una persona**: la
+rutina, los ejercicios y las fases están escritos en el código. El paso 2 es
+el que convierte esto en un producto, y conviene darlo antes de añadir más
+funciones encima.
