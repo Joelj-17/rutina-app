@@ -2704,18 +2704,11 @@ async function alEntrar(){
     }
     if(nubeMasPobre && !S.cambiadoEn){
       const d = diferencias(rNube, rAqui);
-      const m = "CUIDADO: la versión de la nube tiene MENOS datos que este dispositivo.
-
-" +
-        (d.length ? d.join("
-") + "
-
-" : "") +
-        "Suele pasar si otro aparato se conectó estando vacío.
-
-" +
-        "ACEPTAR = traer la de la nube (perderías lo de aquí)
-" +
+      const SL = String.fromCharCode(10);
+      const m = "CUIDADO: la versión de la nube tiene MENOS datos que este dispositivo." + SL + SL +
+        (d.length ? d.join(SL) + SL + SL : "") +
+        "Suele pasar si otro aparato se conectó estando vacío." + SL + SL +
+        "ACEPTAR = traer la de la nube (perderías lo de aquí)" + SL +
         "CANCELAR = quedarte con lo de aquí y subirlo";
       if(confirm(m)){ aplicarDatos(g, bloque.ts); syncAviso("Traída la versión de la nube."); }
       else { await subirDatos(false, true); syncAviso("Se ha subido lo de este dispositivo."); }
