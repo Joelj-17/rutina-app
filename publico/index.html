@@ -561,8 +561,19 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
             min-height:2px}
 .barraDia.vacio i{background:var(--linea);min-height:2px}
 .barraDia.hoy i{background:var(--hecho)}
-.barraDia b{font-size:.56rem;font-weight:700;color:var(--acero);white-space:nowrap}
-.barraDia span{font-size:.55rem;color:var(--acero);opacity:.75;white-space:nowrap}
+.barraDia span{font-size:.58rem;color:var(--acero);opacity:.75;white-space:nowrap}
+.pieBarras{margin:10px 0 0;font-size:.78rem;color:var(--acero);text-align:center}
+
+/* ---- Aviso flotante ----
+   Encima del menu, centrado y estrecho. No tapa nada importante y se va solo,
+   salvo los errores, que se quedan hasta el siguiente aviso. */
+#avisoFlot{position:fixed;left:12px;right:12px;z-index:60;
+           bottom:calc(var(--menuAlto) + 12px + env(safe-area-inset-bottom));
+           max-width:420px;margin:0 auto;padding:12px 15px;border-radius:11px;
+           background:var(--tinta);color:var(--fondo);font-size:.87rem;
+           font-weight:600;line-height:1.35;box-shadow:0 6px 22px rgba(0,0,0,.28)}
+#avisoFlot.mal{background:var(--alerta);color:#fff}
+#avisoFlot.info{background:var(--acero);color:#fff}
 
 /* ---- Copias de seguridad: una lista sobria, no una alarma ---- */
 .copia{display:flex;align-items:center;gap:12px;background:var(--panel);
@@ -939,7 +950,10 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
   <div class="rachas" id="pasosCifras"></div>
 
   <h2 class="sec">Últimos 14 días</h2>
-  <div class="tarj"><div class="barrasDia" id="pasosBarras"></div></div>
+  <div class="tarj">
+    <div class="barrasDia" id="pasosBarras"></div>
+    <p class="pieBarras" id="pasosPieBarras"></p>
+  </div>
 
   <h2 class="sec">Previsión</h2>
   <div class="tarj" id="pasosPrevision"></div>
@@ -1082,6 +1096,11 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
     Tus datos se guardan en este dispositivo. La app hace copias de seguridad sola; puedes verlas y exportarlas desde Ajustes.
   </footer>
 </main>
+
+<!-- Los avisos se pintaban DENTRO de la seccion Ajustes, asi que un fallo al
+     guardar mientras estabas en Comida no lo veias. Este flota sobre lo que
+     haya y se ve desde cualquier pantalla. -->
+<div id="avisoFlot" role="status" aria-live="polite" hidden></div>
 
 <!-- Menú fijo abajo. Está siempre, también en la portada: la queja era no
      saber qué había en la app ni cómo moverse. Cinco sitios y ya. -->
@@ -2605,14 +2624,21 @@ function pintarEstadoDatos(){
     '<span style="color:var(--acero)">Se queda aquí solo, sin servidor. Al abrir la app está todo — ' +
     'no hay que cargar nada.</span>';
 }
-function aviso(t, malo){
-  const p = $("#msgDatos");
+/* Un solo sitio para los avisos, y flotante. Antes cada uno escribia en un
+   parrafo de dentro de Ajustes: si estabas en otra pantalla, el mensaje se
+   pintaba donde no lo veias. Los errores no se van solos; lo demas si. */
+function mostrarAviso(t, tipo){
+  const p = $("#avisoFlot");
+  if(!p) return;
   p.textContent = t;
-  p.style.color = malo ? "var(--alerta)" : "var(--hecho)";
+  p.className = tipo || "";
   p.hidden = false;
-  clearTimeout(aviso._t);
-  aviso._t = setTimeout(() => { p.hidden = true; }, 4000);
+  clearTimeout(mostrarAviso._t);
+  if(tipo !== "mal"){
+    mostrarAviso._t = setTimeout(() => { p.hidden = true; }, 4000);
+  }
 }
+function aviso(t, malo){ mostrarAviso(t, malo ? "mal" : ""); }
 
 /* ============ SINCRONIZACIÓN CIFRADA ============
    Todo el cifrado ocurre aquí, en tu navegador. Al servidor solo viaja un
@@ -2716,12 +2742,7 @@ async function descifrar(bloque){
   return JSON.parse(new TextDecoder().decode(pt));
 }
 
-function syncAviso(t, tipo){
-  const p = $("#syncMsg");
-  p.textContent = t;
-  p.style.color = tipo === "mal" ? "var(--alerta)" : tipo === "info" ? "var(--acero)" : "var(--hecho)";
-  p.hidden = false;
-}
+function syncAviso(t, tipo){ mostrarAviso(t, tipo); }
 
 /* Un retrato de los datos, para poder comparar dos versiones y contarle al
    usuario qué ha cambiado en la otra sesión antes de pisar nada. */
@@ -3268,6 +3289,31 @@ $("#esBtn").addEventListener("click", async () => {
   else await alEntrar();
 });
 setInterval(() => { if(syncFrase && !syncOcupado) pintarEstadoSync(); }, 30000);
+
+/* ---- El cambio de día ----
+   La app se enteraba de qué día es UNA sola vez, al abrirse. Si la dejas
+   abierta —y en el móvil instalada se queda abierta días— pasada la
+   medianoche seguía apuntando la comida, los pasos y el agua en el día
+   anterior, y proponiendo el entrenamiento de ayer. Se comprueba cada minuto
+   y al volver a la app.
+
+   Si estabas mirando otro día a propósito, no se toca: solo se avanza el que
+   estaba puesto en "hoy". */
+let diaVisto = hoyISO();
+function miraSiHaCambiadoElDia(){
+  const hoy = hoyISO();
+  if(hoy === diaVisto) return;
+  const estabaEnHoy = (comDia === diaVisto);
+  diaVisto = hoy;
+  if(estabaEnHoy) comDia = hoy;
+  aplicarAuto();                 // recalcula el día de la rutina y la fase
+  pintarHoy(); pintarComida(); pintarInicio(); pintarDiario();
+  pintarSemana(); pintarPasos(); pintarEstadoSync();
+}
+setInterval(miraSiHaCambiadoElDia, 60000);
+document.addEventListener("visibilitychange", () => {
+  if(!document.hidden) miraSiHaCambiadoElDia();
+});
 
 /* Antes de cerrar o de irse a otra app, guarda lo que quede pendiente.
    keepalive permite que la petición sobreviva al cierre de la pestaña.     */
@@ -4068,16 +4114,28 @@ function pintarPasos(){
   const dias = [];
   for(let i = 13; i >= 0; i--) dias.push({f:diaMenos(i), v:S.pasos[diaMenos(i)] || 0});
   const tope = Math.max.apply(null, dias.map(d => d.v).concat([1]));
+  /* Sin cifra encima de cada barra: catorce columnas en 341 px dan unos 20 px
+     cada una, y "9,4k" no cabe — se salia y se pisaba con la de al lado. Los
+     dos numeros que de verdad se leen van debajo, y el resto se consulta
+     tocando la barra. */
   const bar = $("#pasosBarras");
   if(bar) bar.innerHTML = dias.map(d => {
-    const alto = d.v ? Math.max(4, Math.round(d.v / tope * 76)) : 2;
+    const alto = d.v ? Math.max(4, Math.round(d.v / tope * 86)) : 2;
     const dia = Number(d.f.slice(8));
     return '<div class="barraDia' + (d.v ? "" : " vacio") + (d.f === hoy ? " hoy" : "") +
-      '" title="' + d.f + ": " + (d.v ? d.v + " pasos" : "sin apuntar") + '">' +
-      '<b>' + (d.v ? milesTxt(d.v) : "") + '</b>' +
+      '" title="' + fechaCorta(d.f) + ": " + (d.v ? d.v.toLocaleString("es-ES") + " pasos" : "sin apuntar") + '">' +
       '<i style="height:' + alto + 'px"></i>' +
       '<span>' + dia + '</span></div>';
   }).join("");
+  const pie = $("#pasosPieBarras");
+  if(pie){
+    const conDato = dias.filter(d => d.v);
+    pie.textContent = conDato.length
+      ? "Más alto: " + tope.toLocaleString("es-ES") + " pasos" +
+        (hoyV ? " · hoy " + hoyV.toLocaleString("es-ES") : "") +
+        " · " + (14 - conDato.length) + " días sin apuntar"
+      : "Ningún día apuntado en las dos últimas semanas.";
+  }
 
   /* --- Prevision: con la media, no con el deseo --- */
   const prev = $("#pasosPrevision");
