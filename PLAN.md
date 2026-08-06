@@ -135,6 +135,18 @@ Eso llega con el empaquetado nativo (Capacitor). Hasta entonces: a mano.
 
 # Cosas concretas que hay que arreglar
 
+**Un dispositivo recién estrenado sube su vacío encima de todo.** Pasó el 6 de
+agosto de 2026: abrió la app en la dirección nueva desde el móvil, entró con
+la frase, y como en ese teléfono no había nada todavía, la subida automática
+mandó un estado vacío a la nube y tapó lo que había. Hubo que rescatar los
+datos de los archivos internos del navegador del PC.
+
+Existe la comprobación `nubeMasPobre`, pero solo protege al **bajar**. Falta
+la simétrica: **no subir automáticamente cuando lo local está vacío y en la
+nube hay algo**. Que en ese caso pregunte, o directamente que solo baje. La
+subida automática solo debería dispararse tras un cambio real del usuario.
+
+
 **El PIN se pide en cada recarga.** Hoy la sesión muere al recargar la página,
 y eso convierte el PIN en un peaje constante en vez de una protección. Debe
 durar un rato —del orden de 15-30 minutos de inactividad— y solo entonces

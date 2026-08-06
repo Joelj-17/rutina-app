@@ -2554,10 +2554,21 @@ $("#syncActivar").addEventListener("click", async () => {
   }
 });
 
-/* Sube sola al terminar algo importante, sin molestar si falla. */
+/* ¿Hay algo aquí que merezca la pena guardar? Un aparato recién estrenado no
+   tiene nada, y su vacío no debe viajar solo a ningún sitio. */
+function hayAlgoQueAportar(){
+  const r = retrato(S);
+  return r.sesiones > 0 || r.mediciones > 0 || r.comida > 0 ||
+         r.pasos > 0 || r.agua > 0 || r.sueno > 0 || r.animo > 0 || !!r.altura;
+}
+
+/* Sube sola al terminar algo importante, sin molestar si falla.
+   Nunca sube automáticamente un dispositivo vacío: la subida sola no pregunta
+   nada, así que si lo dejáramos podría borrar la copia buena sin avisar. */
 let syncPendiente = null;
 function syncAuto(){
   if(!syncFrase || !S.cambiadoEn || syncOcupado) return;
+  if(!hayAlgoQueAportar()) return;
   clearTimeout(syncPendiente);
   syncPendiente = setTimeout(() => subirDatos(true, true), 3000);
 }
@@ -2692,7 +2703,8 @@ async function alEntrar(){
   try{
     const r = await fetch(API_SYNC + "?id=" + await idDe(syncFrase));
     if(r.status === 404){
-      await subirDatos(true, true);
+      // No hay nada en la nube. Solo sembramos si aquí hay algo de verdad.
+      if(hayAlgoQueAportar()) await subirDatos(true, true);
       pintarEstadoSync(); return;
     }
     if(!r.ok) throw new Error("HTTP " + r.status);
@@ -2757,7 +2769,10 @@ async function entrarConFrase(){
     syncLlave = await abrirLlave(f);
     syncFrase = f;
     S.syncId = await idDe(f);
-    guardar();
+    // Entrar NO es un cambio de datos: es abrir la puerta. Si lo marcáramos
+    // como cambio, un aparato recién estrenado se creería que tiene algo que
+    // aportar y subiría su vacío encima de lo bueno.
+    guardarSinMarcar();
     $("#loginFrase").value = "";
     loginVisible(false);
     pintarSync();
