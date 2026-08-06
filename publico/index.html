@@ -547,6 +547,19 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
 .puente{font-size:.83rem;color:var(--acero);margin-top:22px;padding-top:14px;
         border-top:1px solid var(--linea-2)}
 
+/* ---- Barras de pasos por dia ----
+   Una barra por dia natural, huecos incluidos: si un dia no apuntaste, se ve.
+   Esconder los huecos haria que la media pareciera mejor de lo que es. */
+.barrasDia{display:flex;align-items:flex-end;gap:4px;height:110px}
+.barraDia{flex:1;display:flex;flex-direction:column;justify-content:flex-end;
+          align-items:center;height:100%;gap:4px;min-width:0}
+.barraDia i{display:block;width:100%;background:var(--agua);border-radius:3px 3px 0 0;
+            min-height:2px}
+.barraDia.vacio i{background:var(--linea);min-height:2px}
+.barraDia.hoy i{background:var(--hecho)}
+.barraDia b{font-size:.56rem;font-weight:700;color:var(--acero);white-space:nowrap}
+.barraDia span{font-size:.55rem;color:var(--acero);opacity:.75;white-space:nowrap}
+
 /* ---- Copias de seguridad: una lista sobria, no una alarma ---- */
 .copia{display:flex;align-items:center;gap:12px;background:var(--panel);
        border:1px solid var(--linea);border-radius:10px;padding:11px 13px;margin-bottom:7px}
@@ -798,15 +811,8 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
 
   <!-- Los pasos no son comida, pero es lo que ajusta el gasto del dia,
        asi que se quedan aqui abajo en vez de partir la pantalla en dos. -->
-  <h2 class="sec">Pasos de hoy</h2>
-  <div class="tarj filaPasos">
-    <label for="comPasos">👟 Pasos de hoy</label>
-    <input id="comPasos" type="number" inputmode="numeric" step="100" min="0" placeholder="8500">
-    <span id="pasosKcal">—</span>
-  </div>
-  <p style="font-size:.79rem;color:var(--acero);margin:-4px 0 0">
-    Míralos en tu app de paseo y tecléalos. Una web no puede leerlos sola, pero con ese número
-    el gasto del día te sale ajustado.</p>
+  <p class="puente">Los pasos, con su historial y tus medias, están en
+    <button class="enlace" data-ir="pasos">Pasos</button>.</p>
 
 </main>
 
@@ -881,6 +887,36 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
     La sincronización entre dispositivos, las copias de seguridad y exportar tus
     datos están ahora en <button class="enlace" data-ir="ajustes">Ajustes</button>.
   </p>
+</main>
+
+<!-- ============ PASOS ============
+     Seccion propia. Meterlos dentro de COMIDA seria repetir el error del
+     cajon de sastre: los pasos no son comida, aunque cuenten para el gasto. -->
+<main class="env panel-sec" id="p-pasos" hidden>
+  <div class="dia-cab" style="padding-top:6px">
+    <div><h1>Pasos</h1><div class="dia-sub" id="pasosSub">—</div></div>
+  </div>
+
+  <div class="tarj filaPasos">
+    <label for="pasHoy">👟 Hoy</label>
+    <input id="pasHoy" type="number" inputmode="numeric" step="100" min="0" placeholder="8500">
+    <span id="pasHoyKcal">—</span>
+  </div>
+  <p style="font-size:.79rem;color:var(--acero);margin:-4px 0 0">
+    Apúntalos al final del día, cuando ya no vayas a andar más. Míralos en la app
+    de tu móvil y tecléalos: una web no puede leerlos sola.</p>
+
+  <h2 class="sec">Cómo vas</h2>
+  <div class="rachas" id="pasosCifras"></div>
+
+  <h2 class="sec">Últimos 14 días</h2>
+  <div class="tarj"><div class="barrasDia" id="pasosBarras"></div></div>
+
+  <h2 class="sec">Previsión</h2>
+  <div class="tarj" id="pasosPrevision"></div>
+
+  <h2 class="sec">Día a día</h2>
+  <div class="hist" id="pasosHist"></div>
 </main>
 
 <!-- ============ AJUSTES ============
@@ -1439,7 +1475,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-06 · 14";
+const VERSION = "2026-08-06 · 15";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -3812,6 +3848,137 @@ $("#fichas").innerHTML = Object.keys(EJ)
     '</div></details>';
 }).join("");
 
+/* ============ PASOS ============
+   Un numero al dia, pero con memoria: la media es lo unico que dice si te
+   estas moviendo mas o menos, y un dia suelto no dice nada. */
+
+function diaMenos(n){
+  const d = new Date(hoyISO() + "T12:00:00");
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
+/* Media de los dias CON dato dentro de una ventana. Contar los dias sin
+   apuntar como cero mentiria a la baja; no contarlos dice lo que de verdad
+   andas los dias que lo mides. */
+function mediaPasos(dias){
+  const v = [];
+  for(let i = 0; i < dias; i++){
+    const x = S.pasos[diaMenos(i)];
+    if(x > 0) v.push(x);
+  }
+  return v.length ? {media:Math.round(v.reduce((a,b) => a+b, 0) / v.length), dias:v.length} : null;
+}
+
+function mejorDiaPasos(){
+  let mejor = null;
+  Object.keys(S.pasos || {}).forEach(f => {
+    if(S.pasos[f] > 0 && (!mejor || S.pasos[f] > mejor.v)) mejor = {f:f, v:S.pasos[f]};
+  });
+  return mejor;
+}
+
+const milesTxt = n => n >= 1000 ? (n/1000).toFixed(n >= 10000 ? 0 : 1).replace(".", ",") + "k"
+                                : String(n);
+
+function pintarPasos(){
+  const hoy = hoyISO(), hoyV = S.pasos[hoy] || 0;
+  const pes = ultimoPeso();
+  const inp = $("#pasHoy");
+  if(inp && document.activeElement !== inp) inp.value = hoyV || "";
+  if($("#pasHoyKcal"))
+    $("#pasHoyKcal").textContent = hoyV && pes != null
+      ? "≈ " + Math.round(hoyV * pes * 0.0004) + " kcal" : (hoyV ? "" : "sin apuntar");
+
+  const apuntados = Object.keys(S.pasos || {}).filter(f => S.pasos[f] > 0).length;
+  if($("#pasosSub"))
+    $("#pasosSub").textContent = apuntados
+      ? apuntados + (apuntados === 1 ? " día apuntado" : " días apuntados")
+      : "Todavía sin apuntar ninguno";
+
+  /* --- Cifras --- */
+  const m7 = mediaPasos(7), m30 = mediaPasos(30), mejor = mejorDiaPasos();
+  const caja = $("#pasosCifras");
+  if(caja) caja.innerHTML =
+    '<div class="racha"><b>' + (hoyV ? milesTxt(hoyV) : "—") + '</b><span>Hoy</span></div>' +
+    '<div class="racha"><b>' + (m7 ? milesTxt(m7.media) : "—") + '</b><span>Media 7 días</span></div>' +
+    '<div class="racha"><b>' + (mejor ? milesTxt(mejor.v) : "—") + '</b><span>Tu mejor día</span></div>';
+
+  /* --- Barras de los ultimos 14 dias, huecos incluidos --- */
+  const dias = [];
+  for(let i = 13; i >= 0; i--) dias.push({f:diaMenos(i), v:S.pasos[diaMenos(i)] || 0});
+  const tope = Math.max.apply(null, dias.map(d => d.v).concat([1]));
+  const bar = $("#pasosBarras");
+  if(bar) bar.innerHTML = dias.map(d => {
+    const alto = d.v ? Math.max(4, Math.round(d.v / tope * 76)) : 2;
+    const dia = Number(d.f.slice(8));
+    return '<div class="barraDia' + (d.v ? "" : " vacio") + (d.f === hoy ? " hoy" : "") +
+      '" title="' + d.f + ": " + (d.v ? d.v + " pasos" : "sin apuntar") + '">' +
+      '<b>' + (d.v ? milesTxt(d.v) : "") + '</b>' +
+      '<i style="height:' + alto + 'px"></i>' +
+      '<span>' + dia + '</span></div>';
+  }).join("");
+
+  /* --- Prevision: con la media, no con el deseo --- */
+  const prev = $("#pasosPrevision");
+  if(prev){
+    if(!m7){
+      prev.innerHTML = '<p style="margin:0;font-size:.86rem;color:var(--acero)">' +
+        'Apunta unos días y aquí saldrá tu media, lo que llevas de semana y a dónde ' +
+        'vas a llegar si sigues así.</p>';
+    }else{
+      let sem = 0, conDato = 0;
+      for(let i = 0; i < 7; i++){ const x = S.pasos[diaMenos(i)] || 0; sem += x; if(x > 0) conDato++; }
+      const proyectada = m7.media * 7;
+      const kcalDia = pes != null ? Math.round(m7.media * pes * 0.0004) : null;
+      const dif = hoyV ? Math.round((hoyV - m7.media) / m7.media * 100) : null;
+      prev.innerHTML =
+        '<div class="balanceDia" style="border:none;padding:0;margin:0">' +
+        '<div><b>' + sem.toLocaleString("es-ES") + '</b><span>Últimos 7 días</span></div>' +
+        '<div><b>' + proyectada.toLocaleString("es-ES") + '</b><span>A tu media, la semana</span></div>' +
+        (kcalDia ? '<div><b>' + kcalDia + '</b><span>kcal al día</span></div>' : "") +
+        '</div>' +
+        '<p style="margin:12px 0 0;font-size:.85rem">' +
+        (dif == null
+          ? 'Hoy todavía sin apuntar. Tu media de los últimos ' + m7.dias +
+            (m7.dias === 1 ? " día" : " días") + ' es de <b>' + m7.media.toLocaleString("es-ES") + '</b> pasos.'
+          : (Math.abs(dif) < 5
+              ? 'Hoy vas <b>en tu media</b> (' + m7.media.toLocaleString("es-ES") + ').'
+              : 'Hoy vas <b>' + (dif > 0 ? "+" : "") + dif + '%</b> respecto a tu media de ' +
+                m7.media.toLocaleString("es-ES") + '.')) +
+        (m30 && m30.dias > m7.dias
+          ? ' En 30 días tu media es de ' + m30.media.toLocaleString("es-ES") + '.'
+          : "") +
+        '</p>';
+    }
+  }
+
+  /* --- Dia a dia --- */
+  const hist = $("#pasosHist");
+  if(hist){
+    const ls = Object.keys(S.pasos || {}).filter(f => S.pasos[f] > 0).sort().reverse().slice(0, 30);
+    hist.innerHTML = ls.length
+      ? ls.map(f => '<div class="comfila"><b>' + fechaCorta(f) + '</b>' +
+          '<span class="mn">' + S.pasos[f].toLocaleString("es-ES") + ' pasos' +
+          (pes != null ? ' · ' + Math.round(S.pasos[f] * pes * 0.0004) + ' kcal' : "") +
+          '</span></div>').join("")
+      : '<div class="vacio">Todavía no has apuntado ningún día.</div>';
+  }
+}
+
+/* El mismo numero se puede tocar en tres sitios; todos escriben en el mismo
+   dato y refrescan lo demas. */
+function ponPasos(valor, dia){
+  const f = dia || hoyISO(), v = num(valor);
+  if(v == null || v <= 0) delete S.pasos[f]; else S.pasos[f] = Math.round(v);
+  guardar();
+  pintarPasos(); pintarInicio(); pintarComida();
+}
+["input","change"].forEach(ev => {
+  const e = $("#pasHoy");
+  if(e) e.addEventListener(ev, x => ponPasos(x.target.value));
+});
+
 /* ============ COMIDA ============ */
 /* Valores por 100 g salvo los marcados "ud" (por unidad). */
 const ALIMENTOS = [
@@ -3924,12 +4091,6 @@ function pintarComida(){
         '<span class="mn">' + Math.round(nDe(c.kcal)) + ' kcal · ' + Math.round(nDe(c.prot)) + ' g</span>' +
         '<button data-borra="' + i + '" aria-label="Quitar">✕</button></div>').join("")
     : '<div class="vacio">Nada apuntado todavía. Empieza por tus comidas del plan, que son un toque.</div>';
-
-  $("#comPasos").value = S.pasos[comDia] || "";
-  const pesoAct = ultimoPeso(), nPasos = S.pasos[comDia] || 0;
-  $("#pasosKcal").textContent = nPasos && pesoAct != null
-    ? "≈ " + Math.round(nPasos * pesoAct * 0.0004) + " kcal"
-    : (nPasos ? "" : "sin apuntar");
 
   const dias = Object.keys(S.comidas).filter(f => comidasDe(f).length).sort().reverse().slice(0, 10);
   $("#comHist").innerHTML = dias.length
@@ -4052,21 +4213,6 @@ $("#mAdd").addEventListener("click", () => {
   $("#mNombre").value = ""; $("#mKcal").value = ""; $("#mProt").value = "";
   $("#alManualCaja").hidden = true;
 });
-/* Con "input" también: si tecleas y cambias de pantalla sin salir del campo,
-   el evento change no llega a saltar y el dato se perdería. */
-["input","change"].forEach(ev => {
-  $("#comPasos").addEventListener(ev, e => {
-    const v = num(e.target.value);
-    if(v == null || v <= 0) delete S.pasos[comDia]; else S.pasos[comDia] = Math.round(v);
-    guardar();
-    if(ev === "change"){ pintarComida(); pintarInicio(); }
-    else{
-      const p = ultimoPeso(), n = S.pasos[comDia] || 0;
-      $("#pasosKcal").textContent = n && p != null
-        ? "≈ " + Math.round(n * p * 0.0004) + " kcal" : (n ? "" : "sin apuntar");
-    }
-  });
-});
 $("#comAyer").addEventListener("click", () => {
   if(comDia !== hoyISO()){ comDia = hoyISO(); pintarComida(); return; }
   const f = prompt("¿Qué día quieres ver? (AAAA-MM-DD)", hoyISO());
@@ -4175,6 +4321,11 @@ function pintarMapa(){
      e:nComidas ? nComidas + (nComidas === 1 ? " cosa apuntada" : " cosas apuntadas")
                 : "Nada apuntado todavía",
      v:Math.round(t.kcal) + " kcal"},
+    {t:"pasos", ic:"👟", n:"Pasos",
+     e:(function(){ const m = mediaPasos(7);
+        return m ? "Tu media son " + m.media.toLocaleString("es-ES") + " al día"
+                 : "Apúntalos al acabar el día"; })(),
+     v:(S.pasos[f] ? S.pasos[f].toLocaleString("es-ES") : "—"), ok:!!S.pasos[f]},
     {t:"cuerpo", ic:"📏", n:"Cuerpo",
      e:ultMed ? "Última medida el " + fechaCorta(ultMed.f) : "Sin ninguna medida",
      v:pes != null ? pes + " kg" : "—"},
@@ -4313,10 +4464,10 @@ $("#vAnimo").addEventListener("click", e => {
 });
 
 /* ============ PESTAÑAS Y SELECTORES ============ */
-const PESTANAS = ["inicio","hoy","comida","cuerpo","diario","semana","guia","ajustes"];
+const PESTANAS = ["inicio","hoy","comida","cuerpo","pasos","diario","semana","guia","ajustes"];
 const TITULOS = {hoy:"Entrenamiento", comida:"Comida", cuerpo:"Cuerpo",
                  diario:"Diario", semana:"La semana", guia:"Guía",
-                 ajustes:"Ajustes y datos"};
+                 pasos:"Pasos", ajustes:"Ajustes y datos"};
 
 /* El reloj ocupa media pantalla y no pinta nada si no estás entrenando. Se
    enseña solo cuando hay sesión en marcha, o cuando estás en Entrenamiento. */
@@ -4352,6 +4503,7 @@ function irA(t){
   if(t === "diario") pintarDiario();
   if(t === "semana") pintarSemana();
   if(t === "cuerpo"){ pintarPerfil(); pintarCuerpo(); }
+  if(t === "pasos") pintarPasos();
   if(t === "ajustes"){ pintarSync(); pintarCopias(); }
 
   /* Con la sesión en marcha, entrar en Entrenamiento y aparecer arriba del
