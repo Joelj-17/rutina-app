@@ -1892,7 +1892,11 @@ setInterval(() => {
   if(!S.t0 || S.pausadoEn) return;
   pintarReloj();
   const ahora = Date.now();
-  if(!S.latido || ahora - S.latido > 5000){ S.latido = ahora; guardar(); }
+  /* El latido NO es un cambio del usuario. Con guardar() se marcaba "hay algo
+     que subir" cada 5 segundos, asi que en una sesion de una hora se
+     encadenaban cientos de subidas, y cada una gastaba una ranura de copia de
+     seguridad hasta vaciar el historico entero de copias. */
+  if(!S.latido || ahora - S.latido > 5000){ S.latido = ahora; guardarSinMarcar(); }
 }, 500);
 
 /* La app en segundo plano cuenta igual que cerrada. */
@@ -1901,7 +1905,7 @@ document.addEventListener("visibilitychange", () => {
   if(document.hidden){ ocultoEn = Date.now(); return; }
   if(ocultoEn){
     const fuera = Date.now() - ocultoEn;
-    if(S.t0 && !S.pausadoEn && fuera > AUSENCIA){ S.acumPausa += fuera; S.latido = Date.now(); guardar(); }
+    if(S.t0 && !S.pausadoEn && fuera > AUSENCIA){ S.acumPausa += fuera; S.latido = Date.now(); guardarSinMarcar(); }
     ocultoEn = null;
     pintarReloj();
   }
@@ -2162,28 +2166,36 @@ function marcarSerie(id){
       descansoSeries(e.r || 45, "Serie " + (h.series+1) + " de " + total + " · " + e.n);
     }
   }else{
-    barraOff();
-    pitido(3);
-    if(!S.hist.some(x => x.f === hoyISO() && x.d === DIAS[S.dia].n)){
-      // Foto completa de la sesión: pesos, tiempos por ejercicio y valoraciones.
-      const usados = {}, detalle = {};
-      listaEj().forEach(x => {
-        const v = S.pesos[x+"|"+S.fase]; if(v) usados[x] = v;
-        const hh = S.hechos[x];
-        if(hh) detalle[x] = {fin:Math.round(hh.fin || 0), series:hh.series, saltado:!!hh.saltado};
-      });
-      S.hist.unshift({id:Date.now(), ts:new Date().toISOString(),
-                      f:hoyISO(), d:DIAS[S.dia].n, seg:Math.round(transcurrido()),
-                      ej:listaEj().length, fase:S.fase+1, rpe:null, molestias:[], nota:"",
-                      pesos:usados, marcas:JSON.parse(JSON.stringify(S.marcas)),
-                      orden:listaEj().slice(), detalle:detalle,
-                      saltados:Object.keys(S.hechos).filter(k => S.hechos[k].saltado)});
-      guardar(); syncAuto();
-    }
+    cerrarEntreno();
   }
   pintarHoy();
   const act = document.querySelector(".ej.activo");
   if(act) act.scrollIntoView({behavior:"smooth", block:"center"});
+}
+
+/* Guarda la sesion en el historial. Vivia dentro de marcarSerie, asi que si el
+   ultimo ejercicio pendiente lo SALTABAS en vez de marcarlo, la sesion no se
+   guardaba nunca: la pantalla final aparecia igual —su condicion es otra— y el
+   cuestionario no tenia donde escribir. Una hora de entrenamiento perdida sin
+   ningun aviso. Ahora cierran por aqui los dos caminos. */
+function cerrarEntreno(){
+  barraOff();
+  pitido(3);
+  if(S.hist.some(x => x.f === hoyISO() && x.d === DIAS[S.dia].n)) return;
+  // Foto completa de la sesión: pesos, tiempos por ejercicio y valoraciones.
+  const usados = {}, detalle = {};
+  listaEj().forEach(x => {
+    const v = S.pesos[x+"|"+S.fase]; if(v) usados[x] = v;
+    const hh = S.hechos[x];
+    if(hh) detalle[x] = {fin:Math.round(hh.fin || 0), series:hh.series, saltado:!!hh.saltado};
+  });
+  S.hist.unshift({id:Date.now(), ts:new Date().toISOString(),
+                  f:hoyISO(), d:DIAS[S.dia].n, seg:Math.round(transcurrido()),
+                  ej:listaEj().length, fase:S.fase+1, rpe:null, molestias:[], nota:"",
+                  pesos:usados, marcas:JSON.parse(JSON.stringify(S.marcas)),
+                  orden:listaEj().slice(), detalle:detalle,
+                  saltados:Object.keys(S.hechos).filter(k => S.hechos[k].saltado)});
+  guardar(); syncAuto();
 }
 
 /* Saltar un ejercicio: cuenta como resuelto pero queda marcado como no hecho. */
@@ -2192,7 +2204,8 @@ function saltarEjercicio(id){
   S.hechos[id] = {series: p ? p.series : 1, fin: transcurrido(), saltado: true};
   guardar();
   const quedan = siguienteId();
-  if(quedan) prepararSiguiente(quedan, 20); else barraOff();
+  if(quedan) prepararSiguiente(quedan, 20);
+  else cerrarEntreno();          // era el ultimo: la sesion tiene que guardarse
   pintarHoy();
 }
 
@@ -2671,7 +2684,17 @@ let syncLlave = null;      // llave ya derivada: el PBKDF2 se hace UNA vez
 let syncOcupado = false;
 
 const b64 = {
-  de: buf => btoa(String.fromCharCode(...new Uint8Array(buf))),
+  /* A trozos y no de una: con el spread, un historial de meses pasaba decenas
+     de miles de argumentos de golpe y el navegador lanzaba RangeError. Fallaba
+     justo cuando mas datos hay que salvar. */
+  de: buf => {
+    const b = new Uint8Array(buf);
+    let t = "";
+    for(let i = 0; i < b.length; i += 8192){
+      t += String.fromCharCode.apply(null, b.subarray(i, i + 8192));
+    }
+    return btoa(t);
+  },
   a:  s   => Uint8Array.from(atob(s), c => c.charCodeAt(0))
 };
 const bytes = t => new TextEncoder().encode(t);
@@ -2907,12 +2930,31 @@ function fundirMapa(a, b, tsA, tsB, prefijo, tsFin){
     const ha = (tsA || {})[ruta], hb = (tsB || {})[ruta];
     const enA = Object.prototype.hasOwnProperty.call(a || {}, k);
     const enB = Object.prototype.hasOwnProperty.call(b || {}, k);
-    let gana, hora;
-    if(enA && enB){ gana = masNuevo(ha, hb) ? a[k] : b[k]; hora = masNuevo(ha, hb) ? ha : hb; }
-    else if(enA){ gana = a[k]; hora = ha; }
-    else { gana = b[k]; hora = hb; }
-    r[k] = gana;
-    if(hora) tsFin[ruta] = hora;
+
+    if(enA && enB){
+      const ganaA = masNuevo(ha, hb);
+      r[k] = ganaA ? a[k] : b[k];
+      const hora = ganaA ? ha : hb;
+      if(hora) tsFin[ruta] = hora;
+      return;
+    }
+
+    /* Que falte en un lado puede significar dos cosas MUY distintas: que ese
+       lado no se ha enterado todavia, o que ahi lo BORRASTE. Se distinguen por
+       la hora: al borrar, sellarCambios sella la ruta con el momento del
+       borrado. Antes no se miraba, asi que vaciar los pasos de hoy —o quitar
+       el ultimo vaso de agua, o desmarcar el animo— y sincronizar los
+       resucitaba desde la otra copia, una y otra vez. */
+    const presente = enA ? "a" : "b";
+    const hPresente = enA ? ha : hb;      // cuando se puso
+    const hAusente  = enA ? hb : ha;      // cuando se borro, si es que se borro
+
+    if(hAusente && !masNuevo(hPresente, hAusente)){
+      tsFin[ruta] = hAusente;             // el borrado es posterior: se queda fuera
+      return;
+    }
+    r[k] = presente === "a" ? a[k] : b[k];
+    if(hPresente) tsFin[ruta] = hPresente;
   });
   return r;
 }
@@ -3332,7 +3374,12 @@ async function guardarAlSalir(){
   if(!hayAlgoQueAportar()) return;          // un vacío tampoco escribe al salir
   try{
     const bloque = await cifrar(paraSubir());
-    if(S.syncUlt) bloque.si = S.syncUlt;    // de qué versión partimos
+    /* Con "si" SIEMPRE, incluso vacio. Sin ese campo el servidor no comprueba
+       nada y escribe: un dispositivo que aun no ha leido la nube -recien
+       instalado, o con el primer intento fallido por falta de red- la
+       machacaba entera. La cadena vacia significa "esperaba que no hubiera
+       nada": si arriba hay algo, el servidor devuelve 409 y esto no toca. */
+    bloque.si = S.syncUlt || "";
     const r = await fetch(API_SYNC + "?id=" + await idDe(syncFrase), {
       method:"PUT", headers:{"Content-Type":"application/json"},
       body:JSON.stringify(bloque), keepalive:true
@@ -3382,10 +3429,17 @@ function copiaSeguridad(motivo){
     const r = retrato(datos);
     const lista = leerCopias();
 
-    // Una automática por día; las de antes de una operación van siempre.
+    /* Una automática por día. Y las de "antes de una operación" tampoco pueden
+       ir siempre: cada sincronización pasa por aquí, así que en una tarde de
+       uso normal las diez ranuras se llenaban de copias idénticas y el
+       histórico de verdad —el de días atrás— se perdía. Justo la red de
+       seguridad, borrándose sola. Se guarda una como mucho cada 20 minutos. */
     if(motivo === "del día"){
       const hoy = hoyISO();
       if(lista.some(c => c.motivo === "del día" && (c.f || "").slice(0,10) === hoy)) return;
+    }else{
+      const ultima = lista[0];
+      if(ultima && Date.now() - new Date(ultima.f).getTime() < 20*60*1000) return;
     }
     lista.unshift({f:new Date().toISOString(), motivo:motivo, r:r, datos:datos});
 
@@ -3527,6 +3581,11 @@ function aplicarDatos(g, ts){
   if(typeof r.fase === "number") S.fase = r.fase;
   if(r.inicio) S.inicio = r.inicio;
   if(r.material) S.material = r.material;
+  /* El día y la fase puestos a mano se fusionan y se exportan, pero aquí no se
+     recogían: al sincronizar volvías a automático sin haber tocado nada. */
+  S.faseManual = (typeof r.faseManual === "number") ? r.faseManual : null;
+  S.diaManual  = (typeof r.diaManual  === "number") ? r.diaManual  : null;
+  aplicarAuto();
   S.ts    = r.ts    || {};
   S.bajas = r.bajas || {};
 
