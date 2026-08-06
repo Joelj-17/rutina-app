@@ -1329,7 +1329,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-06 · 6";
+const VERSION = "2026-08-06 · 7";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -3730,8 +3730,10 @@ function pintarMapa(){
     entEstado = "Terminada, falta valorarla";
     entValor = mmss(transcurrido());
   }else if(yaHecha){
+    // Hecha: interesa lo que hiciste, no lo que estaba previsto.
     const h = S.hist.find(x => x.f === f);
-    entEstado = d.et + " · " + h.ej + " ejercicios";
+    entEstado = mmss(h.seg) + " · " + h.ej + " ejercicios" +
+                (h.rpe ? " · esfuerzo " + h.rpe + "/10" : "");
     entValor = "✓ hecha"; entOk = true;
   }else{
     entEstado = d.et + " · " + ids.length + " ejercicios";
@@ -3898,9 +3900,15 @@ function ajustarCabecera(){
 function irA(t){
   pestanaActual = t;
   PESTANAS.forEach(x => { $("#p-"+x).hidden = (x !== t); });
+  /* La etiqueta de sección solo se pone si la pantalla no dice ya cómo se
+     llama. Si no, sale "DIARIO" y debajo "Diario", que es decir dos veces lo
+     mismo y quitarle sitio a lo que importa. */
   const tit = $("#tituloSec");
-  tit.textContent = TITULOS[t] || "";
-  tit.hidden = (t === "inicio");
+  const etiqueta = TITULOS[t] || "";
+  const propio = ($("#p-"+t).querySelector("h1") || {}).textContent || "";
+  const repetido = propio.trim().toLowerCase() === etiqueta.trim().toLowerCase();
+  tit.textContent = etiqueta;
+  tit.hidden = (t === "inicio" || !etiqueta || repetido);
   ajustarCabecera();
   document.querySelectorAll('#menu button[data-t]').forEach(b =>
     b.setAttribute("aria-selected", String(b.dataset.t === t)));
