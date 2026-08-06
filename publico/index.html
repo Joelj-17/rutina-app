@@ -86,10 +86,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
         padding-top:14px;min-height:20px}
 .tituloSec{margin:0;font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;
            color:var(--acero);font-weight:700}
-.rueda{margin-left:auto;width:36px;height:36px;border-radius:99px;flex:0 0 36px;
-       display:grid;place-items:center;font-size:1.15rem;color:var(--acero);
-       border:1px solid var(--linea);background:var(--panel);line-height:1}
-.rueda:active{color:var(--agua);border-color:var(--agua)}
+.verGuia{width:100%;text-align:left;background:transparent;border:1px solid var(--linea);
+         border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:.88rem;
+         font-weight:600;color:var(--tinta-2)}
+.verGuia:active{border-color:var(--agua);color:var(--agua)}
 
 .dia-cab{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
          flex-wrap:wrap;padding:20px 0 12px}
@@ -497,7 +497,7 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
 .resuelto .mas button{background:none;border:none;color:var(--agua);font-size:.8rem;
                       font-weight:600;padding:4px 2px}
 
-.atajos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+.atajos{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:4px}
 .atajo{background:transparent;border:1px solid var(--linea);border-radius:9px;padding:10px 6px;
        font-size:.74rem;font-weight:600;color:var(--acero)}
 .atajo span{display:block;font-size:.95rem;margin-bottom:2px;filter:grayscale(1);opacity:.6}
@@ -532,7 +532,7 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
 #menu{position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--panel);
       border-top:1px solid var(--linea);
       padding-bottom:env(safe-area-inset-bottom)}
-.menuIn{max-width:660px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+.menuIn{max-width:660px;margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr)}
 .mbot{height:var(--menuAlto);display:flex;flex-direction:column;align-items:center;
       justify-content:center;gap:3px;padding:0 2px;
       font-size:.63rem;font-weight:700;letter-spacing:.02em;color:var(--acero);
@@ -670,13 +670,11 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
 
 <!-- La barra de pestañas de arriba se ha quitado: el menú fijo de abajo hace
      lo mismo, está siempre a la vista y no hace falta volver a ningún sitio. -->
-<!-- Franja de arriba: donde estas, y la rueda de ajustes. La rueda va aqui y
-     no escondida al final de la portada: estaba tan abajo que habia que
-     buscarla, y unos ajustes que no se encuentran es como si no estuvieran. -->
+<!-- Franja de arriba: solo dice en qué sección estás. Los ajustes son una
+     sección, no un icono suelto, y viven en el menú de abajo; la guía
+     pertenece al entrenamiento y se entra desde ahí. -->
 <div class="franja env" id="franja">
   <h1 class="tituloSec" id="tituloSec" hidden></h1>
-  <button class="rueda" id="btnAjustesTop" data-ir="ajustes"
-          aria-label="Ajustes y datos" title="Ajustes y datos">⚙</button>
 </div>
 
 <!-- ============ PORTADA ============ -->
@@ -730,7 +728,6 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
   <div class="atajos">
     <button class="atajo" data-ir="semana"><span>🗓️</span>La semana</button>
     <button class="atajo" data-ir="guia"><span>📖</span>Guía</button>
-    <button class="atajo" data-ir="ajustes"><span>⚙️</span>Ajustes</button>
   </div>
 </main>
 
@@ -743,6 +740,8 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
   <p class="autoinfo" id="autoInfo">—
     <button class="enlace" id="btnAjustes" aria-expanded="false">cambiar</button>
   </p>
+  <!-- La guía se consulta entrenando, que es cuando dudas de cómo va algo. -->
+  <button class="verGuia" data-ir="guia">📖 Cómo se hace cada ejercicio</button>
   <div class="selectores" id="ajustes" hidden>
     <select id="selDia" aria-label="Día de la rutina"></select>
     <select id="selFase" aria-label="Fase del plan">
@@ -1093,6 +1092,7 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
     <button class="mbot" role="tab" data-t="comida" aria-selected="false"><span class="mic">🍽️</span>Comida</button>
     <button class="mbot" role="tab" data-t="cuerpo" aria-selected="false"><span class="mic">📏</span>Cuerpo</button>
     <button class="mbot" role="tab" data-t="diario" aria-selected="false"><span class="mic">📅</span>Diario</button>
+    <button class="mbot" role="tab" data-t="ajustes" aria-selected="false"><span class="mic">⚙️</span>Ajustes</button>
   </div>
 </nav>
 
@@ -4602,8 +4602,6 @@ function irA(t){
   const repetido = primeros.some(e => e && pelar(e.textContent) === pelar(etiqueta));
   tit.textContent = etiqueta;
   tit.hidden = (t === "inicio" || !etiqueta || repetido);
-  // Estando ya en Ajustes, la rueda sobra.
-  $("#btnAjustesTop").hidden = (t === "ajustes");
   ajustarCabecera();
   document.querySelectorAll('#menu button[data-t]').forEach(b =>
     b.setAttribute("aria-selected", String(b.dataset.t === t)));
