@@ -1426,7 +1426,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-06 · 12";
+const VERSION = "2026-08-06 · 13 · fusión";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -1434,6 +1434,10 @@ let S = {
   hechos:{}, pesos:{}, marcas:{}, hist:[],
   comidas:{}, pasos:{}, agua:{}, sueno:{}, siesta:{}, animo:{}, syncId:null, syncUlt:null,
   cofre:null, pinFallos:0, cambiadoEn:null,
+  /* ts: cuando se toco cada cosa, por ruta ('pasos.2026-08-06').
+     bajas: que se borro y cuando. Sin esto, el otro dispositivo te
+     resucita lo borrado en la siguiente sincronizacion. */
+  ts:{}, bajas:{},
   perfil:{altura:"", nacim:"", sexo:"", nivel:"", objetivo:""},
   cuerpo:[]
 };
@@ -1526,6 +1530,7 @@ function paquete(){
     perfil:S.perfil, cuerpo:S.cuerpo.slice(0,500),
     comidas:S.comidas, pasos:S.pasos, agua:S.agua, sueno:S.sueno, siesta:S.siesta,
     animo:S.animo,
+    ts:S.ts || {}, bajas:S.bajas || {},
     syncId:S.syncId, syncUlt:S.syncUlt, cofre:S.cofre, pinFallos:S.pinFallos,
     cambiadoEn:S.cambiadoEn,
     sesion: S.t0 ? {fecha:hoyISO(), dia:S.dia, t0:S.t0, acumPausa:S.acumPausa,
@@ -1540,6 +1545,7 @@ let marcandoCambio = true;   // se apaga cuando el propio sincronizador escribe
 function guardar(){
   if(marcandoCambio){
     S.cambiadoEn = new Date().toISOString();
+    if(typeof sellarCambios === "function") sellarCambios();
     // Una copia al día, la primera vez que guardas algo. Es barata y el día
     // que haga falta vale su peso en oro.
     if(typeof copiaSeguridad === "function") copiaSeguridad("del día");
@@ -2575,6 +2581,269 @@ function syncAviso(t, tipo){
 
 /* Un retrato de los datos, para poder comparar dos versiones y contarle al
    usuario qué ha cambiado en la otra sesión antes de pisar nada. */
+/* ============ FUSIÓN DE DATOS ENTRE DISPOSITIVOS ============
+
+   El problema que resuelve: hasta ahora sincronizar era SUSTITUIR el estado
+   entero, y ganaba el último que escribía. Con eso, apuntar un café en el
+   móvil y el almuerzo en el ordenador significaba perder uno de los dos. Los
+   avisos y las copias de seguridad evitaban el desastre, no el problema.
+
+   Ahora se FUSIONA. Cada apunte lleva identidad y hora, así que los dos lados
+   se pueden juntar sin que nadie renuncie a nada:
+
+   - Lo que está en un lado y no en el otro, se queda.
+   - Si el mismo apunte está en los dos, gana el que se tocó más tarde.
+   - Si borraste algo, queda constancia del borrado. Sin eso, el otro aparato
+     te lo resucita en la siguiente vuelta, que es el fallo clásico.
+
+   Sobre los datos que ya existían, sin identificador: se les calcula uno a
+   partir de su propio contenido. Dos aparatos que tengan el mismo apunte
+   antiguo le dan el mismo identificador, así que la primera fusión los
+   reconoce en vez de duplicarlos.                                          */
+
+/* Un identificador corto y estable a partir de un texto. No es criptografía:
+   solo hace falta que el mismo contenido dé siempre lo mismo en cualquier
+   dispositivo, y que dos contenidos distintos casi nunca coincidan. */
+/* ---- Sellado de horas ----
+   Cada cosa que cambia necesita saber CUANDO cambio, o la fusion no puede
+   decidir. Sellar a mano en cada sitio donde se toca un dato es garantia de
+   olvidarse de alguno, asi que se hace aqui: se compara con lo ultimo
+   guardado y lo que haya cambiado se sella solo. */
+const RUTAS_MAPA = ["pasos","agua","sueno","siesta","animo","pesos"];
+const RUTAS_SUELTAS = ["fase","faseManual","diaManual","inicio"];
+let fotoPrevia = null;
+
+function fotoDeSellado(){
+  const f = {};
+  RUTAS_MAPA.forEach(k => {
+    const m = S[k] || {};
+    Object.keys(m).forEach(x => { f[k + "." + x] = JSON.stringify(m[x]); });
+  });
+  ["altura","nacim","sexo","nivel","objetivo"].forEach(c => {
+    f["perfil." + c] = JSON.stringify((S.perfil || {})[c] || "");
+  });
+  RUTAS_SUELTAS.forEach(c => { f[c] = JSON.stringify(S[c]); });
+  f["material"] = JSON.stringify(S.material || {});
+  return f;
+}
+
+function sellarCambios(){
+  if(!S.ts) S.ts = {};
+  const ahora = fotoDeSellado();
+  if(fotoPrevia){
+    const cuando = new Date().toISOString();
+    const rutas = {};
+    Object.keys(ahora).forEach(r => rutas[r] = 1);
+    Object.keys(fotoPrevia).forEach(r => rutas[r] = 1);
+    Object.keys(rutas).forEach(r => {
+      if(ahora[r] !== fotoPrevia[r]) S.ts[r] = cuando;
+    });
+  }
+  fotoPrevia = ahora;
+}
+
+function claveDe(txt){
+  let h1 = 0x811c9dc5, h2 = 0x01000193;
+  for(let i = 0; i < txt.length; i++){
+    const c = txt.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 0x01000193) >>> 0;
+    h2 = Math.imul(h2 + c + i, 0x85ebca6b) >>> 0;
+  }
+  return h1.toString(36) + h2.toString(36);
+}
+
+/* Identificador para un apunte nuevo. Lleva el instante y algo de azar: dos
+   cafés idénticos apuntados el mismo día son dos apuntes distintos, y tienen
+   que poder coexistir. */
+let contadorId = 0;
+function idNuevo(){
+  contadorId++;
+  return "n" + Date.now().toString(36) + contadorId.toString(36) +
+         Math.floor(Math.random() * 1e6).toString(36);
+}
+
+const T0 = "1970-01-01T00:00:00.000Z";
+const masNuevo = (a, b) => (a || T0) >= (b || T0);
+
+/* ---- Puesta al día de datos antiguos ----
+   Todo lo que se guardó antes de esto no tiene identificador ni hora. Se los
+   ponemos de forma DETERMINISTA: mismo contenido, mismo identificador en
+   todos los dispositivos.
+
+   La hora que se les pone es el COMIENZO del día, no el final, y es
+   deliberado: a un dato antiguo hay que darle la hora más vieja que pueda
+   tener, para que cualquier cosa que hagas después cuente como posterior.
+   Con las 23:59 pasaba lo contrario y se veía enseguida: borrabas un apunte
+   antiguo y volvía en la siguiente fusión, porque el apunte parecía más nuevo
+   que su propio borrado. */
+function sellarLegado(g){
+  const finDe = f => (/^\d{4}-\d{2}-\d{2}$/.test(f || "") ? f : "1970-01-01") +
+                     "T00:00:00.000Z";
+
+  Object.keys(g.comidas || {}).forEach(f => {
+    const l = g.comidas[f];
+    if(!Array.isArray(l)) { g.comidas[f] = []; return; }
+    l.forEach((c, i) => {
+      if(!c || typeof c !== "object") return;
+      if(!c.id) c.id = "v" + claveDe(f + "|" + i + "|" + (c.n || "") + "|" + (c.kcal || 0));
+      if(!c.ts) c.ts = finDe(f);
+    });
+  });
+
+  (g.hist || []).forEach(h => {
+    if(!h || typeof h !== "object") return;
+    if(!h.id) h.id = "v" + claveDe("hist|" + (h.f || "") + "|" + (h.seg || 0));
+    if(!h.ts) h.ts = finDe(h.f);
+  });
+
+  (g.cuerpo || []).forEach(m => {
+    if(!m || typeof m !== "object") return;
+    if(!m.ts) m.ts = finDe(m.f);
+  });
+
+  if(!g.ts || typeof g.ts !== "object") g.ts = {};
+  if(!g.bajas || typeof g.bajas !== "object") g.bajas = {};
+  return g;
+}
+
+/* ---- Fusión ---- */
+
+/* Listas de apuntes (comidas de un día). Union por identificador; si el mismo
+   apunte está en los dos lados, gana el retocado más tarde. Lo borrado en
+   cualquiera de los dos se queda fuera, salvo que se haya vuelto a apuntar
+   después de borrarlo. */
+function fundirLista(a, b, bajas){
+  const por = {};
+  const meter = c => {
+    if(!c || !c.id) return;
+    const y = por[c.id];
+    if(!y || masNuevo(c.ts, y.ts)) por[c.id] = c;
+  };
+  (a || []).forEach(meter);
+  (b || []).forEach(meter);
+  return Object.keys(por)
+    .filter(id => !(bajas[id] && masNuevo(bajas[id], por[id].ts)))
+    .map(id => por[id])
+    .sort((x, y) => (x.ts || "").localeCompare(y.ts || ""));
+}
+
+/* Valores sueltos por día (pasos, agua, sueño, siesta, ánimo) y por clave
+   (pesos). Aquí no hay union posible: o uno o el otro. Gana el más reciente
+   según el registro de horas, y si no hay hora, el que tenga algo. */
+function fundirMapa(a, b, tsA, tsB, prefijo, tsFin){
+  const r = {}, claves = {};
+  Object.keys(a || {}).forEach(k => claves[k] = 1);
+  Object.keys(b || {}).forEach(k => claves[k] = 1);
+  Object.keys(claves).forEach(k => {
+    const ruta = prefijo + "." + k;
+    const ha = (tsA || {})[ruta], hb = (tsB || {})[ruta];
+    const enA = Object.prototype.hasOwnProperty.call(a || {}, k);
+    const enB = Object.prototype.hasOwnProperty.call(b || {}, k);
+    let gana, hora;
+    if(enA && enB){ gana = masNuevo(ha, hb) ? a[k] : b[k]; hora = masNuevo(ha, hb) ? ha : hb; }
+    else if(enA){ gana = a[k]; hora = ha; }
+    else { gana = b[k]; hora = hb; }
+    r[k] = gana;
+    if(hora) tsFin[ruta] = hora;
+  });
+  return r;
+}
+
+/* Fusiona dos estados completos. Es conmutativa: da igual quién es "el mío"
+   y quién "el de la nube", el resultado es el mismo. Eso es justo lo que
+   quita los diálogos de "¿con cuál te quedas?". */
+function fundir(mio, otro){
+  const a = sellarLegado(JSON.parse(JSON.stringify(mio || {})));
+  const b = sellarLegado(JSON.parse(JSON.stringify(otro || {})));
+  const r = {v:2};
+  const ts = {};
+
+  // Las bajas se suman: si un lado sabe de un borrado, cuenta para los dos.
+  const bajas = {};
+  [a.bajas, b.bajas].forEach(m => Object.keys(m || {}).forEach(id => {
+    if(!bajas[id] || masNuevo(m[id], bajas[id])) bajas[id] = m[id];
+  }));
+
+  // Comidas: día a día, apunte a apunte.
+  r.comidas = {};
+  const dias = {};
+  Object.keys(a.comidas || {}).forEach(f => dias[f] = 1);
+  Object.keys(b.comidas || {}).forEach(f => dias[f] = 1);
+  Object.keys(dias).forEach(f => {
+    const l = fundirLista((a.comidas || {})[f], (b.comidas || {})[f], bajas);
+    if(l.length) r.comidas[f] = l;
+  });
+
+  // Sesiones: una por identificador. Si el mismo entrenamiento está en los
+  // dos, nos quedamos con el que trae el desglose por ejercicio.
+  const hs = {};
+  (a.hist || []).concat(b.hist || []).forEach(h => {
+    if(!h || !h.id) return;
+    const y = hs[h.id];
+    if(!y){ hs[h.id] = h; return; }
+    const rico = x => (x.detalle ? 2 : 0) + (x.orden ? 1 : 0);
+    if(rico(h) > rico(y) || (rico(h) === rico(y) && masNuevo(h.ts, y.ts))) hs[h.id] = h;
+  });
+  r.hist = Object.keys(hs).map(k => hs[k])
+    .filter(h => !(bajas[h.id] && masNuevo(bajas[h.id], h.ts)))
+    .sort((x, y) => (y.f || "").localeCompare(x.f || ""))
+    .slice(0, 200);
+
+  // Mediciones: una por día, gana la retocada más tarde.
+  const ms = {};
+  (a.cuerpo || []).concat(b.cuerpo || []).forEach(m => {
+    if(!m || !m.f) return;
+    const y = ms[m.f];
+    if(!y || masNuevo(m.ts, y.ts)) ms[m.f] = m;
+  });
+  r.cuerpo = Object.keys(ms).map(k => ms[k])
+    .filter(m => !(bajas["med|" + m.f] && masNuevo(bajas["med|" + m.f], m.ts)))
+    .sort((x, y) => (y.f || "").localeCompare(x.f || ""))
+    .slice(0, 500);
+
+  // Valores sueltos.
+  ["pasos","agua","sueno","siesta","animo"].forEach(k => {
+    r[k] = fundirMapa(a[k], b[k], a.ts, b.ts, k, ts);
+  });
+  r.pesos = fundirMapa(a.pesos, b.pesos, a.ts, b.ts, "pesos", ts);
+
+  // Perfil: campo a campo, cada uno con su hora.
+  r.perfil = {};
+  const campos = ["altura","nacim","sexo","nivel","objetivo"];
+  campos.forEach(c => {
+    const ruta = "perfil." + c;
+    const ha = (a.ts || {})[ruta], hb = (b.ts || {})[ruta];
+    const va = (a.perfil || {})[c], vb = (b.perfil || {})[c];
+    const gana = masNuevo(ha, hb) ? va : vb;
+    r.perfil[c] = (gana === undefined || gana === null || gana === "")
+      ? (va || vb || "") : gana;
+    const hora = masNuevo(ha, hb) ? ha : hb;
+    if(hora) ts[ruta] = hora;
+  });
+
+  // Ajustes sueltos: gana el que tenga hora más reciente; si ninguno la
+  // tiene, el que traiga algo.
+  ["fase","faseManual","diaManual","inicio","material"].forEach(c => {
+    const ha = (a.ts || {})[c], hb = (b.ts || {})[c];
+    const enA = a[c] !== undefined && a[c] !== null;
+    const enB = b[c] !== undefined && b[c] !== null;
+    r[c] = (enA && enB) ? (masNuevo(ha, hb) ? a[c] : b[c]) : (enA ? a[c] : b[c]);
+    const hora = masNuevo(ha, hb) ? ha : hb;
+    if(hora) ts[c] = hora;
+  });
+
+  // La sesión a medias no se fusiona: es de un dispositivo concreto, y
+  // mezclarla solo puede dar un cronómetro que no significa nada. Se conserva
+  // la que haya empezado más tarde.
+  const sa = a.sesion, sb = b.sesion;
+  r.sesion = (sa && sb) ? ((sa.t0 || 0) >= (sb.t0 || 0) ? sa : sb) : (sa || sb || null);
+
+  r.bajas = bajas;
+  r.ts = ts;
+  r.v = 2;
+  return r;
+}
+
 function retrato(g){
   const dias = o => Object.keys(o || {}).length;
   return {
@@ -2604,80 +2873,70 @@ function paraSubir(){
   return p;
 }
 
-/* Sube, pero antes mira si otra sesión ha tocado la nube desde la última vez
-   que sincronizamos. Si es así, enseña exactamente qué difiere y pregunta. */
+/* Guarda en la nube. Y "guardar" aqui significa FUSIONAR Y ESCRIBIR, nunca
+   sustituir a ciegas:
+
+     1. Lee lo que hay arriba.
+     2. Lo fusiona con lo de aqui: no se pierde nada de ninguno de los lados.
+     3. Escribe el resultado, diciendo de que version partia.
+     4. Si mientras tanto otro dispositivo escribio, el servidor lo rechaza y
+        se vuelve a empezar. Sin esto quedaria una rendija: dos aparatos que
+        leen a la vez y escriben uno detras de otro, y el segundo tapa al
+        primero.
+
+   Por eso ya no hay dialogos de "con cual te quedas": no hay que elegir. */
 async function subirDatos(silencioso, saltarAviso){
   if(!syncFrase || syncOcupado) return false;
   syncOcupado = true;
   try{
     const id = await idDe(syncFrase);
 
-    /* Cierre de seguridad, aquí y no en quien llama: este es el único sitio
-       donde se destruye la copia de la nube, así que es donde hay que mirar.
-       Un dispositivo sin nada no puede tapar una copia que sí tiene datos.
-       Ni en silencio (se niega) ni a mano (avisa de lo que va a borrar). */
-    if(!hayAlgoQueAportar()){
-      let laNube = null;
+    for(let intento = 0; intento < 3; intento++){
+      // 1. Que hay arriba
+      let deLaNube = null, tsNube = null;
       try{
         const q = await fetch(urlNube(id), SIN_CACHE);
-        if(q.ok) laNube = retrato(await descifrar(await q.json()));
+        if(q.ok){
+          const b = await q.json();
+          tsNube = b.ts || null;
+          deLaNube = await descifrar(b);
+        }else if(q.status !== 404){
+          throw new Error("HTTP " + q.status);
+        }
       }catch(e){
-        // Si no se puede comprobar, desde un vacío no se sube a ciegas.
-        if(silencioso) return false;
-      }
-      if(laNube && (laNube.sesiones || laNube.mediciones || laNube.comida || laNube.altura)){
-        if(silencioso) return false;
-        const SL = String.fromCharCode(10);
-        const plural = (n, uno, varios) => n + " " + (n === 1 ? uno : varios);
-        const tiene = [
-          laNube.sesiones   ? plural(laNube.sesiones, "sesión", "sesiones") : "",
-          laNube.mediciones ? plural(laNube.mediciones, "medición", "mediciones") : "",
-          laNube.comida     ? plural(laNube.comida, "día de comida", "días de comida") : ""
-        ].filter(Boolean).join(", ");
-        if(!confirm("ESTE DISPOSITIVO ESTÁ VACÍO." + SL + SL +
-            "En la nube hay " + (tiene || "datos") + "." + SL + SL +
-            "Subir desde aquí BORRARÍA todo eso." + SL + SL +
-            "ACEPTAR = borrarlo de todas formas" + SL +
-            "CANCELAR = no subir  ←  lo que quieres casi seguro")){
-          syncAviso("No se ha subido. Usa «Traer de la nube» para bajar lo que hay.", "info");
+        /* Si no se puede leer, un dispositivo vacio no escribe a ciegas: seria
+           la unica forma de que este cambio destruyera algo. Uno con datos si
+           escribe, porque perder lo de hoy por no tener red es peor. */
+        if(!hayAlgoQueAportar()){
+          if(!silencioso) syncAviso("No he podido leer la nube. No subo desde un dispositivo vacío.", "mal");
           return false;
         }
       }
+
+      // 2. Fusionar
+      const fundido = deLaNube ? fundir(paraSubir(), deLaNube) : sellarLegado(paraSubir());
+      if(deLaNube) aplicarDatos(deLaNube, tsNube);
+
+      // 3. Escribir, diciendo de que version partiamos
+      const bloque = await cifrar(paraSubir());
+      if(tsNube) bloque.si = tsNube;
+      const r = await fetch(API_SYNC + "?id=" + id,
+        {method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(bloque)});
+
+      // 4. Alguien escribio entre medias: volvemos a leer y fusionar
+      if(r.status === 409) continue;
+      if(!r.ok) throw new Error("HTTP " + r.status);
+
+      const j = await r.json();
+      S.syncUlt = j.ts; S.cambiadoEn = null;
+      guardarSinMarcar();
+      if(!silencioso) syncAviso("Guardado en la nube · " + new Date(j.ts).toLocaleTimeString("es-ES"));
+      pintarSync(); pintarEstadoSync();
+      return true;
     }
 
-    if(!saltarAviso && S.syncUlt){
-      try{
-        const previo = await fetch(urlNube(id), SIN_CACHE);
-        if(previo.ok){
-          const b = await previo.json();
-          if(b.ts && b.ts > S.syncUlt){
-            const otro = await descifrar(b);
-            const dif = diferencias(retrato(otro), retrato(paraSubir()));
-            const cuando = new Date(b.ts).toLocaleString("es-ES");
-            const msg = "OTRA SESIÓN HA GUARDADO DESPUÉS QUE TÚ\n\n" +
-              "Guardó el " + cuando + ".\n\n" +
-              (dif.length ? "Diferencias:\n" + dif.join("\n") + "\n\n"
-                          : "No he encontrado diferencias en el recuento.\n\n") +
-              "Si sigues, lo tuyo sustituye a lo de la nube.\n\n¿Subir de todas formas?";
-            if(!confirm(msg)){
-              syncAviso("No se ha subido. Usa «Traer de la nube» si quieres lo otro.", "info");
-              return false;
-            }
-          }
-        }
-      }catch(e){ /* si no se puede comprobar, seguimos: mejor guardar que perder */ }
-    }
-
-    const bloque = await cifrar(paraSubir());
-    const r = await fetch(API_SYNC + "?id=" + id,
-      {method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(bloque)});
-    if(!r.ok) throw new Error("HTTP " + r.status);
-    const j = await r.json();
-    S.syncUlt = j.ts; S.cambiadoEn = null;
-    guardarSinMarcar();
-    if(!silencioso) syncAviso("Guardado en la nube · " + new Date(j.ts).toLocaleTimeString("es-ES"));
-    pintarSync(); pintarEstadoSync();
-    return true;
+    if(!silencioso) syncAviso("Otro dispositivo está guardando a la vez. Inténtalo en un momento.", "mal");
+    return false;
   }catch(e){
     if(!silencioso) syncAviso("No se ha podido subir: " + e.message, "mal");
     return false;
@@ -2696,27 +2955,19 @@ async function bajarDatos(){
     try{ g = await descifrar(bloque); }
     catch(e){ syncAviso("La frase no descifra estos datos. ¿La has escrito bien?", "mal"); return false; }
 
-    const nS = Array.isArray(g.hist) ? g.hist.length : 0;
-    const nM = Array.isArray(g.cuerpo) ? g.cuerpo.length : 0;
-    if(!confirm("En la nube hay:\n\n  " + nS + " sesiones\n  " + nM + " mediciones\n\n" +
-                "AQUÍ TIENES: " + S.hist.length + " sesiones y " + S.cuerpo.length + " mediciones.\n\n" +
-                "¿Sustituir lo de este dispositivo por lo de la nube?")){
-      syncAviso("Cancelado. No se ha tocado nada."); return false;
-    }
-    copiaSeguridad("antes de traer de la nube");
-    S.pesos  = g.pesos  || {};
-    S.hist   = Array.isArray(g.hist)   ? g.hist   : [];
-    S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
-    ["comidas","pasos","agua","sueno","siesta","animo"].forEach(k => {
-      S[k] = (g[k] && typeof g[k] === "object") ? g[k] : {};
-    });
-    S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
-    if(typeof g.fase === "number") S.fase = g.fase;
-    if(g.inicio) S.inicio = g.inicio;
-    S.syncUlt = bloque.ts;
-    guardar();
-    pintarHoy(); pintarPerfil(); pintarCuerpo(); pintarSemana(); pintarComida(); pintarDiario(); pintarInicio();
-    syncAviso("Descargado: " + nS + " sesiones y " + nM + " mediciones.");
+    /* Ya no sustituye: fusiona. Y por eso no pregunta nada — no hay nada
+       que perder, se queda lo de los dos lados. */
+    const antes = retrato(paraSubir());
+    aplicarDatos(g, bloque.ts);
+    const ahora = retrato(paraSubir());
+    if(S.cambiadoEn) await subirDatos(true, true);
+
+    const sumado = ["sesiones","mediciones","comida"]
+      .filter(k => ahora[k] > antes[k])
+      .map(k => "+" + (ahora[k] - antes[k]) + " " + ETIQUETAS[k]);
+    syncAviso(sumado.length
+      ? "Fusionado · " + sumado.join(", ")
+      : "Ya estaba todo aquí. No había nada nuevo que traer.");
     return true;
   }catch(e){
     syncAviso("No se ha podido descargar: " + e.message, "mal");
@@ -3035,22 +3286,54 @@ async function probarPin(){
 }
 
 /* Al entrar, mira si hay algo más nuevo en la nube sin dar la lata. */
+/* Trae lo de la nube FUSIONANDOLO con lo de aqui. Antes esto sustituia el
+   estado entero, y por eso apuntar algo en dos sitios distintos significaba
+   perder uno de los dos. Ahora no se pierde nada de ninguno de los lados.
+   Devuelve el resultado de la fusion, que es lo que hay que subir. */
 function aplicarDatos(g, ts){
   copiaSeguridad("antes de traer de la nube");
-  S.pesos = g.pesos || {};
-  S.hist = Array.isArray(g.hist) ? g.hist : [];
-  S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
+  const r = fundir(paraSubir(), g || {});
+
+  S.pesos  = r.pesos  || {};
+  S.hist   = Array.isArray(r.hist)   ? r.hist   : [];
+  S.cuerpo = Array.isArray(r.cuerpo) ? r.cuerpo : [];
   ["comidas","pasos","agua","sueno","siesta","animo"].forEach(k => {
-    S[k] = (g[k] && typeof g[k] === "object") ? g[k] : {};
+    S[k] = (r[k] && typeof r[k] === "object") ? r[k] : {};
   });
-  S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
-  if(typeof g.fase === "number") S.fase = g.fase;
-  if(g.inicio) S.inicio = g.inicio;
+  S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, r.perfil || {});
+  if(typeof r.fase === "number") S.fase = r.fase;
+  if(r.inicio) S.inicio = r.inicio;
+  if(r.material) S.material = r.material;
+  S.ts    = r.ts    || {};
+  S.bajas = r.bajas || {};
+
   S.syncUlt = ts || null;
-  S.cambiadoEn = null;
+  // Si la fusion ha aportado algo que la nube no tenia, queda pendiente de
+  // subir. Quien llama decide cuando.
+  S.cambiadoEn = JSON.stringify(sinRuido(r)) === JSON.stringify(sinRuido(g || {}))
+    ? null : new Date().toISOString();
   guardarSinMarcar();
+  if(typeof sellarCambios === "function"){ fotoPrevia = null; sellarCambios(); }
   pintarHoy(); pintarPerfil(); pintarCuerpo(); pintarSemana();
   pintarComida(); pintarDiario(); pintarInicio(); pintarEstadoSync();
+  return r;
+}
+
+/* Para comparar dos estados sin que el ruido de la comparacion mienta: el
+   orden de las claves y los campos que no son datos no cuentan. */
+function sinRuido(x){
+  const g = sellarLegado(JSON.parse(JSON.stringify(x || {})));
+  const orden = o => {
+    if(Array.isArray(o)) return o.map(orden);
+    if(o && typeof o === "object"){
+      const r = {};
+      Object.keys(o).sort().forEach(k => { if(k !== "exportado") r[k] = orden(o[k]); });
+      return r;
+    }
+    return o;
+  };
+  delete g.sesion; delete g.exportado; delete g.ts;
+  return orden(g);
 }
 
 /* Al entrar en cualquier dispositivo: carga sola la última copia guardada.
@@ -3058,61 +3341,34 @@ function aplicarDatos(g, ts){
    traerla podría perder algo.                                              */
 async function alEntrar(){
   if(!syncFrase) return;
-  pintarEstadoSync("Comprobando la nube…");
+  pintarEstadoSync("Sincronizando…");
   try{
-    const r = await fetch(urlNube(await idDe(syncFrase)), SIN_CACHE);
+    const id = await idDe(syncFrase);
+    const r = await fetch(urlNube(id), SIN_CACHE);
+
     if(r.status === 404){
-      // No hay nada en la nube. Solo sembramos si aquí hay algo de verdad.
+      // No hay nada arriba. Solo sembramos si aqui hay algo de verdad.
       if(hayAlgoQueAportar()) await subirDatos(true, true);
       pintarEstadoSync(); return;
     }
     if(!r.ok) throw new Error("HTTP " + r.status);
     const bloque = await r.json();
-
-    if(S.syncUlt && bloque.ts && bloque.ts <= S.syncUlt){
-      // La nube no ha cambiado. Si aquí hay algo sin subir, se sube.
-      if(S.cambiadoEn) await subirDatos(true, true);
-      pintarEstadoSync(); return;
-    }
-
     const g = await descifrar(bloque);
-    const rNube = retrato(g), rAqui = retrato(paraSubir());
-    // Salvaguarda: que la nube sea más nueva no significa que tenga más.
-    // Si aquí hay más registros, se pregunta aunque no haya cambios sin subir.
-    const nubeMasPobre = rNube.sesiones < rAqui.sesiones ||
-                         rNube.mediciones < rAqui.mediciones ||
-                         rNube.comida < rAqui.comida;
-    if(!S.cambiadoEn && !nubeMasPobre){
-      aplicarDatos(g, bloque.ts);
-      syncAviso("Cargada la última versión guardada · " +
-                new Date(bloque.ts).toLocaleString("es-ES"));
-      pintarEstadoSync();
-      return;
-    }
-    if(nubeMasPobre && !S.cambiadoEn){
-      const d = diferencias(rNube, rAqui);
-      const SL = String.fromCharCode(10);
-      const m = "CUIDADO: la versión de la nube tiene MENOS datos que este dispositivo." + SL + SL +
-        (d.length ? d.join(SL) + SL + SL : "") +
-        "Suele pasar si otro aparato se conectó estando vacío." + SL + SL +
-        "ACEPTAR = traer la de la nube (perderías lo de aquí)" + SL +
-        "CANCELAR = quedarte con lo de aquí y subirlo";
-      if(confirm(m)){ aplicarDatos(g, bloque.ts); syncAviso("Traída la versión de la nube."); }
-      else { await subirDatos(false, true); syncAviso("Se ha subido lo de este dispositivo."); }
-      pintarEstadoSync();
-      return;
-    }
-    // Los dos lados han cambiado: se enseña la diferencia y decide él.
-    const dif = diferencias(retrato(g), retrato(paraSubir()));
-    const msg = "HAY UNA VERSIÓN MÁS NUEVA EN LA NUBE\n\n" +
-      "Guardada el " + new Date(bloque.ts).toLocaleString("es-ES") + " desde otro dispositivo.\n" +
-      "Aquí tienes cambios sin subir desde el " +
-      new Date(S.cambiadoEn).toLocaleString("es-ES") + ".\n\n" +
-      (dif.length ? "Diferencias:\n" + dif.join("\n") + "\n\n" : "") +
-      "ACEPTAR = quedarte con la de la nube (pierdes lo de aquí)\n" +
-      "CANCELAR = quedarte con lo de aquí (lo subirás al guardar)";
-    if(confirm(msg)){ aplicarDatos(g, bloque.ts); syncAviso("Cargada la versión de la nube."); }
-    else syncAviso("Te quedas con lo de este dispositivo.", "info");
+
+    /* Se fusiona SIEMPRE. Ya no hay que preguntarle con cual se queda,
+       porque no hay que renunciar a nada: lo que esta en un lado y no en el
+       otro se conserva, y de lo que esta en los dos gana lo mas reciente. */
+    const antes = retrato(paraSubir());
+    aplicarDatos(g, bloque.ts);
+    const ahora = retrato(paraSubir());
+
+    // Si la fusion aporta algo que arriba no estaba, se sube.
+    if(S.cambiadoEn) await subirDatos(true, true);
+
+    const gano = ["sesiones","mediciones","comida"]
+      .filter(k => ahora[k] > antes[k])
+      .map(k => "+" + (ahora[k] - antes[k]) + " " + ETIQUETAS[k]);
+    if(gano.length) syncAviso("Sincronizado · " + gano.join(", "));
     pintarEstadoSync();
   }catch(e){
     pintarEstadoSync();
@@ -3675,6 +3931,10 @@ function pintarComida(){
 
 function anotar(c){
   if(!S.comidas[comDia]) S.comidas[comDia] = [];
+  // Identidad y hora desde el minuto cero: es lo que permite fusionar dos
+  // dispositivos sin que ninguno pierda lo suyo.
+  if(!c.id) c.id = idNuevo();
+  if(!c.ts) c.ts = new Date().toISOString();
   S.comidas[comDia].push(c);
   guardar(); pintarComida(); pintarInicio();
 }
@@ -3736,7 +3996,9 @@ $("#comPlan").addEventListener("click", e => {
 $("#comLista").addEventListener("click", e => {
   const b = e.target.closest("[data-borra]");
   if(!b) return;
-  S.comidas[comDia].splice(Number(b.dataset.borra), 1);
+  const fuera = S.comidas[comDia].splice(Number(b.dataset.borra), 1)[0];
+  // Se apunta la baja. Si no, el otro dispositivo lo vuelve a traer.
+  if(fuera && fuera.id) S.bajas[fuera.id] = new Date().toISOString();
   guardar(); pintarComida(); pintarInicio();
 });
 
@@ -4163,6 +4425,16 @@ if("serviceWorker" in navigator && location.protocol.indexOf("http") === 0){
 
 /* ============ ARRANQUE ============ */
 $("#cFecha").value = hoyISO();
+/* Los datos que ya existían no tienen identificador ni hora. Se los ponemos
+   al arrancar, y no solo al fusionar: si no, borrar un apunte antiguo no
+   dejaría constancia —no hay identificador que apuntar en las bajas— y el
+   otro dispositivo te lo devolvería en la siguiente sincronización. */
+sellarLegado(S);
+
+/* La foto de partida para el sellado: sin esto, el primer cambio tras
+   abrir la app se quedaria sin hora. */
+sellarCambios();
+
 pintarHoy();
 pintarPerfil();
 pintarCuerpo();

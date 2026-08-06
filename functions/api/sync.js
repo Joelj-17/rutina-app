@@ -60,6 +60,20 @@ export async function onRequest({ request, env }) {
         return responde({ error: "faltan campos del cifrado" }, 400);
       }
 
+      /* Escritura condicional. El cliente dice de que version partia ("si").
+         Si mientras fusionaba entro otra, se le rechaza y vuelve a empezar.
+         Sin esto queda una rendija estrecha pero real: dos dispositivos leen
+         a la vez, fusionan cada uno por su lado, y el segundo en escribir tapa
+         al primero. Es exactamente el fallo que este cambio viene a cerrar. */
+      if (typeof datos.si === "string") {
+        const actual = await env.RUTINA.get(id, { type: "json" });
+        const tsActual = actual && actual.ts;
+        if (tsActual && tsActual !== datos.si) {
+          return responde({ error: "alguien ha escrito antes", ts: tsActual }, 409);
+        }
+        delete datos.si;
+      }
+
       datos.ts = new Date().toISOString();
       await env.RUTINA.put(id, JSON.stringify(datos));
       return responde({ ok: true, ts: datos.ts });
