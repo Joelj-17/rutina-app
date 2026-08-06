@@ -157,13 +157,13 @@ svg.esq{width:100%;max-width:340px;height:108px;color:var(--tinta);display:block
             border-top:1px solid var(--linea);padding-top:8px;margin-top:4px;line-height:1.4}
 
 /* ---- Comida ---- */
-.medidor{margin-bottom:14px}
+.medidor{margin-bottom:11px}
 .medidor:last-child{margin-bottom:0}
 .medidor .cab{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
               font-size:.82rem;margin-bottom:5px}
-.medidor .cab b{font-family:var(--mono);font-size:1.05rem;font-variant-numeric:tabular-nums}
+.medidor .cab b{font-family:var(--mono);font-size:.92rem;font-variant-numeric:tabular-nums}
 .medidor .cab span{color:var(--acero)}
-.riel{height:9px;background:var(--fondo);border-radius:99px;overflow:hidden;position:relative}
+.riel{height:6px;background:var(--fondo);border-radius:99px;overflow:hidden;position:relative}
 .riel i{display:block;height:100%;background:var(--agua);border-radius:99px;transition:width .3s}
 .riel i.lleno{background:var(--hecho)}
 .riel i.pasado{background:var(--alerta)}
@@ -190,9 +190,9 @@ svg.esq{width:100%;max-width:340px;height:108px;color:var(--tinta);display:block
 .comfila button{color:var(--alerta);font-size:1.1rem;line-height:1;padding:2px 5px}
 
 /* ---- Portada ---- */
-.portada{padding:26px 0 40px}
-.portada h1{font-size:1.9rem;margin:0 0 2px;letter-spacing:-.025em}
-.portada .hoy{color:var(--acero);font-size:.92rem;margin:0 0 22px}
+.portada{padding:22px 0 40px}
+.portada h1{font-size:1.4rem;margin:0 0 2px;letter-spacing:-.02em;font-weight:700}
+.portada .hoy{color:var(--acero);font-size:.84rem;margin:0 0 18px}
 .menu{display:grid;gap:11px}
 .tarjMenu{display:block;width:100%;text-align:left;background:var(--panel);border:1px solid var(--linea);
           border-radius:14px;padding:18px 20px;box-shadow:var(--sombra);position:relative;
@@ -360,55 +360,85 @@ td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowra
 .tabla-env{overflow-x:auto;margin-bottom:14px}
 footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px solid var(--linea);margin-top:26px}
 /* ---- El diario de hoy, todo a un toque desde la portada ---- */
-.bloque{background:var(--panel);border:1px solid var(--linea);border-radius:14px;
-        padding:16px 17px;box-shadow:var(--sombra);margin-bottom:11px}
-.bloque.destaca{border-width:2px;border-color:var(--agua)}
+.bloque{background:var(--panel);border:1px solid var(--linea);border-radius:12px;
+        padding:14px 15px;margin-bottom:8px}
+.bloque.destaca{border-color:var(--linea)}
 .bloqueCab{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:11px}
-.bloqueCab h2{margin:0;font-size:.72rem;text-transform:uppercase;letter-spacing:.11em;
+.bloqueCab h2{margin:0;font-size:.66rem;text-transform:uppercase;letter-spacing:.11em;
               color:var(--acero);font-weight:700}
-.bloqueCab .dato{font-family:var(--mono);font-size:.83rem;font-weight:700;color:var(--agua)}
-.bloque .linea1{font-size:1.02rem;font-weight:600;margin:0 0 3px}
-.bloque .linea2{font-size:.84rem;color:var(--acero);margin:0 0 12px}
-.accionGrande{width:100%;background:var(--agua);color:#fff;padding:14px;border-radius:11px;
-              font-size:.98rem;font-weight:700}
+.bloqueCab .dato{font-family:var(--mono);font-size:.76rem;font-weight:600;color:var(--acero)}
+.bloque .linea1{font-size:.95rem;font-weight:600;margin:0 0 2px}
+.bloque .linea2{font-size:.8rem;color:var(--acero);margin:0 0 11px}
+.accionGrande{width:100%;background:var(--agua);color:#fff;padding:12px;border-radius:9px;
+              font-size:.9rem;font-weight:700}
 .accionGrande:active{transform:translateY(1px)}
-.accionGrande.hecho{background:var(--hecho)}
-.accionGrande.suave{background:var(--fondo);color:var(--agua);border:1.5px solid var(--agua)}
+.accionGrande.hecho{background:transparent;color:var(--hecho);border:1px solid var(--hecho)}
+.accionGrande.suave{background:transparent;color:var(--acero);border:1px solid var(--linea);
+                    font-weight:600}
 
 .platosMini{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
-.pmini{padding:10px 3px;border-radius:10px;border:1.5px solid var(--linea);background:var(--panel);
-       font-size:.7rem;font-weight:700;color:var(--tinta-2);line-height:1.25}
-.pmini b{display:block;font-family:var(--mono);font-size:.66rem;color:var(--acero);font-weight:700;margin-top:2px}
-.pmini.ok{background:var(--hecho);border-color:var(--hecho);color:#fff}
-.pmini.ok b{color:rgba(255,255,255,.85)}
+.pmini{padding:9px 3px;border-radius:8px;border:1px solid var(--linea);background:transparent;
+       font-size:.68rem;font-weight:600;color:var(--tinta-2);line-height:1.25}
+.pmini b{display:block;font-family:var(--mono);font-size:.63rem;color:var(--acero);font-weight:600;margin-top:2px}
+.pmini.ok{border-color:var(--hecho);color:var(--hecho)}
+.pmini.ok b{color:var(--hecho);opacity:.7}
 
 .vida{display:flex;flex-direction:column;gap:2px}
-.vidaF{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--linea-2)}
+.vidaF{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--linea-2)}
 .vidaF:last-child{border-bottom:none}
-.vidaF .ic{font-size:1.15rem;width:24px;text-align:center;flex:0 0 24px}
-.vidaF .nom{flex:1;font-size:.88rem;font-weight:600}
-.vidaF input{width:82px;text-align:center;font-family:var(--mono);font-weight:700;font-size:.95rem;
-             padding:6px 4px}
-.vidaF .sufijo{font-family:var(--mono);font-size:.76rem;color:var(--agua);font-weight:700;
-               min-width:64px;text-align:right}
+.vidaF .ic{font-size:.98rem;width:20px;text-align:center;flex:0 0 20px;filter:grayscale(.35)}
+.vidaF .nom{flex:1;font-size:.84rem;font-weight:500}
+.vidaF input{width:74px;text-align:center;font-family:var(--mono);font-weight:600;font-size:.88rem;
+             padding:5px 4px}
+.vidaF .sufijo{font-family:var(--mono);font-size:.72rem;color:var(--acero);font-weight:600;
+               min-width:58px;text-align:right}
 .vasos{display:flex;gap:4px}
-.vaso{width:21px;height:21px;border-radius:50%;border:2px solid var(--linea);background:transparent;padding:0}
-.vaso.lleno{background:var(--agua);border-color:var(--agua)}
+.vaso{width:17px;height:17px;border-radius:50%;border:1.5px solid var(--linea);background:transparent;padding:0}
+.vaso.lleno{background:var(--acero);border-color:var(--acero)}
 .caras{display:flex;gap:5px}
-.cara{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--linea);background:var(--panel);
-      font-size:1.05rem;line-height:1;padding:0;filter:grayscale(1);opacity:.5}
-.cara.sel{filter:none;opacity:1;border-color:var(--agua);background:var(--agua-claro);border-width:2px}
+.cara{width:29px;height:29px;border-radius:50%;border:1px solid var(--linea);background:transparent;
+      font-size:.92rem;line-height:1;padding:0;filter:grayscale(1);opacity:.4}
+.cara.sel{filter:none;opacity:1;border-color:var(--acero)}
 
 .balanceDia{display:flex;gap:14px;justify-content:space-between;text-align:center}
 .balanceDia div{flex:1}
-.balanceDia b{display:block;font-family:var(--mono);font-size:1.2rem;font-variant-numeric:tabular-nums}
-.balanceDia span{font-size:.64rem;text-transform:uppercase;letter-spacing:.07em;color:var(--acero);font-weight:700}
-.balanceDia .def b{color:var(--hecho)} .balanceDia .sup b{color:var(--alerta)}
+.balanceDia b{display:block;font-family:var(--mono);font-size:1.05rem;font-variant-numeric:tabular-nums;
+              color:var(--tinta-2);font-weight:600}
+.balanceDia span{font-size:.62rem;text-transform:uppercase;letter-spacing:.07em;color:var(--acero);font-weight:600}
+.balanceDia .def b{color:var(--hecho);font-weight:700} .balanceDia .sup b{color:var(--alerta);font-weight:700}
+
+/* ---- Diario: una tarjeta por día con todo dentro ---- */
+.rachas{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.racha{background:var(--panel);border:1px solid var(--linea);border-radius:11px;padding:12px 10px;
+       text-align:center;box-shadow:var(--sombra)}
+.racha b{display:block;font-family:var(--mono);font-size:1.35rem;font-weight:700;
+         font-variant-numeric:tabular-nums;color:var(--agua)}
+.racha span{font-size:.64rem;text-transform:uppercase;letter-spacing:.07em;color:var(--acero);font-weight:700}
+.dcard{background:var(--panel);border:1px solid var(--linea);border-radius:12px;
+       box-shadow:var(--sombra);margin-bottom:9px;overflow:hidden}
+.dcard.esHoy{border-color:var(--agua);border-width:2px}
+.dcab{display:block;width:100%;text-align:left;padding:13px 15px}
+.dcab .fila1{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.dcab .fecha{font-weight:700;font-size:.95rem}
+.dcab .flecha2{color:var(--acero);font-size:.72rem;margin-left:6px;display:inline-block}
+.dcab[aria-expanded="true"] .flecha2{transform:rotate(180deg)}
+.dcab .bal{font-family:var(--mono);font-size:.82rem;font-weight:700}
+.dcab .bal.def{color:var(--hecho)} .dcab .bal.sup{color:var(--alerta)}
+.iconos{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:.78rem;color:var(--acero)}
+.iconos i{font-style:normal;font-family:var(--mono);font-weight:700;color:var(--tinta-2)}
+.iconos .off{opacity:.32}
+.ddet{padding:0 15px 14px;border-top:1px solid var(--linea-2)}
+.ddet h5{margin:12px 0 6px;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;
+         color:var(--acero);font-weight:700}
+.ddet .comidaL{font-size:.83rem;display:flex;justify-content:space-between;gap:10px;
+               padding:3px 0;border-bottom:1px solid var(--linea-2)}
+.ddet .comidaL:last-child{border-bottom:none}
+.ddet .comidaL span{font-family:var(--mono);color:var(--acero);white-space:nowrap}
 
 .atajos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
-.atajo{background:var(--panel);border:1px solid var(--linea);border-radius:11px;padding:12px 6px;
-       font-size:.78rem;font-weight:700;color:var(--tinta-2)}
-.atajo span{display:block;font-size:1.1rem;margin-bottom:3px;filter:grayscale(.3)}
+.atajo{background:transparent;border:1px solid var(--linea);border-radius:9px;padding:10px 6px;
+       font-size:.74rem;font-weight:600;color:var(--acero)}
+.atajo span{display:block;font-size:.95rem;margin-bottom:2px;filter:grayscale(1);opacity:.6}
 
 [hidden]{display:none!important}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -434,6 +464,7 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
     <button role="tab" aria-selected="true"  data-t="hoy">HOY</button>
     <button role="tab" aria-selected="false" data-t="comida">COMIDA</button>
     <button role="tab" aria-selected="false" data-t="cuerpo">CUERPO</button>
+    <button role="tab" aria-selected="false" data-t="diario">DIARIO</button>
     <button role="tab" aria-selected="false" data-t="semana">SEMANA</button>
     <button role="tab" aria-selected="false" data-t="guia">GUÍA</button>
   </nav>
@@ -490,7 +521,7 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
 
   <div class="atajos">
     <button class="atajo" data-ir="cuerpo"><span>📏</span>Cuerpo</button>
-    <button class="atajo" data-ir="semana"><span>📊</span>Semana</button>
+    <button class="atajo" data-ir="diario"><span>📅</span>Diario</button>
     <button class="atajo" data-ir="guia"><span>📖</span>Guía</button>
   </div>
 </main>
@@ -670,6 +701,15 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
   <p id="msgDatos" style="font-size:.85rem;color:var(--hecho);font-weight:600;margin-top:10px" hidden></p>
 </main>
 
+<!-- ============ DIARIO ============ -->
+<main class="env panel-sec" id="p-diario" hidden>
+  <div class="dia-cab" style="padding-top:6px">
+    <div><h1>Diario</h1><div class="dia-sub" id="diarioSub">—</div></div>
+  </div>
+  <div id="diarioRachas"></div>
+  <div id="diarioLista"></div>
+</main>
+
 <!-- ============ SEMANA ============ -->
 <main class="env panel-sec" id="p-semana" hidden>
   <h2 class="sec">Tu semana</h2>
@@ -678,9 +718,6 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
     <p><strong>El domingo no es opcional.</strong> Una serie de cada ejercicio y sin bloque de pierna. No es pereza: es lo que hace que llegues al mes tres en pie.</p>
   </div>
   <p style="font-size:.88rem;color:var(--acero)">A y B son la misma sesión. Solo cambia el ejercicio de pecho — press en el suelo (A) o flexiones (B) — para no repetir exactamente el mismo estímulo siete días seguidos.</p>
-
-  <h2 class="sec">Tus últimas sesiones</h2>
-  <div class="hist" id="hist"></div>
 
   <h2 class="sec">Tus pesos guardados</h2>
   <div class="tabla-env"><table id="tablaPesos"></table></div>
@@ -2255,6 +2292,99 @@ function detalleSesion(h){
 }
 
 /* ============ SEMANA ============ */
+/* ============ DIARIO: un día, una tarjeta, todo dentro ============ */
+function diasConDatos(){
+  const set = {};
+  S.hist.forEach(h => set[h.f] = 1);
+  S.cuerpo.forEach(c => set[c.f] = 1);
+  [S.comidas, S.pasos, S.agua, S.sueno, S.animo].forEach(o =>
+    Object.keys(o).forEach(f => { if(o === S.comidas ? comidasDe(f).length : o[f]) set[f] = 1; }));
+  return Object.keys(set).sort().reverse();
+}
+function fechaLarga(f){
+  const d = new Date(f + "T00:00:00");
+  if(isNaN(d)) return f;
+  return DIAS[d.getDay()].n + " " + d.getDate() + " de " + MESES[d.getMonth()];
+}
+function pintarDiario(){
+  const dias = diasConDatos();
+  const hoy = hoyISO();
+
+  /* Constancia: lo que de verdad decide el resultado. */
+  let seguidos = 0;
+  for(let i = 0; ; i++){
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const f = hoyISO(d);
+    if(S.hist.some(h => h.f === f)) seguidos++;
+    else if(!(i === 0)) break;
+    else if(i > 0) break;
+    if(i > 400) break;
+  }
+  const ult7 = Array.from({length:7}, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - i); return hoyISO(d);
+  });
+  const sesiones7 = ult7.filter(f => S.hist.some(h => h.f === f)).length;
+  const sueños = ult7.map(f => S.sueno[f]).filter(x => x);
+  const mediaSueno = sueños.length ? (sueños.reduce((a,b) => a+b, 0)/sueños.length).toFixed(1) : null;
+
+  $("#diarioSub").textContent = dias.length
+    ? dias.length + (dias.length === 1 ? " día registrado" : " días registrados")
+    : "Todavía sin nada";
+  $("#diarioRachas").innerHTML = dias.length ? '<div class="rachas">' +
+    '<div class="racha"><b>' + S.hist.length + '</b><span>Sesiones</span></div>' +
+    '<div class="racha"><b>' + sesiones7 + '/7</b><span>Últimos 7 días</span></div>' +
+    '<div class="racha"><b>' + (mediaSueno || "—") + '</b><span>Sueño medio</span></div></div>' : "";
+
+  $("#diarioLista").innerHTML = dias.length ? dias.slice(0, 60).map(f => {
+    const ses = S.hist.find(h => h.f === f);
+    const t = totalDe(f), gasto = gastoDe(f);
+    const med = S.cuerpo.find(c => c.f === f);
+    const pas = S.pasos[f], ag = S.agua[f], su = S.sueno[f], an = S.animo[f];
+    const bal = (gasto && t.kcal > 0) ? Math.round(t.kcal - gasto) : null;
+
+    const chip = (ico, val, hay) =>
+      '<span class="' + (hay ? "" : "off") + '">' + ico + " <i>" + val + "</i></span>";
+    const iconos = [
+      chip("🏋", ses ? mmss(ses.seg) : "—", !!ses),
+      chip("🍽", t.kcal ? Math.round(t.kcal) + " kcal" : "—", t.kcal > 0),
+      chip("👟", pas ? pas : "—", !!pas),
+      chip("💧", ag ? ag + "/" + VASOS : "—", !!ag),
+      chip("😴", su ? su + " h" : "—", !!su),
+      chip((CARAS.find(c => c.v === an) || {e:"🙂"}).e, an ? (CARAS.find(c => c.v === an)||{}).t : "—", !!an)
+    ].join("");
+
+    let det = "";
+    if(ses) det += '<h5>Entrenamiento · ' + esc(ses.d) + '</h5>' + detalleSesion(ses);
+    if(comidasDe(f).length){
+      det += '<h5>Comida</h5>' + comidasDe(f).map(c =>
+        '<div class="comidaL"><span style="color:var(--tinta);font-family:var(--ui)">' + esc(c.n) +
+        '</span><span>' + Math.round(c.kcal) + ' kcal · ' + Math.round(c.prot) + ' g</span></div>').join("");
+    }
+    if(med) det += '<h5>Medición</h5><div class="comidaL"><span style="color:var(--tinta);font-family:var(--ui)">' +
+      (med.peso != null ? med.peso.toFixed(1) + " kg" : "—") +
+      (med.cintura != null ? " · cintura " + med.cintura + " cm" : "") + '</span></div>' +
+      (med.nota ? '<p style="font-size:.82rem;color:var(--acero);margin:6px 0 0">' + esc(med.nota) + '</p>' : "");
+    if(!det) det = '<p style="font-size:.84rem;color:var(--acero);margin:12px 0 0">Solo registros del día, sin sesión ni comidas apuntadas.</p>';
+
+    return '<div class="dcard' + (f === hoy ? " esHoy" : "") + '">' +
+      '<button class="dcab" aria-expanded="false"><span class="fila1">' +
+      '<span class="fecha">' + (f === hoy ? "Hoy" : fechaLarga(f)) + '<span class="flecha2">▼</span></span>' +
+      (bal != null ? '<span class="bal ' + (bal < 0 ? "def" : "sup") + '">' +
+        (bal > 0 ? "+" : "") + bal + ' kcal</span>' : "") +
+      '</span><span class="iconos">' + iconos + '</span></button>' +
+      '<div class="ddet" hidden>' + det + '</div></div>';
+  }).join("")
+  : '<div class="vacio">Aquí se irá guardando cada día: entrenamiento, comida, pasos, agua, sueño y ánimo. Empieza apuntando algo en la portada.</div>';
+
+  $("#diarioLista").querySelectorAll(".dcab").forEach(b => {
+    b.addEventListener("click", () => {
+      const d = b.nextElementSibling, abierto = !d.hidden;
+      d.hidden = abierto;
+      b.setAttribute("aria-expanded", String(!abierto));
+    });
+  });
+}
+
 function pintarSemana(){
   const hoy = new Date().getDay(), orden = [1,2,3,4,5,6,0];
   $("#semanaLista").innerHTML = orden.map(i => {
@@ -2264,31 +2394,6 @@ function pintarSemana(){
       '</b><span class="et">' + d.et + '</span><span class="mn">' + listaDia(d.k).length + " ej · " + mins + '</span></div>';
   }).join("");
 
-  $("#hist").innerHTML = S.hist.length
-    ? S.hist.slice(0,14).map((h, i) => {
-        const rpe = h.rpe ? (ESFUERZO.find(x => x.v === h.rpe) || {}).t : null;
-        const mol = (h.molestias || []).filter(m => m !== "Ninguna");
-        const lin2 = [rpe, mol.length ? "molestias: " + mol.join(", ") : null, h.nota || null]
-                     .filter(Boolean).join(" · ");
-        return '<div class="hfila">' +
-          '<button class="hcab" data-i="' + i + '" aria-expanded="false">' +
-            '<span class="lin1"><span class="hf">' + esc(h.f) + '</span><b>' + esc(h.d) +
-            '</b><span class="hf">' + mmss(h.seg) + " · F" + (h.fase||1) + '</span>' +
-            '<span class="flecha">▼</span></span>' +
-            (lin2 ? '<span class="lin2">' + esc(lin2) + '</span>' : "") +
-          '</button>' +
-          '<div class="hdet" hidden>' + detalleSesion(h) + '</div>' +
-        '</div>';
-      }).join("")
-    : '<div class="vacio">Todavía no has terminado ninguna sesión. Aparecerán aquí en cuanto completes la primera.</div>';
-
-  $("#hist").querySelectorAll(".hcab").forEach(b => {
-    b.addEventListener("click", () => {
-      const det = b.nextElementSibling, abierto = !det.hidden;
-      det.hidden = abierto;
-      b.setAttribute("aria-expanded", String(!abierto));
-    });
-  });
 
   const filas = Object.keys(EJ).filter(id => !EJ[id].bloque).map(id => {
     const g = S.pesos[id+"|"+S.fase];
@@ -2344,7 +2449,10 @@ const ALIMENTOS = [
   ["Judías verdes",31,1.8], ["Espinacas",23,2.9], ["Champiñones",22,3], ["Zanahoria",41,0.9],
   ["Tomate frito de bote",90,1.4], ["Tomate triturado",22,1.1], ["Encurtidos",15,0.6],
   ["Café solo",2,0.1,"ud"], ["Café con leche",90,5,"ud"], ["Azúcar (cucharadita)",20,0,"ud"],
-  ["Refresco zero",0,0,"ud"], ["Cerveza (caña)",90,1,"ud"], ["Vino (copa)",120,0,"ud"],
+  ["Refresco zero",0,0,"ud"], ["Refresco con azúcar (lata)",140,0,"ud"],
+  ["Cerveza (caña)",90,1,"ud"], ["Cerveza (tercio)",130,1.5,"ud"], ["Vino (copa)",120,0,"ud"],
+  ["Gin-tonic",190,0,"ud"], ["Gin-tonic con tónica zero",115,0,"ud"],
+  ["Copa con refresco (ron, whisky, vodka)",200,0,"ud"], ["Chupito",70,0,"ud"],
   ["Chocolate negro",550,7], ["Galletas",450,7], ["Helado",200,3.5],
   ["Pizza",260,11], ["Hamburguesa completa",250,13], ["Croquetas",230,7]
 ];
@@ -2651,7 +2759,7 @@ $("#vAnimo").addEventListener("click", e => {
 });
 
 /* ============ PESTAÑAS Y SELECTORES ============ */
-const PESTANAS = ["inicio","hoy","comida","cuerpo","semana","guia"];
+const PESTANAS = ["inicio","hoy","comida","cuerpo","diario","semana","guia"];
 function irA(t){
   PESTANAS.forEach(x => { $("#p-"+x).hidden = (x !== t); });
   $("#barraNav").hidden = (t === "inicio");
@@ -2659,6 +2767,7 @@ function irA(t){
     b.setAttribute("aria-selected", String(b.dataset.t === t)));
   if(t === "inicio") pintarInicio();
   if(t === "comida") pintarComida();
+  if(t === "diario") pintarDiario();
   if(t === "semana") pintarSemana();
   if(t === "cuerpo"){ pintarPerfil(); pintarCuerpo(); }
   window.scrollTo({top:0, behavior:"smooth"});
@@ -2736,6 +2845,7 @@ pintarPerfil();
 pintarCuerpo();
 pintarSemana();
 pintarComida();
+pintarDiario();
 pintarInicio();
 /* Si hay una sesión a medias, entra directo al entrenamiento. */
 irA(S.t0 ? "hoy" : "inicio");
