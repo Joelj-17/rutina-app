@@ -2,7 +2,9 @@
    Estrategia: red primero para el HTML (así ves los cambios al desplegar),
    caché primero para iconos y manifiesto. Todo sigue funcionando sin conexión. */
 
-const CACHE = "rutina-v1";
+/* Al cambiar este nombre, al activarse se borran las cachés anteriores.
+   Súbelo cuando un despliegue tenga que llegar sí o sí a los dispositivos. */
+const CACHE = "rutina-v2";
 const BASE = new URL("./", self.location).pathname;
 const ESENCIALES = [
   BASE,

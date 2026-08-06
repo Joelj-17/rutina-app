@@ -1231,6 +1231,11 @@ function esquema(id){
 
 /* ============ ESTADO ============ */
 const LS = "rutina.v1";
+
+/* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
+   de un vistazo si un dispositivo está ejecutando el código que crees. Sin
+   esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
+const VERSION = "2026-08-06 · 4";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -2396,6 +2401,39 @@ async function subirDatos(silencioso, saltarAviso){
   try{
     const id = await idDe(syncFrase);
 
+    /* Cierre de seguridad, aquí y no en quien llama: este es el único sitio
+       donde se destruye la copia de la nube, así que es donde hay que mirar.
+       Un dispositivo sin nada no puede tapar una copia que sí tiene datos.
+       Ni en silencio (se niega) ni a mano (avisa de lo que va a borrar). */
+    if(!hayAlgoQueAportar()){
+      let laNube = null;
+      try{
+        const q = await fetch(API_SYNC + "?id=" + id);
+        if(q.ok) laNube = retrato(await descifrar(await q.json()));
+      }catch(e){
+        // Si no se puede comprobar, desde un vacío no se sube a ciegas.
+        if(silencioso) return false;
+      }
+      if(laNube && (laNube.sesiones || laNube.mediciones || laNube.comida || laNube.altura)){
+        if(silencioso) return false;
+        const SL = String.fromCharCode(10);
+        const plural = (n, uno, varios) => n + " " + (n === 1 ? uno : varios);
+        const tiene = [
+          laNube.sesiones   ? plural(laNube.sesiones, "sesión", "sesiones") : "",
+          laNube.mediciones ? plural(laNube.mediciones, "medición", "mediciones") : "",
+          laNube.comida     ? plural(laNube.comida, "día de comida", "días de comida") : ""
+        ].filter(Boolean).join(", ");
+        if(!confirm("ESTE DISPOSITIVO ESTÁ VACÍO." + SL + SL +
+            "En la nube hay " + (tiene || "datos") + "." + SL + SL +
+            "Subir desde aquí BORRARÍA todo eso." + SL + SL +
+            "ACEPTAR = borrarlo de todas formas" + SL +
+            "CANCELAR = no subir  ←  lo que quieres casi seguro")){
+          syncAviso("No se ha subido. Usa «Traer de la nube» para bajar lo que hay.", "info");
+          return false;
+        }
+      }
+    }
+
     if(!saltarAviso && S.syncUlt){
       try{
         const previo = await fetch(API_SYNC + "?id=" + id);
@@ -2496,7 +2534,8 @@ function pintarSync(){
     (abierta
       ? "Cifrada con tu frase. El servidor solo guarda un bloque ilegible."
       : "Escribe tu frase para volver a conectar en este dispositivo.") +
-    (S.syncUlt ? "<br>Última subida: " + new Date(S.syncUlt).toLocaleString("es-ES") : "") + '</p>' +
+    (S.syncUlt ? "<br>Última subida: " + new Date(S.syncUlt).toLocaleString("es-ES") : "") +
+    '<br>Versión de la app: <b>' + VERSION + '</b></p>' +
     '<div class="acciones">' +
     (abierta
       ? '<button class="bt p" id="syncSubir">Subir ahora</button>' +
