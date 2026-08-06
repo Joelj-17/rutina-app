@@ -8,8 +8,9 @@ Funciona sin conexión y se instala en el móvil como aplicación.
 ## Estructura
 
 ```
-publico/    Lo que Netlify publica en internet
-personal/   NO se publica ni se sube al repositorio (ver .gitignore)
+publico/       Lo que se publica en internet
+functions/     El punto de sincronización (una función de Cloudflare)
+personal/      NO se publica ni se sube al repositorio (ver .gitignore)
 ```
 
 **En `publico/` no puede haber nada personal.** Todo lo que esté ahí es
@@ -39,8 +40,17 @@ python -m http.server 8000
 
 ## Despliegue
 
-Netlify publica la carpeta `publico` (configurado en `netlify.toml`).
+**Cloudflare Pages**, proyecto `rutina-app` → https://rutina-app.pages.dev
 Cada `git push` a `main` despliega automáticamente.
+
+Configuración: sin orden de compilación, carpeta publicada `publico`.
+No hay `package.json` **a propósito**: sin dependencias no hay instalación,
+y el despliegue es solo copiar archivos.
+
+La función de `functions/api/sync.js` responde en `/api/sync` y guarda en un
+espacio de Workers KV enlazado con el nombre **`RUTINA`** (ajustes del
+proyecto → *Bindings*). Sin ese enlace la sincronización devuelve un error
+claro, pero la app sigue funcionando en local.
 
 > Este repositorio es **independiente** del de la web de Praxioma.
 > No mezclar.
