@@ -82,8 +82,14 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 
 /* Título de la sección en la que estás. Lo pide la navegación de abajo: si el
    menú no va arriba, algo tiene que decirte dónde estás al llegar. */
-.tituloSec{max-width:660px;margin:0 auto;padding:18px 14px 0;font-size:.68rem;
-           text-transform:uppercase;letter-spacing:.12em;color:var(--acero);font-weight:700}
+.franja{display:flex;align-items:center;justify-content:space-between;gap:12px;
+        padding-top:14px;min-height:20px}
+.tituloSec{margin:0;font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;
+           color:var(--acero);font-weight:700}
+.rueda{margin-left:auto;width:36px;height:36px;border-radius:99px;flex:0 0 36px;
+       display:grid;place-items:center;font-size:1.15rem;color:var(--acero);
+       border:1px solid var(--linea);background:var(--panel);line-height:1}
+.rueda:active{color:var(--agua);border-color:var(--agua)}
 
 .dia-cab{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
          flex-wrap:wrap;padding:20px 0 12px}
@@ -647,7 +653,14 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
 
 <!-- La barra de pestañas de arriba se ha quitado: el menú fijo de abajo hace
      lo mismo, está siempre a la vista y no hace falta volver a ningún sitio. -->
-<h1 class="tituloSec" id="tituloSec" hidden></h1>
+<!-- Franja de arriba: donde estas, y la rueda de ajustes. La rueda va aqui y
+     no escondida al final de la portada: estaba tan abajo que habia que
+     buscarla, y unos ajustes que no se encuentran es como si no estuvieran. -->
+<div class="franja env" id="franja">
+  <h1 class="tituloSec" id="tituloSec" hidden></h1>
+  <button class="rueda" id="btnAjustesTop" data-ir="ajustes"
+          aria-label="Ajustes y datos" title="Ajustes y datos">⚙</button>
+</div>
 
 <!-- ============ PORTADA ============ -->
 <main class="env portada" id="p-inicio">
@@ -1426,7 +1439,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-06 · 13 · fusión";
+const VERSION = "2026-08-06 · 14";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -4329,6 +4342,8 @@ function irA(t){
   const repetido = primeros.some(e => e && pelar(e.textContent) === pelar(etiqueta));
   tit.textContent = etiqueta;
   tit.hidden = (t === "inicio" || !etiqueta || repetido);
+  // Estando ya en Ajustes, la rueda sobra.
+  $("#btnAjustesTop").hidden = (t === "ajustes");
   ajustarCabecera();
   document.querySelectorAll('#menu button[data-t]').forEach(b =>
     b.setAttribute("aria-selected", String(b.dataset.t === t)));
