@@ -1905,8 +1905,6 @@ function marcaDe(id){
   if(!S.marcas[id]) S.marcas[id] = {esf:null};
   return S.marcas[id];
 }
-function marcada(id){ const m = S.marcas[id]; return !!(m && m.esf); }
-
 /* ============ HOY ============ */
 function pintarHoy(){
   const d = DIAS[S.dia], ids = listaEj();
@@ -3004,14 +3002,6 @@ function retrato(g){
 const ETIQUETAS = {sesiones:"sesiones", mediciones:"mediciones", comida:"días de comida",
                    pasos:"días con pasos", agua:"días con agua", sueno:"días con sueño",
                    animo:"días con ánimo", pesos:"pesos de ejercicios"};
-function diferencias(nube, aqui){
-  const l = [];
-  Object.keys(ETIQUETAS).forEach(k => {
-    if(nube[k] !== aqui[k]) l.push("  " + ETIQUETAS[k] + ": la nube " + nube[k] + " · aquí " + aqui[k]);
-  });
-  if(nube.altura !== aqui.altura) l.push("  altura: la nube " + (nube.altura||"—") + " · aquí " + (aqui.altura||"—"));
-  return l;
-}
 function paraSubir(){
   const p = paquete();
   delete p.cofre; delete p.pinFallos; delete p.syncId; delete p.syncUlt; delete p.cambiadoEn;
@@ -3682,7 +3672,15 @@ function cargarDatos(texto, origen){
   S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
   if(typeof g.fase === "number") S.fase = g.fase;
   if(g.inicio) S.inicio = g.inicio;
+  /* Las horas y las bajas vienen del archivo: importar significa "esto pasa a
+     ser mis datos". Si se quedaran las de antes, apuntarían a cosas que ya no
+     están, y una baja vieja podría borrar en silencio algo que acabas de
+     importar. Lo que llegue sin identificador se sella aquí mismo. */
+  S.ts    = (g.ts    && typeof g.ts    === "object") ? g.ts    : {};
+  S.bajas = (g.bajas && typeof g.bajas === "object") ? g.bajas : {};
+  sellarLegado(S);
   guardar();
+  fotoPrevia = null; sellarCambios();
   pintarHoy(); pintarPerfil(); pintarCuerpo(); pintarSemana(); pintarComida(); pintarInicio();
   aviso("Cargado: " + nS + " sesiones, " + nM + " mediciones.");
   return true;
@@ -3715,7 +3713,13 @@ $("#listaCopias").addEventListener("click", e => {
   S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
   if(typeof g.fase === "number") S.fase = g.fase;
   if(g.inicio) S.inicio = g.inicio;
+  // Las horas y las bajas de la copia, igual que al importar: si se quedaran
+  // las de ahora, una baja posterior borraría lo que acabas de restaurar.
+  S.ts    = (g.ts    && typeof g.ts    === "object") ? g.ts    : {};
+  S.bajas = (g.bajas && typeof g.bajas === "object") ? g.bajas : {};
+  sellarLegado(S);
   guardar();
+  fotoPrevia = null; sellarCambios();
   pintarHoy(); pintarPerfil(); pintarCuerpo(); pintarSemana();
   pintarComida(); pintarDiario(); pintarInicio(); pintarCopias();
   aviso("Restaurada: " + r.sesiones + " sesiones, " + r.mediciones + " mediciones. " +
