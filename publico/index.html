@@ -2153,7 +2153,8 @@ function marcarSerie(id){
         const hh = S.hechos[x];
         if(hh) detalle[x] = {fin:Math.round(hh.fin || 0), series:hh.series, saltado:!!hh.saltado};
       });
-      S.hist.unshift({id:Date.now(), f:hoyISO(), d:DIAS[S.dia].n, seg:Math.round(transcurrido()),
+      S.hist.unshift({id:Date.now(), ts:new Date().toISOString(),
+                      f:hoyISO(), d:DIAS[S.dia].n, seg:Math.round(transcurrido()),
                       ej:listaEj().length, fase:S.fase+1, rpe:null, molestias:[], nota:"",
                       pesos:usados, marcas:JSON.parse(JSON.stringify(S.marcas)),
                       orden:listaEj().slice(), detalle:detalle,
@@ -2211,7 +2212,14 @@ function pintarFin(){
 
   const guardaEnt = () => {
     let e2 = S.hist.find(x => x.f === hoyISO() && x.d === DIAS[S.dia].n);
-    if(e2){ e2.rpe = ent.rpe; e2.molestias = ent.molestias; e2.nota = ent.nota; guardar(); }
+    if(e2){
+      e2.rpe = ent.rpe; e2.molestias = ent.molestias; e2.nota = ent.nota;
+      /* Y su hora: la fusión se queda con la versión más reciente de cada
+         sesión. Sin actualizarla, valorar la sesión después de haberla subido
+         no ganaba, y la valoración se perdía al sincronizar. */
+      e2.ts = new Date().toISOString();
+      guardar();
+    }
   };
 
   const p1 = document.createElement("div"); p1.className = "preg"; p1.textContent = "¿Cómo ha ido?";
@@ -3027,34 +3035,45 @@ async function subirDatos(silencioso, saltarAviso){
     const id = await idDe(syncFrase);
 
     for(let intento = 0; intento < 3; intento++){
-      // 1. Que hay arriba
-      let deLaNube = null, tsNube = null;
+      /* 1. Qué hay arriba. Hay que distinguir dos cosas que NO son iguales:
+            - "la nube está vacía" (404): se puede escribir tranquilo.
+            - "no he podido leer" (fallo de red, 500, JSON roto): NO sabemos
+              qué hay, así que escribir sería a ciegas. */
+      let deLaNube = null, tsNube = null, vacia = false, pudeLeer = false;
       try{
         const q = await fetch(urlNube(id), SIN_CACHE);
         if(q.ok){
           const b = await q.json();
           tsNube = b.ts || null;
           deLaNube = await descifrar(b);
-        }else if(q.status !== 404){
+          pudeLeer = true;
+        }else if(q.status === 404){
+          vacia = true; pudeLeer = true;
+        }else{
           throw new Error("HTTP " + q.status);
         }
-      }catch(e){
-        /* Si no se puede leer, un dispositivo vacio no escribe a ciegas: seria
-           la unica forma de que este cambio destruyera algo. Uno con datos si
-           escribe, porque perder lo de hoy por no tener red es peor. */
-        if(!hayAlgoQueAportar()){
-          if(!silencioso) syncAviso("No he podido leer la nube. No subo desde un dispositivo vacío.", "mal");
-          return false;
-        }
+      }catch(e){ /* pudeLeer se queda en false */ }
+
+      if(!pudeLeer){
+        /* Antes esto seguía adelante cuando el dispositivo tenía datos, y como
+           sin haber leído no hay de qué versión partir, el servidor no podía
+           rechazar la escritura: se machacaba la nube entera. Un teléfono
+           recién reinstalado con tres días podía borrar un año.
+
+           Lo correcto es no escribir y dejarlo pendiente: el dato sigue aquí
+           guardado y sube en cuanto la nube se pueda leer. */
+        if(!silencioso) syncAviso("No he podido leer la nube. No subo sin saber qué hay arriba; se reintentará.", "mal");
+        return false;
       }
 
-      // 2. Fusionar
-      const fundido = deLaNube ? fundir(paraSubir(), deLaNube) : sellarLegado(paraSubir());
+      // 2. Fusionar. El resultado lo aplica aplicarDatos, que es quien manda.
       if(deLaNube) aplicarDatos(deLaNube, tsNube);
+      else sellarLegado(S);
 
       // 3. Escribir, diciendo de que version partiamos
       const bloque = await cifrar(paraSubir());
       if(tsNube) bloque.si = tsNube;
+      else if(vacia) bloque.si = "";        // "esperaba que estuviera vacía"
       const r = await fetch(API_SYNC + "?id=" + id,
         {method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(bloque)});
 
@@ -3252,20 +3271,43 @@ setInterval(() => { if(syncFrase && !syncOcupado) pintarEstadoSync(); }, 30000);
 
 /* Antes de cerrar o de irse a otra app, guarda lo que quede pendiente.
    keepalive permite que la petición sobreviva al cierre de la pestaña.     */
+/* Este camino escribía en la nube A CIEGAS: sin leer, sin fusionar y sin
+   decir de qué versión partía, así que el servidor no podía rechazarlo.
+   Bastaba con apuntar algo y bloquear el móvil antes de que saltara la subida
+   normal —que espera 3 segundos— para machacar lo que otro dispositivo
+   hubiera subido mientras tanto.
+
+   Aquí no se puede fusionar: la pestaña se está muriendo y no da tiempo. Así
+   que hace lo único correcto en ese hueco: escribir CONDICIONALMENTE. Si la
+   nube cambió desde la última vez que la vimos, el servidor lo rechaza y el
+   cambio se queda pendiente para la próxima apertura, que sí fusiona. */
 async function guardarAlSalir(){
-  if(!syncFrase || !S.cambiadoEn) return;
+  if(!syncFrase || !S.cambiadoEn || syncOcupado) return;
+  if(!hayAlgoQueAportar()) return;          // un vacío tampoco escribe al salir
   try{
     const bloque = await cifrar(paraSubir());
-    await fetch(API_SYNC + "?id=" + await idDe(syncFrase), {
+    if(S.syncUlt) bloque.si = S.syncUlt;    // de qué versión partimos
+    const r = await fetch(API_SYNC + "?id=" + await idDe(syncFrase), {
       method:"PUT", headers:{"Content-Type":"application/json"},
       body:JSON.stringify(bloque), keepalive:true
     });
-    S.syncUlt = new Date().toISOString(); S.cambiadoEn = null;
+    /* Antes no se miraba la respuesta: un rechazo por conflicto o por tamaño
+       se daba por bueno, se borraba la marca de "pendiente" y ese cambio no
+       se volvía a intentar. */
+    if(!r.ok) return;
+    const j = await r.json();
+    S.syncUlt = j.ts; S.cambiadoEn = null;
     guardarSinMarcar();
   }catch(e){ /* si no llega, queda pendiente para la próxima vez */ }
 }
 window.addEventListener("pagehide", guardarAlSalir);
-document.addEventListener("visibilitychange", () => { if(document.hidden) guardarAlSalir(); });
+document.addEventListener("visibilitychange", () => {
+  if(document.hidden){ guardarAlSalir(); return; }
+  /* Al volver a la app tras un rato, mirar si otro dispositivo ha guardado.
+     Sin esto, un móvil que lleva horas abierto trabaja con una foto vieja de
+     la nube y cualquier cosa que suba parte de ahí. */
+  if(syncFrase && !syncOcupado) alEntrar();
+});
 
 /* ============ LOGIN ============ */
 /* ============ COPIAS DE SEGURIDAD ============
@@ -3669,6 +3711,9 @@ function cargarDatos(texto, origen){
   S.agua    = (g.agua    && typeof g.agua    === "object") ? g.agua    : {};
   S.sueno   = (g.sueno   && typeof g.sueno   === "object") ? g.sueno   : {};
   S.animo   = (g.animo   && typeof g.animo   === "object") ? g.animo   : {};
+  // La siesta y el material se exportan pero no se importaban: se perdian.
+  S.siesta  = (g.siesta  && typeof g.siesta  === "object") ? g.siesta  : {};
+  S.material = Object.assign({barra:false}, g.material || {});
   S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
   if(typeof g.fase === "number") S.fase = g.fase;
   if(g.inicio) S.inicio = g.inicio;
@@ -3710,6 +3755,7 @@ $("#listaCopias").addEventListener("click", e => {
   ["comidas","pasos","agua","sueno","siesta","animo"].forEach(k => {
     S[k] = (g[k] && typeof g[k] === "object") ? g[k] : {};
   });
+  S.material = Object.assign({barra:false}, g.material || {});
   S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
   if(typeof g.fase === "number") S.fase = g.fase;
   if(g.inicio) S.inicio = g.inicio;
@@ -3761,11 +3807,24 @@ $("#pegarOk").addEventListener("click", () => {
 $("#btnBorrar").addEventListener("click", () => {
   if(!confirm("Se borra TODO: perfil, mediciones, pesos e historial. No hay vuelta atrás.\n\n¿Has exportado antes?")) return;
   if(!confirm("Última confirmación. ¿Borrar todos los datos?")) return;
+  /* Borraba a medias: se iban el historial, las mediciones y los pesos, pero
+     se quedaban comida, pasos, agua, sueño, siesta y ánimo en memoria. Y como
+     tampoco volvía a guardar, el siguiente guardado los reescribía todos en
+     el almacén. "Borrar todo" tiene que borrar todo. */
   try{ localStorage.removeItem(LS); }catch(err){}
   S.pesos = {}; S.hist = []; S.cuerpo = [];
+  S.comidas = {}; S.pasos = {}; S.agua = {}; S.sueno = {}; S.siesta = {}; S.animo = {};
+  S.ts = {}; S.bajas = {};
   S.perfil = {altura:"",nacim:"",sexo:"",nivel:"",objetivo:""};
-  S.t0 = null; S.hechos = {}; S.acumPausa = 0; S.pausadoEn = null;
+  S.inicio = null; S.faseManual = null; S.diaManual = null;
+  S.t0 = null; S.hechos = {}; S.marcas = {}; S.acumPausa = 0; S.pausadoEn = null;
+  S.ultimoHecho = null; S.latido = null;
+  S.syncUlt = null; S.cambiadoEn = null;
+  guardarSinMarcar();
+  fotoPrevia = null; sellarCambios();
+  aplicarAuto();
   pintarHoy(); pintarPerfil(); pintarCuerpo(); pintarSemana();
+  pintarComida(); pintarDiario(); pintarInicio(); pintarPasos(); pintarEstadoDatos();
   aviso("Todo borrado.");
 });
 
@@ -4216,13 +4275,16 @@ function pintarComida(){
     : '<div class="vacio">Aquí se irán acumulando los días.</div>';
 }
 
-function anotar(c){
-  if(!S.comidas[comDia]) S.comidas[comDia] = [];
+/* El único sitio por el que se apunta comida. Sin "dia" va al que estés
+   mirando; la portada le pasa hoy explícitamente porque siempre es hoy. */
+function anotar(c, dia){
+  const f = dia || comDia;
+  if(!S.comidas[f]) S.comidas[f] = [];
   // Identidad y hora desde el minuto cero: es lo que permite fusionar dos
   // dispositivos sin que ninguno pierda lo suyo.
   if(!c.id) c.id = idNuevo();
   if(!c.ts) c.ts = new Date().toISOString();
-  S.comidas[comDia].push(c);
+  S.comidas[f].push(c);
   guardar(); pintarComida(); pintarInicio();
 }
 
@@ -4277,16 +4339,26 @@ $("#comPlan").addEventListener("click", e => {
   if(!b) return;
   const p = PLATOS.find(x => x.id === b.dataset.plato);
   const ya = comidasDe(comDia).findIndex(c => c.plato === p.id);
-  if(ya >= 0){ S.comidas[comDia].splice(ya, 1); guardar(); pintarComida(); pintarInicio(); }
+  if(ya >= 0){ quitarComida(comDia, ya); pintarComida(); pintarInicio(); }
   else anotar({n:p.n + " — " + p.d, kcal:p.kcal, prot:p.prot, plato:p.id});
 });
+/* Quitar un apunte de comida. TODOS los sitios que quiten comida tienen que
+   pasar por aqui: si uno se salta la baja, ese apunte vuelve desde el otro
+   dispositivo en la siguiente sincronizacion. Pasaba en dos de los tres
+   sitios que habia. */
+function quitarComida(f, i){
+  const l = S.comidas[f];
+  if(!l || i < 0 || i >= l.length) return;
+  const fuera = l.splice(i, 1)[0];
+  if(fuera && fuera.id) S.bajas[fuera.id] = new Date().toISOString();
+  guardar();
+}
+
 $("#comLista").addEventListener("click", e => {
   const b = e.target.closest("[data-borra]");
   if(!b) return;
-  const fuera = S.comidas[comDia].splice(Number(b.dataset.borra), 1)[0];
-  // Se apunta la baja. Si no, el otro dispositivo lo vuelve a traer.
-  if(fuera && fuera.id) S.bajas[fuera.id] = new Date().toISOString();
-  guardar(); pintarComida(); pintarInicio();
+  quitarComida(comDia, Number(b.dataset.borra));
+  pintarComida(); pintarInicio();
 });
 
 $("#listaAlimentos").innerHTML = ALIMENTOS
@@ -4542,11 +4614,10 @@ $("#pComPlatos").addEventListener("click", e => {
   if(!b) return;
   const p = PLATOS.find(x => x.id === b.dataset.plato2);
   const ya = comidasDe(hoyISO()).findIndex(c => c.plato === p.id);
-  if(ya >= 0){ S.comidas[hoyISO()].splice(ya, 1); }
-  else{
-    if(!S.comidas[hoyISO()]) S.comidas[hoyISO()] = [];
-    S.comidas[hoyISO()].push({n:p.n + " — " + p.d, kcal:p.kcal, prot:p.prot, plato:p.id});
-  }
+  if(ya >= 0){ quitarComida(hoyISO(), ya); }
+  // Pasa por anotar() como todo lo demas: metia el apunte a pelo, sin
+  // identificador ni hora, y luego no habia forma de apuntar su baja.
+  else anotar({n:p.n + " — " + p.d, kcal:p.kcal, prot:p.prot, plato:p.id}, hoyISO());
   guardar(); pintarInicio(); pintarComida();
 });
 $("#vAgua").addEventListener("click", e => {
