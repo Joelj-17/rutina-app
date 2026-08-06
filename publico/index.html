@@ -388,6 +388,16 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
 .accionGrande.suave{background:transparent;color:var(--acero);border:1px solid var(--linea);
                     font-weight:600}
 
+/* ---- "Lo de siempre": lo que repites, a un toque ---- */
+.sueles{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:6px}
+.suele{display:flex;align-items:baseline;gap:7px;max-width:100%;
+       background:transparent;border:1px solid var(--linea);border-radius:99px;
+       padding:8px 13px;font-size:.83rem;font-weight:600;color:var(--tinta-2)}
+.suele:active{border-color:var(--agua);color:var(--agua)}
+.suele .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px}
+.suele .k{font-family:var(--mono);font-size:.74rem;color:var(--acero);font-weight:600;
+          white-space:nowrap}
+
 .platosMini{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
 .pmini{padding:9px 3px;border-radius:8px;border:1px solid var(--linea);background:transparent;
        font-size:.68rem;font-weight:600;color:var(--tinta-2);line-height:1.25}
@@ -719,6 +729,11 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
   <h2 class="sec">Tus comidas del plan</h2>
   <p style="font-size:.86rem;color:var(--acero);margin-top:0">Un toque y se apunta. Si ese día cambiaste algo, lo ajustas abajo.</p>
   <div class="platos" id="comPlan"></div>
+
+  <!-- Lo que repites sale de tu propio historial: teclear cada día el mismo
+       café es la fricción que hace que uno deje de apuntar. -->
+  <h2 class="sec" id="tituloSueles" hidden>Lo de siempre</h2>
+  <div class="sueles" id="sueles"></div>
 
   <h2 class="sec">Añadir otra cosa</h2>
   <div class="tarj">
@@ -1329,7 +1344,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-06 · 8";
+const VERSION = "2026-08-06 · 9";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -3510,6 +3525,7 @@ function medidor(et, val, obj, ud){
 }
 
 function pintarComida(){
+  if(typeof pintarSueles === "function") pintarSueles();
   const esHoy = comDia === hoyISO();
   const t = totalDe(comDia), gasto = gastoDe(comDia);
   $("#comFecha").textContent = esHoy ? "Hoy" : comDia;
@@ -3571,6 +3587,52 @@ function anotar(c){
   S.comidas[comDia].push(c);
   guardar(); pintarComida(); pintarInicio();
 }
+
+/* Lo que repites, sacado de tus propios días. No es una lista que yo decida:
+   es lo que tú has apuntado más veces. Se ordena por veces repetido y, a
+   igualdad, por lo más reciente. Las comidas del plan quedan fuera: esas ya
+   tienen sus botones arriba. */
+function loDeSiempre(maximo){
+  const cuenta = {};
+  const dias = Object.keys(S.comidas || {}).sort().reverse();   // recientes primero
+  dias.forEach((f, orden) => {
+    (S.comidas[f] || []).forEach(c => {
+      if(!c || c.plato || !c.n) return;
+      const k = c.n.trim();
+      if(!k) return;
+      if(!cuenta[k]) cuenta[k] = {n:k, kcal:nDe(c.kcal), prot:nDe(c.prot), veces:0, ultimo:orden};
+      cuenta[k].veces++;
+      if(orden < cuenta[k].ultimo){                 // el dato más reciente manda
+        cuenta[k].ultimo = orden;
+        cuenta[k].kcal = nDe(c.kcal); cuenta[k].prot = nDe(c.prot);
+      }
+    });
+  });
+  return Object.keys(cuenta).map(k => cuenta[k])
+    .sort((a,b) => b.veces - a.veces || a.ultimo - b.ultimo)
+    .slice(0, maximo || 6);
+}
+
+function pintarSueles(){
+  const caja = $("#sueles"), tit = $("#tituloSueles");
+  if(!caja) return;
+  const l = loDeSiempre(6);
+  tit.hidden = caja.hidden = !l.length;
+  caja.innerHTML = l.map((x, i) =>
+    '<button class="suele" data-suele="' + i + '">' +
+      '<span class="n">' + esc(x.n) + '</span>' +
+      '<span class="k">' + Math.round(x.kcal) + '</span></button>').join("");
+  caja.__lista = l;
+}
+
+$("#sueles").addEventListener("click", e => {
+  const b = e.target.closest("[data-suele]");
+  if(!b) return;
+  const x = ($("#sueles").__lista || [])[Number(b.dataset.suele)];
+  if(!x) return;
+  anotar({n:x.n, kcal:x.kcal, prot:x.prot});
+  aviso("Apuntado: " + x.n);
+});
 
 $("#comPlan").addEventListener("click", e => {
   const b = e.target.closest("[data-plato]");
