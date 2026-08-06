@@ -71,7 +71,28 @@ ningún caso identidad ni documento identificativo.**
 
 ---
 
-# Lo que hay que decidir antes de construir
+# Decisiones tomadas (6 de agosto de 2026)
+
+1. **Estructura de nodos y modularidad:** aprobada.
+2. **Anuncios: sí.** El proyecto tiene que dar dinero. El mensaje es
+   **«no vendemos ni cedemos tus datos personales; los anuncios son lo que
+   mantiene la versión gratuita»**. Cuidado con el matiz: no se puede seguir
+   diciendo «tus datos no salen del móvil» a secas, porque el SDK de anuncios
+   sí ve el dispositivo. Lo que sí es cierto y defendible: *tus registros
+   —entrenamientos, comida, peso— no salen de tu móvil*.
+3. **Premium con IA: sí.** Aviso claro y consentimiento explícito de
+   tratamiento en el momento de contratarlo, no escondido en las condiciones.
+4. **Empaquetado nativo: sí**, para poder leer los pasos.
+
+**Forma jurídica: autónomo.** Pendiente de revisar antes de publicar en las
+tiendas: como autónomo la responsabilidad es personal e ilimitada, y aquí hay
+datos de salud de terceros, suscripciones y publicidad. Merece una
+conversación específica (enlaza con las notas de responsabilidad civil de
+Praxioma) antes del lanzamiento, no antes de seguir construyendo.
+
+---
+
+# Detalle de esas decisiones
 
 ## 1. El catálogo de ejercicios: cuántos con dibujo
 
