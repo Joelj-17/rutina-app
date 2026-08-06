@@ -1235,7 +1235,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-06 · 4";
+const VERSION = "2026-08-06 · 5";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -2276,6 +2276,17 @@ function aviso(t, malo){
    nunca sale del dispositivo, ni se guarda en ningún sitio salvo aquí.     */
 
 const API_SYNC = "/api/sync";
+
+/* Consultar la nube NUNCA puede responderse desde una copia guardada: creerse
+   que arriba no hay nada cuando si lo hay acaba borrando datos. Cada consulta
+   lleva una marca distinta para que ninguna cache la reconozca, y ademas se
+   pide con cache:"no-store". */
+let consultaN = 0;
+function urlNube(id){
+  consultaN++;
+  return API_SYNC + "?id=" + id + "&_=" + Date.now() + "." + consultaN;
+}
+const SIN_CACHE = {cache:"no-store"};
 const ITERACIONES = 600000;
 const ITER_PIN   = 300000;   // por intento de PIN: encarece probar a lo bruto
 const FALLOS_MAX = 10;
@@ -2408,7 +2419,7 @@ async function subirDatos(silencioso, saltarAviso){
     if(!hayAlgoQueAportar()){
       let laNube = null;
       try{
-        const q = await fetch(API_SYNC + "?id=" + id);
+        const q = await fetch(urlNube(id), SIN_CACHE);
         if(q.ok) laNube = retrato(await descifrar(await q.json()));
       }catch(e){
         // Si no se puede comprobar, desde un vacío no se sube a ciegas.
@@ -2436,7 +2447,7 @@ async function subirDatos(silencioso, saltarAviso){
 
     if(!saltarAviso && S.syncUlt){
       try{
-        const previo = await fetch(API_SYNC + "?id=" + id);
+        const previo = await fetch(urlNube(id), SIN_CACHE);
         if(previo.ok){
           const b = await previo.json();
           if(b.ts && b.ts > S.syncUlt){
@@ -2477,7 +2488,7 @@ async function bajarDatos(){
   if(!syncFrase) return false;
   syncAviso("Descargando…", "info");
   try{
-    const r = await fetch(API_SYNC + "?id=" + await idDe(syncFrase));
+    const r = await fetch(urlNube(await idDe(syncFrase)), SIN_CACHE);
     if(r.status === 404){ syncAviso("Todavía no hay nada guardado en la nube con esa frase.", "info"); return false; }
     if(!r.ok) throw new Error("HTTP " + r.status);
     const bloque = await r.json();
@@ -2575,7 +2586,7 @@ $("#syncActivar").addEventListener("click", async () => {
     $("#formSync").hidden = true; $("#syncFrase").value = "";
     guardar();
     // Si ya hay algo en la nube con esta frase, se ofrece traerlo; si no, se sube esto.
-    const r = await fetch(API_SYNC + "?id=" + id);
+    const r = await fetch(urlNube(id), SIN_CACHE);
     if(r.status === 404){
       await subirDatos(false);
       syncAviso("Activada. Tus datos ya están cifrados en la nube.");
@@ -2740,7 +2751,7 @@ async function alEntrar(){
   if(!syncFrase) return;
   pintarEstadoSync("Comprobando la nube…");
   try{
-    const r = await fetch(API_SYNC + "?id=" + await idDe(syncFrase));
+    const r = await fetch(urlNube(await idDe(syncFrase)), SIN_CACHE);
     if(r.status === 404){
       // No hay nada en la nube. Solo sembramos si aquí hay algo de verdad.
       if(hayAlgoQueAportar()) await subirDatos(true, true);
