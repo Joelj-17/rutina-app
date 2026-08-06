@@ -161,7 +161,22 @@ de verdad.
 
 # Por dónde empezar
 
-1. **Rediseño visual y de organización** ← lo primero que pidió
+1. ~~**Rediseño visual y de organización**~~ ← **primera pasada hecha** el 6 de
+   agosto de 2026. Lo que pidió y lo que se ha hecho:
+   - *«me satura ver el entrenamiento lo primero»* → la portada ya no lleva el
+     entrenamiento delante. Primero un **mapa** con las cuatro secciones y su
+     estado; la acción del día va después, y **desaparece si no hay nada que
+     hacer**.
+   - *«no veo qué modos u opciones hay»* → el mapa dice qué hay y cómo va cada
+     cosa sin entrar a mirar.
+   - *«no hay menú y es poco intuitivo»* → **menú fijo abajo**, siempre a la
+     vista, también en la portada. Fuera la barra de pestañas de arriba y el
+     botón de «volver»: ya no hay a dónde volver.
+   - El **cronómetro solo aparece cuando hace falta** (sesión en marcha o
+     pantalla de entrenamiento). Era la mitad de la sensación de agobio.
+
+   Queda para más adelante: la pantalla de entrenamiento sigue siendo una
+   lista larga, y las secciones de correr y otros deportes no existen todavía.
 2. **Modelo de datos**: separar catálogo de ejercicios, rutinas y sesiones
    (hoy están fundidos en el código)
 3. **Crear y guardar rutinas propias**

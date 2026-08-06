@@ -21,6 +21,9 @@
   --r:12px;
   --mono:ui-monospace,"Cascadia Mono","SF Mono",Menlo,Consolas,monospace;
   --ui:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  /* Alto del menú de abajo. Lo usan el relleno de la página y la barra de
+     descanso para no pisarse; si se cambia aquí, se ajusta todo solo. */
+  --menuAlto:56px;
 }
 @media (prefers-color-scheme:dark){
   :root{
@@ -43,7 +46,14 @@
   --sombra:0 1px 2px rgba(18,26,28,.06), 0 4px 14px rgba(18,26,28,.05);
 }
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;overflow-x:hidden;max-width:100%}
+/* Ojo con el recorte lateral: "hidden" convierte la página en un contenedor
+   con scroll propio, y eso deja sin efecto el "sticky" del reloj en el móvil
+   —se iba hacia arriba al bajar—. "clip" recorta igual pero sin crear ese
+   contenedor. Se deja "hidden" delante como respaldo: los navegadores que no
+   entiendan "clip" ignoran la segunda línea y se quedan con la primera. */
+html,body{margin:0;padding:0;max-width:100%;
+          overflow-x:hidden;
+          overflow-x:clip}
 body{background:var(--fondo);color:var(--tinta);font-family:var(--ui);font-size:16px;
      line-height:1.5;-webkit-text-size-adjust:100%;padding-bottom:env(safe-area-inset-bottom)}
 button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
@@ -52,7 +62,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .env{max-width:660px;margin:0 auto;padding:0 14px}
 .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
 
-#reloj{position:sticky;top:0;z-index:40;background:var(--panel);border-bottom:1px solid var(--linea)}
+#cabecera{position:sticky;top:0;z-index:40}
+#reloj{background:var(--panel);border-bottom:1px solid var(--linea)}
 #reloj.corriendo{background:var(--agua);border-bottom-color:var(--agua);color:#fff}
 #reloj.descansando{background:var(--descanso);border-bottom-color:var(--descanso);color:#fff}
 .reloj-in{display:flex;align-items:center;gap:14px;padding:10px 0 11px}
@@ -69,13 +80,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .barra i{display:block;height:100%;background:#fff;transition:width .3s ease}
 #reloj:not(.corriendo):not(.descansando) .barra i{background:var(--agua)}
 
-nav{display:flex;gap:2px;padding:12px 0 0;overflow-x:auto;scrollbar-width:none;
-    -webkit-overflow-scrolling:touch}
-nav::-webkit-scrollbar{display:none}
-nav button{flex:1 1 auto;min-width:0;padding:9px 7px 10px;font-size:.74rem;font-weight:700;
-           color:var(--acero);border-bottom:2px solid var(--linea);letter-spacing:.03em;
-           white-space:nowrap}
-nav button[aria-selected="true"]{color:var(--agua);border-bottom-color:var(--agua)}
+/* Título de la sección en la que estás. Lo pide la navegación de abajo: si el
+   menú no va arriba, algo tiene que decirte dónde estás al llegar. */
+.tituloSec{max-width:660px;margin:0 auto;padding:18px 14px 0;font-size:.68rem;
+           text-transform:uppercase;letter-spacing:.12em;color:var(--acero);font-weight:700}
 
 .dia-cab{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
          flex-wrap:wrap;padding:20px 0 12px}
@@ -263,8 +271,12 @@ svg.esq{width:100%;max-width:340px;height:108px;color:var(--tinta);display:block
        letter-spacing:.05em}
 .zonas span{text-align:center}
 
-#barraAbajo{position:fixed;inset:auto 0 0 0;z-index:50;color:#fff;display:none;
-            padding:16px 14px calc(16px + env(safe-area-inset-bottom));background:var(--descanso)}
+/* El descanso se coloca JUSTO ENCIMA del menú, no encima del menú tapándolo:
+   los dos van fijos abajo y si no se separan se pisan. El hueco de la barra
+   de gestos del móvil lo pone el menú, que es quien toca el borde. */
+#barraAbajo{position:fixed;left:0;right:0;z-index:49;color:#fff;display:none;
+            bottom:calc(var(--menuAlto) + env(safe-area-inset-bottom));
+            padding:16px 14px;background:var(--descanso)}
 #barraAbajo.on{display:block}
 #barraAbajo.prep{background:var(--acero)}
 #barraAbajo.activo{background:var(--agua)}
@@ -449,14 +461,54 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
 .resuelto .mas button{background:none;border:none;color:var(--agua);font-size:.8rem;
                       font-weight:600;padding:4px 2px}
 
-.atajos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+.atajos{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:4px}
 .atajo{background:transparent;border:1px solid var(--linea);border-radius:9px;padding:10px 6px;
        font-size:.74rem;font-weight:600;color:var(--acero)}
 .atajo span{display:block;font-size:.95rem;margin-bottom:2px;filter:grayscale(1);opacity:.6}
 
+/* ---- El mapa de la portada: qué hay aquí, antes que qué hacer ----
+   Lo primero que se ve no debe ser el entrenamiento, sino las secciones y en
+   qué estado están. Todas en contorno: ninguna grita más que las otras. */
+.mapa{display:flex;flex-direction:column;gap:7px;margin-bottom:18px}
+.destino{display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+         background:var(--panel);border:1px solid var(--linea);border-radius:11px;
+         padding:12px 14px}
+.destino:active{border-color:var(--acero)}
+.destino .dic{font-size:1.05rem;width:22px;flex:0 0 22px;text-align:center;
+              filter:grayscale(1);opacity:.55}
+.destino .dtx{flex:1;min-width:0;display:block}
+.destino .dn{display:block;font-size:.94rem;font-weight:600;line-height:1.2}
+.destino .de{display:block;font-size:.78rem;color:var(--acero);margin-top:2px;
+             overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.destino .dv{font-family:var(--mono);font-size:.78rem;font-weight:600;color:var(--acero);
+             white-space:nowrap}
+.destino .dv.ok{color:var(--hecho)}
+.destino .dfl{color:var(--linea);font-size:.8rem;flex:0 0 auto}
+
+/* La única acción fuerte de la portada, y solo cuando toca. */
+.accionHoy{width:100%;background:var(--agua);color:#fff;padding:15px;border-radius:11px;
+           font-size:1rem;font-weight:700;letter-spacing:.01em;margin-bottom:18px}
+.accionHoy:active{transform:translateY(1px)}
+.accionHoy.suave{background:transparent;color:var(--acero);border:1px solid var(--linea);
+                 font-weight:600;font-size:.9rem;padding:12px}
+
+/* ---- Menú de abajo: siempre a la vista, para saber qué hay sin buscarlo ---- */
+#menu{position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--panel);
+      border-top:1px solid var(--linea);
+      padding-bottom:env(safe-area-inset-bottom)}
+.menuIn{max-width:660px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+.mbot{height:var(--menuAlto);display:flex;flex-direction:column;align-items:center;
+      justify-content:center;gap:3px;padding:0 2px;
+      font-size:.63rem;font-weight:700;letter-spacing:.02em;color:var(--acero);
+      border-top:2px solid transparent;margin-top:-1px}
+.mbot .mic{font-size:1.15rem;line-height:1;filter:grayscale(1);opacity:.5}
+.mbot[aria-selected="true"]{color:var(--agua);border-top-color:var(--agua)}
+.mbot[aria-selected="true"] .mic{filter:none;opacity:1}
+/* Sitio para que el menú no tape el final de ninguna pantalla. */
+body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
+
 /* ---- Estado de la sincronización, siempre a la vista ---- */
-#estadoSync{position:sticky;top:0;z-index:35;background:var(--panel);
-            border-bottom:1px solid var(--linea)}
+#estadoSync{background:var(--panel);border-bottom:1px solid var(--linea)}
 .esync{display:flex;align-items:center;gap:9px;padding:7px 14px;font-size:.78rem}
 .esync .pip{width:7px;height:7px;border-radius:50%;background:var(--hecho);flex:0 0 7px}
 .esync.pendiente .pip{background:var(--descanso)}
@@ -527,57 +579,52 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
   </div>
 </div>
 
-<header id="reloj">
-  <div class="env reloj-in">
-    <div class="crono" id="crono">0:00</div>
-    <div class="reloj-txt">
-      <div class="reloj-et" id="relojEt">Sin empezar</div>
-      <div class="reloj-tit" id="relojTit">Pulsa Empezar cuando estés listo</div>
+<!-- Lo que va pegado arriba, todo junto: si cada uno se pega por su cuenta
+     acaban montándose el uno encima del otro. -->
+<div id="cabecera">
+  <header id="reloj">
+    <div class="env reloj-in">
+      <div class="crono" id="crono">0:00</div>
+      <div class="reloj-txt">
+        <div class="reloj-et" id="relojEt">Sin empezar</div>
+        <div class="reloj-tit" id="relojTit">Pulsa Empezar cuando estés listo</div>
+      </div>
+      <button class="reloj-btn" id="btnPausa" hidden>Pausa</button>
     </div>
-    <button class="reloj-btn" id="btnPausa" hidden>Pausa</button>
-  </div>
-  <div class="barra"><i id="barra" style="width:0%"></i></div>
-</header>
+    <div class="barra"><i id="barra" style="width:0%"></i></div>
+  </header>
 
-<div id="estadoSync" hidden>
-  <div class="env esync">
-    <span class="pip" id="esPip"></span>
-    <span class="txt" id="esTxt">—</span>
-    <button id="esBtn">Guardar</button>
+  <div id="estadoSync" hidden>
+    <div class="env esync">
+      <span class="pip" id="esPip"></span>
+      <span class="txt" id="esTxt">—</span>
+      <button id="esBtn">Guardar</button>
+    </div>
   </div>
 </div>
 
-<div class="env" id="barraNav" hidden>
-  <nav role="tablist">
-    <button class="volver" id="btnVolver" aria-label="Volver al menú">‹ Menú</button>
-    <button role="tab" aria-selected="true"  data-t="hoy">HOY</button>
-    <button role="tab" aria-selected="false" data-t="comida">COMIDA</button>
-    <button role="tab" aria-selected="false" data-t="cuerpo">CUERPO</button>
-    <button role="tab" aria-selected="false" data-t="diario">DIARIO</button>
-    <button role="tab" aria-selected="false" data-t="semana">SEMANA</button>
-    <button role="tab" aria-selected="false" data-t="guia">GUÍA</button>
-  </nav>
-</div>
+<!-- La barra de pestañas de arriba se ha quitado: el menú fijo de abajo hace
+     lo mismo, está siempre a la vista y no hace falta volver a ningún sitio. -->
+<h1 class="tituloSec" id="tituloSec" hidden></h1>
 
 <!-- ============ PORTADA ============ -->
 <main class="env portada" id="p-inicio">
   <h1>Rutina</h1>
   <p class="hoy" id="portadaHoy">—</p>
 
+  <!-- El mapa: qué hay en la app y cómo va cada cosa. Va lo primero a
+       propósito: abrir y encontrarse el entrenamiento de frente satura. -->
+  <div class="mapa" id="pMapa"></div>
+
+  <!-- La única acción fuerte, y solo cuando hay algo que hacer -->
+  <button class="accionHoy" id="pEntBtn" hidden>Empezar la sesión</button>
+
   <!-- Anoche: se pregunta una vez y se resuelve -->
   <div class="bloque anoche" id="pAnoche"></div>
 
-  <!-- Entrenamiento -->
-  <div class="bloque destaca">
-    <div class="bloqueCab"><h2>Entrenamiento</h2><span class="dato" id="pEntDato"></span></div>
-    <p class="linea1" id="pEntTit">—</p>
-    <p class="linea2" id="pEntSub">—</p>
-    <button class="accionGrande" id="pEntBtn">Empezar la sesión</button>
-  </div>
-
   <!-- Comida -->
   <div class="bloque">
-    <div class="bloqueCab"><h2>Comida</h2><span class="dato" id="pComDato"></span></div>
+    <div class="bloqueCab"><h2>Comida de hoy</h2><span class="dato" id="pComDato"></span></div>
     <div id="pComBarras"></div>
     <div class="platosMini" id="pComPlatos"></div>
     <button class="accionGrande suave" data-ir="comida">+ Añadir otra cosa</button>
@@ -607,9 +654,9 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
   <!-- Balance -->
   <div class="bloque" id="pBalance" hidden></div>
 
+  <!-- Lo de consulta, que no hace falta tener en el menú de abajo -->
   <div class="atajos">
-    <button class="atajo" data-ir="cuerpo"><span>📏</span>Cuerpo</button>
-    <button class="atajo" data-ir="diario"><span>📅</span>Diario</button>
+    <button class="atajo" data-ir="semana"><span>🗓️</span>La semana</button>
     <button class="atajo" data-ir="guia"><span>📖</span>Guía</button>
   </div>
 </main>
@@ -880,6 +927,18 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
     Tus datos se guardan solo en este navegador. Expórtalos de vez en cuando desde la pestaña CUERPO.
   </footer>
 </main>
+
+<!-- Menú fijo abajo. Está siempre, también en la portada: la queja era no
+     saber qué había en la app ni cómo moverse. Cinco sitios y ya. -->
+<nav id="menu" role="tablist" aria-label="Secciones">
+  <div class="menuIn">
+    <button class="mbot" role="tab" data-t="inicio" aria-selected="true"><span class="mic">🏠</span>Inicio</button>
+    <button class="mbot" role="tab" data-t="hoy"    aria-selected="false"><span class="mic">🏋️</span>Entrenar</button>
+    <button class="mbot" role="tab" data-t="comida" aria-selected="false"><span class="mic">🍽️</span>Comida</button>
+    <button class="mbot" role="tab" data-t="cuerpo" aria-selected="false"><span class="mic">📏</span>Cuerpo</button>
+    <button class="mbot" role="tab" data-t="diario" aria-selected="false"><span class="mic">📅</span>Diario</button>
+  </div>
+</nav>
 
 <div id="barraAbajo" role="status" aria-live="polite">
   <div class="desc-in">
@@ -1453,7 +1512,9 @@ let BA = {modo:null, timer:null, fin:0, ini:0, avisado:false, accion:null};
 function barraOn(clase){
   const b = $("#barraAbajo");
   b.className = "on " + clase;
-  document.body.style.paddingBottom = "104px";
+  // Hueco para la barra de descanso Y para el menú, que está debajo de ella.
+  document.body.style.paddingBottom =
+    "calc(var(--menuAlto) + 104px + env(safe-area-inset-bottom))";
   $("#reloj").classList.toggle("descansando", clase === "descanso" || clase === "cambio");
 }
 function barraOff(){
@@ -1895,6 +1956,7 @@ function empezar(){
   S.marcas = {}; S.ultimoHecho = null; S.latido = Date.now();
   if(!S.inicio) S.inicio = hoyISO();
   guardar(); pitido(1); pintarHoy();
+  ajustarCabecera();          // arranca la sesión: el reloj pasa a hacer falta
 }
 $("#btnEmpezar").addEventListener("click", empezar);
 
@@ -1983,6 +2045,7 @@ function pintarFin(){
     guardaEnt(); barraOff();
     S.t0 = null; S.hechos = {}; S.acumPausa = 0; S.pausadoEn = null; S.latido = null;
     guardar(); pintarHoy(); pintarSemana();
+    ajustarCabecera();        // se acabó la sesión: el reloj deja de hacer falta
   });
   acc.appendChild(b); d.appendChild(acc);
   box.appendChild(d);
@@ -3460,37 +3523,84 @@ $("#pAnoche").addEventListener("click", e => {
   guardar(); pintarAnoche(); pintarDiario();
 });
 
+/* El mapa de la portada: cada sección con una línea de estado, para saber de
+   un vistazo qué hay y qué falta sin entrar a mirar. Todas iguales de
+   discretas: la que manda es la acción de abajo, si es que hay alguna. */
+function pintarMapa(){
+  const f = hoyISO(), d = DIAS[S.dia], ids = listaEj();
+  const yaHecha = S.hist.some(h => h.f === f);
+  const t = totalDe(f);
+  const pes = ultimoPeso();
+  const ultMed = S.cuerpo && S.cuerpo.length ? S.cuerpo[0] : null;
+
+  let entEstado, entValor, entOk = false;
+  if(S.t0 && siguienteId()){
+    entEstado = "Vas por " + EJ[siguienteId()].n;
+    entValor = mmss(transcurrido());
+  }else if(S.t0){
+    entEstado = "Terminada, falta valorarla";
+    entValor = mmss(transcurrido());
+  }else if(yaHecha){
+    const h = S.hist.find(x => x.f === f);
+    entEstado = d.et + " · " + h.ej + " ejercicios";
+    entValor = "✓ hecha"; entOk = true;
+  }else{
+    entEstado = d.et + " · " + ids.length + " ejercicios";
+    entValor = (S.fase === 0 ? "50" : S.fase === 1 ? "60" : "70") + " min";
+  }
+
+  const nComidas = comidasDe(f).length;
+  const destinos = [
+    {t:"hoy", ic:"🏋️", n:"Entrenamiento", e:entEstado, v:entValor, ok:entOk},
+    {t:"comida", ic:"🍽️", n:"Comida", ok:t.kcal >= OBJ.kcal * 0.9,
+     e:nComidas ? nComidas + (nComidas === 1 ? " cosa apuntada" : " cosas apuntadas")
+                : "Nada apuntado todavía",
+     v:Math.round(t.kcal) + " kcal"},
+    {t:"cuerpo", ic:"📏", n:"Cuerpo",
+     e:ultMed ? "Última medida el " + fechaCorta(ultMed.f) : "Sin ninguna medida",
+     v:pes != null ? pes + " kg" : "—"},
+    {t:"diario", ic:"📅", n:"Diario",
+     e:S.hist.length ? "Todo lo registrado, día a día" : "Aquí se irá guardando cada día",
+     v:S.hist.length ? S.hist.length + (S.hist.length === 1 ? " sesión" : " sesiones") : ""}
+  ];
+
+  $("#pMapa").innerHTML = destinos.map(x =>
+    '<button class="destino" data-ir="' + x.t + '">' +
+      '<span class="dic">' + x.ic + '</span>' +
+      '<span class="dtx"><span class="dn">' + x.n + '</span>' +
+      '<span class="de">' + x.e + '</span></span>' +
+      '<span class="dv' + (x.ok ? " ok" : "") + '">' + x.v + '</span>' +
+      '<span class="dfl">›</span>' +
+    '</button>').join("");
+}
+
+/* Solo hay fecha corta en un par de sitios; no merece una función mayor. */
+function fechaCorta(iso){
+  if(!iso) return "—";
+  const p = iso.split("-");
+  return Number(p[2]) + " de " + MESES[Number(p[1]) - 1];
+}
+
 function pintarInicio(){
   const f = hoyISO(), d = DIAS[S.dia], ids = listaEj(), hoy = new Date();
   $("#portadaHoy").textContent = d.n + ", " + hoy.getDate() + " de " + MESES[hoy.getMonth()] +
     (S.inicio ? " · día " + (diasDesdeInicio()+1) + " del plan" : "");
 
-  /* --- Entrenamiento --- */
-  const hechos = ids.filter(estaHecho).length;
+  pintarMapa();
+
+  /* --- La acción del momento. Si no hay nada que hacer, no hay botón:
+         un botón que no toca es ruido, y esto ya saturaba bastante. --- */
   const yaHecha = S.hist.some(h => h.f === f);
   const btn = $("#pEntBtn");
-  btn.className = "accionGrande";
+  btn.hidden = false;
+  btn.className = "accionHoy";
   if(S.t0 && siguienteId()){
-    $("#pEntTit").textContent = "Vas por " + EJ[siguienteId()].n;
-    $("#pEntSub").textContent = hechos + " de " + ids.length + " ejercicios";
-    $("#pEntDato").textContent = mmss(transcurrido());
-    btn.textContent = "▶ Seguir";
+    btn.textContent = "▶ Seguir la sesión";
   }else if(S.t0){
-    $("#pEntTit").textContent = "Sesión terminada";
-    $("#pEntSub").textContent = "Falta valorar cómo ha ido";
-    $("#pEntDato").textContent = mmss(transcurrido());
-    btn.textContent = "Cerrar la sesión"; btn.className = "accionGrande hecho";
+    btn.textContent = "Cerrar la sesión";
   }else if(yaHecha){
-    const h = S.hist.find(x => x.f === f);
-    $("#pEntTit").textContent = "✓ Hecha hoy";
-    $("#pEntSub").textContent = d.et + " · " + mmss(h.seg) + " · " + h.ej + " ejercicios";
-    $("#pEntDato").textContent = "";
-    btn.textContent = "Ver la sesión"; btn.className = "accionGrande suave";
+    btn.hidden = true;               // hecha: no hay nada que empujar
   }else{
-    $("#pEntTit").textContent = d.et;
-    $("#pEntSub").textContent = ids.length + " ejercicios · " +
-      (S.fase === 0 ? "50" : S.fase === 1 ? "60" : "70") + " min";
-    $("#pEntDato").textContent = "Fase " + (S.fase+1);
     btn.textContent = "▶ Empezar la sesión";
   }
 
@@ -3584,10 +3694,24 @@ $("#vAnimo").addEventListener("click", e => {
 
 /* ============ PESTAÑAS Y SELECTORES ============ */
 const PESTANAS = ["inicio","hoy","comida","cuerpo","diario","semana","guia"];
+const TITULOS = {hoy:"Entrenamiento", comida:"Comida", cuerpo:"Cuerpo",
+                 diario:"Diario", semana:"La semana", guia:"Guía"};
+
+/* El reloj ocupa media pantalla y no pinta nada si no estás entrenando. Se
+   enseña solo cuando hay sesión en marcha, o cuando estás en Entrenamiento. */
+let pestanaActual = "inicio";
+function ajustarCabecera(){
+  $("#reloj").hidden = !(S.t0 || pestanaActual === "hoy");
+}
+
 function irA(t){
+  pestanaActual = t;
   PESTANAS.forEach(x => { $("#p-"+x).hidden = (x !== t); });
-  $("#barraNav").hidden = (t === "inicio");
-  document.querySelectorAll('nav button[data-t]').forEach(b =>
+  const tit = $("#tituloSec");
+  tit.textContent = TITULOS[t] || "";
+  tit.hidden = (t === "inicio");
+  ajustarCabecera();
+  document.querySelectorAll('#menu button[data-t]').forEach(b =>
     b.setAttribute("aria-selected", String(b.dataset.t === t)));
   if(t === "inicio") pintarInicio();
   if(t === "comida") pintarComida();
@@ -3596,10 +3720,13 @@ function irA(t){
   if(t === "cuerpo"){ pintarPerfil(); pintarCuerpo(); pintarSync(); }
   window.scrollTo({top:0, behavior:"smooth"});
 }
-document.querySelectorAll('[data-ir]').forEach(b =>
-  b.addEventListener("click", () => irA(b.dataset.ir)));
-$("#btnVolver").addEventListener("click", () => irA("inicio"));
-document.querySelectorAll('nav button[data-t]').forEach(b =>
+/* Delegado en el documento: los destinos del mapa se dibujan cada vez que se
+   pinta la portada, así que engancharlos uno a uno al arrancar no valdría. */
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-ir]");
+  if(b) irA(b.dataset.ir);
+});
+document.querySelectorAll('#menu button[data-t]').forEach(b =>
   b.addEventListener("click", () => irA(b.dataset.t)));
 $("#selDia").innerHTML = [1,2,3,4,5,6,0]
   .map(i => '<option value="' + i + '">' + DIAS[i].n + ' · ' + DIAS[i].et + '</option>').join("");
