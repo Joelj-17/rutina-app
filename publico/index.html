@@ -1575,6 +1575,12 @@ function cargar(){
     S.syncUlt = g.syncUlt || null;
     S.cofre   = g.cofre || null;
     S.pinFallos = g.pinFallos || 0;
+    /* Las horas de cada cambio y las bajas. Se guardaban pero NO se volvían a
+       leer al abrir, así que se perdían en cada arranque: la fusión se
+       quedaba sin saber qué lado era más reciente, y lo que borrabas volvía
+       desde el otro dispositivo en cuanto sincronizaba. */
+    S.ts    = (g.ts    && typeof g.ts    === "object") ? g.ts    : {};
+    S.bajas = (g.bajas && typeof g.bajas === "object") ? g.bajas : {};
     S.cambiadoEn = g.cambiadoEn || null;
     S.perfil = Object.assign(S.perfil, g.perfil || {});
     S.faseManual = (typeof g.faseManual === "number") ? g.faseManual : null;
