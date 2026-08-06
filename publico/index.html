@@ -461,7 +461,7 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
 .resuelto .mas button{background:none;border:none;color:var(--agua);font-size:.8rem;
                       font-weight:600;padding:4px 2px}
 
-.atajos{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:4px}
+.atajos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
 .atajo{background:transparent;border:1px solid var(--linea);border-radius:9px;padding:10px 6px;
        font-size:.74rem;font-weight:600;color:var(--acero)}
 .atajo span{display:block;font-size:.95rem;margin-bottom:2px;filter:grayscale(1);opacity:.6}
@@ -506,6 +506,10 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
 .mbot[aria-selected="true"] .mic{filter:none;opacity:1}
 /* Sitio para que el menú no tape el final de ninguna pantalla. */
 body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
+
+/* Aviso de "esto se ha mudado", para no dejar a nadie buscando. */
+.puente{font-size:.83rem;color:var(--acero);margin-top:22px;padding-top:14px;
+        border-top:1px solid var(--linea-2)}
 
 /* ---- Copias de seguridad: una lista sobria, no una alarma ---- */
 .copia{display:flex;align-items:center;gap:12px;background:var(--panel);
@@ -662,10 +666,12 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
   <!-- Balance -->
   <div class="bloque" id="pBalance" hidden></div>
 
-  <!-- Lo de consulta, que no hace falta tener en el menú de abajo -->
+  <!-- Lo de consulta y lo de configurar: no hace falta en el menú de abajo,
+       pero sí tiene que verse que existe. -->
   <div class="atajos">
     <button class="atajo" data-ir="semana"><span>🗓️</span>La semana</button>
     <button class="atajo" data-ir="guia"><span>📖</span>Guía</button>
+    <button class="atajo" data-ir="ajustes"><span>⚙️</span>Ajustes</button>
   </div>
 </main>
 
@@ -773,6 +779,7 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
     </div>
   </div>
 
+
   <h2 class="sec">Tu perfil</h2>
   <div class="tarj" id="fichaPerfil"></div>
   <div class="tarj" id="formPerfil" hidden>
@@ -811,10 +818,21 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
     </div>
   </div>
 
-
   <h2 class="sec">Todas tus mediciones</h2>
   <div class="hist" id="listaCuerpo"></div>
 
+  <!-- Puente: la sincronización vivía aquí y es donde la va a buscar. -->
+  <p class="puente">
+    La sincronización entre dispositivos, las copias de seguridad y exportar tus
+    datos están ahora en <button class="enlace" data-ir="ajustes">Ajustes</button>.
+  </p>
+</main>
+
+<!-- ============ AJUSTES ============
+     Estaba todo metido dentro de CUERPO: perfil, sincronizacion, copias y
+     exportar. Seis cosas distintas en una pantalla no son una seccion, son
+     un cajon de sastre. CUERPO se queda con el cuerpo. -->
+<main class="env panel-sec" id="p-ajustes" hidden>
   <h2 class="sec">Sincronizar entre dispositivos</h2>
   <div class="tarj" id="tarjSync"></div>
   <div class="tarj" id="formSync" hidden>
@@ -832,8 +850,10 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
       <button class="bt" id="syncCancelar">Cancelar</button>
     </div>
     <div class="nota rojo" style="margin:12px 0 0">
-      <p><strong>Si pierdes la frase, los datos no se recuperan.</strong> Ni yo, ni Netlify,
-      ni nadie: esa es exactamente la propiedad que la hace segura. Apúntala en papel antes de seguir.</p>
+      <p><strong>Si pierdes la frase, lo de la nube no se recupera.</strong> Ni yo, ni quien
+      aloja la app, ni nadie: esa es exactamente la propiedad que la hace segura. Apúntala en
+      papel antes de seguir. Lo que tengas en este dispositivo sigue estando, y las copias de
+      seguridad también: la frase solo abre la copia de la nube.</p>
     </div>
   </div>
   <p id="syncMsg" style="font-size:.85rem;font-weight:600;margin-top:10px" hidden></p>
@@ -845,7 +865,7 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
     ahí, esto sigue aquí.</p>
   <div id="listaCopias"></div>
 
-  <h2 class="sec">Tus datos</h2>
+  <h2 class="sec">Llevarte tus datos</h2>
   <p id="estadoDatos" style="font-size:.87rem;margin-top:0">—</p>
   <div class="acciones">
     <button class="bt p" id="btnCopiar">Copiar datos</button>
@@ -939,7 +959,7 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
   </div>
   <footer>
     Orientación de entrenamiento general, no consejo médico. Si tienes una lesión previa o dolor persistente, consúltalo con un fisioterapeuta.<br><br>
-    Tus datos se guardan solo en este navegador. Expórtalos de vez en cuando desde la pestaña CUERPO.
+    Tus datos se guardan en este dispositivo. La app hace copias de seguridad sola; puedes verlas y exportarlas desde Ajustes.
   </footer>
 </main>
 
@@ -2114,7 +2134,7 @@ function pintarPerfil(){
                    salud:"Salud y hábito", postura:"Corregir postura y desequilibrios"};
 
   const relleno = !!(S.perfil.altura || S.perfil.nacim || S.perfil.sexo);
-  let ficha = '<div class="fichaCab"><h3>' + (relleno ? "Tus datos" : "Perfil sin rellenar") + '</h3>' +
+  let ficha = '<div class="fichaCab"><h3>' + (relleno ? "Tus datos personales" : "Perfil sin rellenar") + '</h3>' +
               '<button class="bt" id="pEditar">' + (relleno ? "Editar" : "Rellenar") + '</button></div>';
 
   if(relleno){
@@ -3862,9 +3882,10 @@ $("#vAnimo").addEventListener("click", e => {
 });
 
 /* ============ PESTAÑAS Y SELECTORES ============ */
-const PESTANAS = ["inicio","hoy","comida","cuerpo","diario","semana","guia"];
+const PESTANAS = ["inicio","hoy","comida","cuerpo","diario","semana","guia","ajustes"];
 const TITULOS = {hoy:"Entrenamiento", comida:"Comida", cuerpo:"Cuerpo",
-                 diario:"Diario", semana:"La semana", guia:"Guía"};
+                 diario:"Diario", semana:"La semana", guia:"Guía",
+                 ajustes:"Ajustes y datos"};
 
 /* El reloj ocupa media pantalla y no pinta nada si no estás entrenando. Se
    enseña solo cuando hay sesión en marcha, o cuando estás en Entrenamiento. */
@@ -3886,7 +3907,8 @@ function irA(t){
   if(t === "comida") pintarComida();
   if(t === "diario") pintarDiario();
   if(t === "semana") pintarSemana();
-  if(t === "cuerpo"){ pintarPerfil(); pintarCuerpo(); pintarSync(); pintarCopias(); }
+  if(t === "cuerpo"){ pintarPerfil(); pintarCuerpo(); }
+  if(t === "ajustes"){ pintarSync(); pintarCopias(); }
   window.scrollTo({top:0, behavior:"smooth"});
 }
 /* Delegado en el documento: los destinos del mapa se dibujan cada vez que se
