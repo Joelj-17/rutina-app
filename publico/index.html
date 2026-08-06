@@ -440,11 +440,65 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
        font-size:.74rem;font-weight:600;color:var(--acero)}
 .atajo span{display:block;font-size:.95rem;margin-bottom:2px;filter:grayscale(1);opacity:.6}
 
+/* ---- Login ---- */
+#login{position:fixed;inset:0;z-index:200;background:var(--fondo);display:none;
+       overflow-y:auto;padding:0 20px}
+#login.on{display:flex;align-items:center;justify-content:center}
+.loginCaja{width:100%;max-width:330px;text-align:center;padding:36px 0}
+.loginCaja h1{font-size:1.55rem;margin:0 0 4px;letter-spacing:-.025em}
+.loginCaja .lsub{color:var(--acero);font-size:.87rem;margin:0 0 30px}
+.puntos{display:flex;gap:13px;justify-content:center;margin-bottom:8px;height:16px}
+.punto{width:13px;height:13px;border-radius:50%;border:1.5px solid var(--linea)}
+.punto.on{background:var(--agua);border-color:var(--agua)}
+.loginErr{color:var(--alerta);font-size:.82rem;font-weight:600;min-height:34px;
+          display:flex;align-items:center;justify-content:center;padding:0 6px;line-height:1.35}
+.teclas{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-bottom:22px}
+.tecla{aspect-ratio:1;border-radius:50%;border:1px solid var(--linea);background:var(--panel);
+       font-family:var(--mono);font-size:1.4rem;font-weight:600;color:var(--tinta);
+       display:flex;align-items:center;justify-content:center}
+.tecla:active{background:var(--agua);border-color:var(--agua);color:#fff}
+.tecla.vacia{border:none;background:none;pointer-events:none}
+.tecla.aux{font-size:1.05rem;color:var(--acero);border-color:transparent}
+.loginPie{display:flex;flex-direction:column;gap:11px}
+.loginPie button{background:none;border:none;color:var(--agua);font-size:.85rem;font-weight:600;
+                 padding:6px}
+.loginPie button.gris{color:var(--acero);font-weight:500;font-size:.8rem}
+#loginFrase{width:100%;font-family:var(--mono);font-size:.8rem;padding:11px;border-radius:9px;
+            border:1px solid var(--linea);background:var(--panel);color:var(--tinta);
+            resize:vertical;min-height:74px;margin-bottom:11px}
+.loginBtn{width:100%;background:var(--agua);color:#fff;border:none;border-radius:9px;
+          padding:12px;font-size:.92rem;font-weight:700;margin-bottom:11px}
+
 [hidden]{display:none!important}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login">
+  <div class="loginCaja">
+    <h1 id="loginTit">Rutina</h1>
+    <p class="lsub" id="loginSub">Escribe tu PIN</p>
+
+    <div id="zonaPin">
+      <div class="puntos" id="loginPuntos"></div>
+      <div class="loginErr" id="loginErr"></div>
+      <div class="teclas" id="loginTeclas"></div>
+    </div>
+
+    <div id="zonaFrase" hidden>
+      <textarea id="loginFrase" rows="3" autocomplete="off" spellcheck="false"
+        placeholder="liga-botella-motor-cresta-…"></textarea>
+      <button class="loginBtn" id="loginEntrarFrase">Entrar</button>
+    </div>
+
+    <div class="loginPie">
+      <button id="loginCambiar">Entrar con la frase larga</button>
+      <button class="gris" id="loginSaltar">Entrar sin sincronizar</button>
+    </div>
+  </div>
+</div>
 
 <header id="reloj">
   <div class="env reloj-in">
@@ -1149,6 +1203,7 @@ let S = {
   t0:null, pausadoEn:null, acumPausa:0, latido:null,
   hechos:{}, pesos:{}, marcas:{}, hist:[],
   comidas:{}, pasos:{}, agua:{}, sueno:{}, animo:{}, syncId:null, syncUlt:null,
+  cofre:null, pinFallos:0,
   perfil:{altura:"", nacim:"", sexo:"", nivel:"", objetivo:""},
   cuerpo:[]
 };
@@ -1204,6 +1259,8 @@ function cargar(){
     S.animo   = (g.animo   && typeof g.animo   === "object") ? g.animo   : {};
     S.syncId  = g.syncId || null;
     S.syncUlt = g.syncUlt || null;
+    S.cofre   = g.cofre || null;
+    S.pinFallos = g.pinFallos || 0;
     S.perfil = Object.assign(S.perfil, g.perfil || {});
     S.faseManual = (typeof g.faseManual === "number") ? g.faseManual : null;
     S.diaManual  = (typeof g.diaManual  === "number") ? g.diaManual  : null;
@@ -1236,7 +1293,7 @@ function paquete(){
     pesos:S.pesos, hist:S.hist.slice(0,200),
     perfil:S.perfil, cuerpo:S.cuerpo.slice(0,500),
     comidas:S.comidas, pasos:S.pasos, agua:S.agua, sueno:S.sueno, animo:S.animo,
-    syncId:S.syncId, syncUlt:S.syncUlt,
+    syncId:S.syncId, syncUlt:S.syncUlt, cofre:S.cofre, pinFallos:S.pinFallos,
     sesion: S.t0 ? {fecha:hoyISO(), dia:S.dia, t0:S.t0, acumPausa:S.acumPausa,
                     pausadoEn:S.pausadoEn, hechos:S.hechos, marcas:S.marcas,
                     latido:S.latido || Date.now()} : null
@@ -2168,6 +2225,8 @@ function aviso(t, malo){
 
 const API_SYNC = "/api/sync";
 const ITERACIONES = 600000;
+const ITER_PIN   = 300000;   // por intento de PIN: encarece probar a lo bruto
+const FALLOS_MAX = 10;
 let syncFrase = null;      // solo en memoria mientras la pestaña está abierta
 let syncLlave = null;      // llave ya derivada: el PBKDF2 se hace UNA vez
 let syncOcupado = false;
@@ -2208,6 +2267,35 @@ async function cifrar(objeto){
                                          bytes(JSON.stringify(objeto)));
   return {v:1, salt:b64.de(syncLlave.sal), iv:b64.de(iv), ct:b64.de(ct)};
 }
+
+/* --- El cofre: la frase guardada en ESTE dispositivo, cerrada con un PIN ---
+   Lo que queda en el móvil es la frase cifrada, no la frase. Sin el PIN no
+   sirve de nada, y el PIN no se guarda en ninguna parte.
+
+   Un PIN de 4 cifras son 10.000 combinaciones: poco. Por eso cada intento
+   pasa por 300.000 iteraciones (hace lento probar) y a los 10 fallos el
+   cofre se destruye solo. Aun así, la protección de verdad es el bloqueo
+   de tu móvil; esto evita el vistazo casual, no a un atacante decidido.   */
+async function llavePin(pin, sal){
+  const base = await crypto.subtle.importKey("raw", bytes("pin:" + pin), "PBKDF2",
+                                             false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    {name:"PBKDF2", salt:sal, iterations:ITER_PIN, hash:"SHA-256"},
+    base, {name:"AES-GCM", length:256}, false, ["encrypt","decrypt"]);
+}
+async function cerrarCofre(pin, frase){
+  const sal = crypto.getRandomValues(new Uint8Array(16));
+  const iv  = crypto.getRandomValues(new Uint8Array(12));
+  const k   = await llavePin(pin, sal);
+  const ct  = await crypto.subtle.encrypt({name:"AES-GCM", iv}, k, bytes(frase));
+  return {salt:b64.de(sal), iv:b64.de(iv), ct:b64.de(ct), n:pin.length};
+}
+async function abrirCofre(pin, cofre){
+  const k  = await llavePin(pin, b64.a(cofre.salt));
+  const pt = await crypto.subtle.decrypt({name:"AES-GCM", iv:b64.a(cofre.iv)}, k,
+                                         b64.a(cofre.ct));
+  return new TextDecoder().decode(pt);
+}
 async function descifrar(bloque){
   if(!syncLlave) throw new Error("sin llave");
   const pt = await crypto.subtle.decrypt({name:"AES-GCM", iv:b64.a(bloque.iv)},
@@ -2226,7 +2314,9 @@ async function subirDatos(silencioso){
   if(!syncFrase || syncOcupado) return false;
   syncOcupado = true;
   try{
-    const bloque = await cifrar(paquete());
+    const p = paquete();
+    delete p.cofre; delete p.pinFallos; delete p.syncId; delete p.syncUlt;
+    const bloque = await cifrar(p);
     const r = await fetch(API_SYNC + "?id=" + await idDe(syncFrase),
       {method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(bloque)});
     if(!r.ok) throw new Error("HTTP " + r.status);
@@ -2347,6 +2437,9 @@ $("#syncActivar").addEventListener("click", async () => {
     if(r.status === 404){
       await subirDatos(false);
       syncAviso("Activada. Tus datos ya están cifrados en la nube.");
+      if(confirm("¿Guardar la frase en este dispositivo con un PIN? " +
+                "Así entras con unos números en vez de escribirla entera cada vez."))
+        await pedirPinNuevo();
     }else{
       pintarSync();
       await bajarDatos();
@@ -2365,6 +2458,162 @@ function syncAuto(){
   clearTimeout(syncPendiente);
   syncPendiente = setTimeout(() => subirDatos(true), 4000);
 }
+
+/* ============ LOGIN ============ */
+let pinActual = "";
+
+function loginVisible(v){
+  $("#login").classList.toggle("on", v);
+  document.body.style.overflow = v ? "hidden" : "";
+}
+function pintarPuntos(){
+  const n = (S.cofre && S.cofre.n) || 4;
+  $("#loginPuntos").innerHTML = Array.from({length:n}, (_, i) =>
+    '<span class="punto' + (i < pinActual.length ? " on" : "") + '"></span>').join("");
+}
+function pintarTeclado(){
+  const t = ["1","2","3","4","5","6","7","8","9","", "0", "borrar"];
+  $("#loginTeclas").innerHTML = t.map(x =>
+    x === "" ? '<span class="tecla vacia"></span>'
+    : x === "borrar" ? '<button class="tecla aux" data-tecla="B" aria-label="Borrar">⌫</button>'
+    : '<button class="tecla" data-tecla="' + x + '">' + x + '</button>').join("");
+}
+function loginError(t){ $("#loginErr").textContent = t || ""; }
+
+async function probarPin(){
+  const n = (S.cofre && S.cofre.n) || 4;
+  if(pinActual.length < n) return;
+  loginError("Comprobando…");
+  try{
+    const frase = await abrirCofre(pinActual, S.cofre);
+    syncLlave = await abrirLlave(frase);
+    syncFrase = frase;
+    S.pinFallos = 0; guardar();
+    pinActual = ""; pintarPuntos(); loginError("");
+    loginVisible(false);
+    pintarSync();
+    bajarSilencioso();
+  }catch(e){
+    pinActual = ""; pintarPuntos();
+    S.pinFallos = (S.pinFallos || 0) + 1;
+    guardar();
+    if(S.pinFallos >= FALLOS_MAX){
+      S.cofre = null; S.pinFallos = 0; guardar();
+      pintarLogin();
+      loginError("Demasiados fallos. El PIN se ha borrado de este dispositivo: entra con la frase.");
+    }else{
+      loginError("PIN incorrecto. Te quedan " + (FALLOS_MAX - S.pinFallos) + " intentos.");
+    }
+  }
+}
+
+/* Al entrar, mira si hay algo más nuevo en la nube sin dar la lata. */
+async function bajarSilencioso(){
+  if(!syncFrase) return;
+  try{
+    const r = await fetch(API_SYNC + "?id=" + await idDe(syncFrase));
+    if(!r.ok) return;
+    const bloque = await r.json();
+    if(S.syncUlt && bloque.ts && bloque.ts <= S.syncUlt) return;   // no hay nada nuevo
+    const g = await descifrar(bloque);
+    const nS = Array.isArray(g.hist) ? g.hist.length : 0;
+    if(nS < S.hist.length) return;   // lo de aquí es más completo: no lo pisamos solos
+    if(nS === S.hist.length && !S.syncUlt) return;
+    if(!confirm("Hay datos más recientes en la nube (" + nS + " sesiones).\n\n¿Traerlos?")) return;
+    S.pesos = g.pesos || {};
+    S.hist = Array.isArray(g.hist) ? g.hist : [];
+    S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
+    ["comidas","pasos","agua","sueno","animo"].forEach(k => {
+      S[k] = (g[k] && typeof g[k] === "object") ? g[k] : {};
+    });
+    S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
+    if(typeof g.fase === "number") S.fase = g.fase;
+    if(g.inicio) S.inicio = g.inicio;
+    S.syncUlt = bloque.ts;
+    guardar();
+    pintarHoy(); pintarPerfil(); pintarCuerpo(); pintarSemana();
+    pintarComida(); pintarDiario(); pintarInicio();
+  }catch(e){ /* sin conexión: se sigue trabajando en local */ }
+}
+
+async function entrarConFrase(){
+  const f = $("#loginFrase").value.trim().replace(/\s+/g, " ");
+  if(f.length < 20){ loginError("Esa frase es demasiado corta."); return; }
+  loginError("Abriendo…");
+  try{
+    syncLlave = await abrirLlave(f);
+    syncFrase = f;
+    S.syncId = await idDe(f);
+    guardar();
+    $("#loginFrase").value = "";
+    loginVisible(false);
+    pintarSync();
+    await bajarDatos();
+    if(confirm("¿Quieres guardar la frase en este dispositivo con un PIN?\n\n" +
+               "Así entras con 4 números en vez de escribirla entera cada vez."))
+      pedirPinNuevo();
+  }catch(e){ loginError("No se ha podido: " + e.message); }
+}
+
+async function pedirPinNuevo(){
+  const p = prompt("Elige un PIN de 4 a 8 cifras para este dispositivo:");
+  if(p === null) return;
+  const pin = p.replace(/\D/g, "");
+  if(pin.length < 4 || pin.length > 8){ alert("Tiene que tener entre 4 y 8 cifras."); return pedirPinNuevo(); }
+  const p2 = prompt("Repítelo:");
+  if(p2 === null) return;
+  if(p2.replace(/\D/g,"") !== pin){ alert("No coinciden."); return pedirPinNuevo(); }
+  S.cofre = await cerrarCofre(pin, syncFrase);
+  S.pinFallos = 0;
+  guardar(); pintarSync();
+  alert("Listo. La próxima vez que abras la app entras con el PIN.");
+}
+
+function pintarLogin(){
+  const hayCofre = !!(S.cofre && S.cofre.ct);
+  $("#loginSub").textContent = hayCofre ? "Escribe tu PIN" : "Escribe tu frase de acceso";
+  $("#zonaPin").hidden = !hayCofre;
+  $("#zonaFrase").hidden = hayCofre;
+  $("#loginCambiar").textContent = hayCofre ? "Entrar con la frase larga" : "Tengo PIN en este dispositivo";
+  $("#loginCambiar").hidden = !hayCofre;
+  if(hayCofre){ pintarPuntos(); pintarTeclado(); }
+}
+
+$("#loginTeclas").addEventListener("click", e => {
+  const b = e.target.closest("[data-tecla]");
+  if(!b) return;
+  const v = b.dataset.tecla;
+  const n = (S.cofre && S.cofre.n) || 4;
+  if(v === "B") pinActual = pinActual.slice(0, -1);
+  else if(pinActual.length < n) pinActual += v;
+  pintarPuntos(); loginError("");
+  if(pinActual.length === n) probarPin();
+});
+document.addEventListener("keydown", e => {
+  if(!$("#login").classList.contains("on") || $("#zonaPin").hidden) return;
+  if(/^[0-9]$/.test(e.key)){
+    const n = (S.cofre && S.cofre.n) || 4;
+    if(pinActual.length < n) pinActual += e.key;
+    pintarPuntos(); loginError("");
+    if(pinActual.length === n) probarPin();
+  }else if(e.key === "Backspace"){
+    pinActual = pinActual.slice(0, -1); pintarPuntos();
+  }
+});
+$("#loginCambiar").addEventListener("click", () => {
+  const mostrandoPin = !$("#zonaPin").hidden;
+  $("#zonaPin").hidden = mostrandoPin;
+  $("#zonaFrase").hidden = !mostrandoPin;
+  $("#loginSub").textContent = mostrandoPin ? "Escribe tu frase de acceso" : "Escribe tu PIN";
+  $("#loginCambiar").textContent = mostrandoPin ? "Volver al PIN" : "Entrar con la frase larga";
+  loginError("");
+  if(mostrandoPin) $("#loginFrase").focus();
+});
+$("#loginEntrarFrase").addEventListener("click", entrarConFrase);
+$("#loginSaltar").addEventListener("click", () => {
+  loginVisible(false);
+  syncAviso("Trabajando solo en este dispositivo. No se sincronizará.", "info");
+});
 
 /* ---- Copiar / exportar / importar / borrar ---- */
 $("#btnCopiar").addEventListener("click", async () => {
@@ -3085,6 +3334,8 @@ pintarComida();
 pintarDiario();
 pintarInicio();
 pintarSync();
+pintarLogin();
+if(S.cofre || S.syncId){ loginVisible(true); }
 /* Si hay una sesión a medias, entra directo al entrenamiento. */
 irA(S.t0 ? "hoy" : "inicio");
 </script>
