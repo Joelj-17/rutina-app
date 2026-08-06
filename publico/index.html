@@ -435,6 +435,20 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
 .ddet .comidaL:last-child{border-bottom:none}
 .ddet .comidaL span{font-family:var(--mono);color:var(--acero);white-space:nowrap}
 
+/* ---- Anoche: pregunta corta que se resuelve y se calla ---- */
+.anoche .preg2{font-size:.95rem;font-weight:600;margin:0 0 11px}
+.horas{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
+.hbot{padding:11px 2px;border-radius:9px;border:1px solid var(--linea);background:transparent;
+      font-family:var(--mono);font-size:.92rem;font-weight:700;color:var(--tinta-2)}
+.hbot:active,.hbot.sel{background:var(--agua);border-color:var(--agua);color:#fff}
+.hbot.otro{font-family:var(--ui);font-size:.78rem;font-weight:600;color:var(--acero)}
+.resuelto{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.resuelto .dato2{font-family:var(--mono);font-size:1.05rem;font-weight:700}
+.resuelto .et2{font-size:.78rem;color:var(--acero)}
+.resuelto .mas{margin-left:auto;display:flex;gap:8px}
+.resuelto .mas button{background:none;border:none;color:var(--agua);font-size:.8rem;
+                      font-weight:600;padding:4px 2px}
+
 .atajos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
 .atajo{background:transparent;border:1px solid var(--linea);border-radius:9px;padding:10px 6px;
        font-size:.74rem;font-weight:600;color:var(--acero)}
@@ -549,6 +563,10 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
 <main class="env portada" id="p-inicio">
   <h1>Rutina</h1>
   <p class="hoy" id="portadaHoy">—</p>
+
+  <!-- Anoche: se pregunta una vez y se resuelve -->
+  <div class="bloque anoche" id="pAnoche"></div>
+
   <!-- Entrenamiento -->
   <div class="bloque destaca">
     <div class="bloqueCab"><h2>Entrenamiento</h2><span class="dato" id="pEntDato"></span></div>
@@ -565,9 +583,9 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
     <button class="accionGrande suave" data-ir="comida">+ Añadir otra cosa</button>
   </div>
 
-  <!-- El día -->
+  <!-- Hoy llevas: solo lo que se acumula durante el día -->
   <div class="bloque">
-    <div class="bloqueCab"><h2>El día</h2></div>
+    <div class="bloqueCab"><h2>Hoy llevas</h2></div>
     <div class="vida">
       <div class="vidaF">
         <span class="ic">👟</span><span class="nom">Pasos</span>
@@ -580,12 +598,7 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
         <span class="sufijo" id="vAguaTxt"></span>
       </div>
       <div class="vidaF">
-        <span class="ic">😴</span><span class="nom">Sueño</span>
-        <input id="vSueno" type="number" inputmode="decimal" step="0.5" min="0" max="16" placeholder="7.5">
-        <span class="sufijo">horas</span>
-      </div>
-      <div class="vidaF">
-        <span class="ic">🙂</span><span class="nom">Ánimo</span>
+        <span class="ic">🙂</span><span class="nom">Cómo estás</span>
         <div class="caras" id="vAnimo"></div>
       </div>
     </div>
@@ -1223,7 +1236,7 @@ let S = {
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
   t0:null, pausadoEn:null, acumPausa:0, latido:null,
   hechos:{}, pesos:{}, marcas:{}, hist:[],
-  comidas:{}, pasos:{}, agua:{}, sueno:{}, animo:{}, syncId:null, syncUlt:null,
+  comidas:{}, pasos:{}, agua:{}, sueno:{}, siesta:{}, animo:{}, syncId:null, syncUlt:null,
   cofre:null, pinFallos:0, cambiadoEn:null,
   perfil:{altura:"", nacim:"", sexo:"", nivel:"", objetivo:""},
   cuerpo:[]
@@ -1277,6 +1290,7 @@ function cargar(){
     S.pasos   = (g.pasos   && typeof g.pasos   === "object") ? g.pasos   : {};
     S.agua    = (g.agua    && typeof g.agua    === "object") ? g.agua    : {};
     S.sueno   = (g.sueno   && typeof g.sueno   === "object") ? g.sueno   : {};
+    S.siesta  = (g.siesta  && typeof g.siesta  === "object") ? g.siesta  : {};
     S.animo   = (g.animo   && typeof g.animo   === "object") ? g.animo   : {};
     S.syncId  = g.syncId || null;
     S.syncUlt = g.syncUlt || null;
@@ -1314,7 +1328,8 @@ function paquete(){
     material:S.material,
     pesos:S.pesos, hist:S.hist.slice(0,200),
     perfil:S.perfil, cuerpo:S.cuerpo.slice(0,500),
-    comidas:S.comidas, pasos:S.pasos, agua:S.agua, sueno:S.sueno, animo:S.animo,
+    comidas:S.comidas, pasos:S.pasos, agua:S.agua, sueno:S.sueno, siesta:S.siesta,
+    animo:S.animo,
     syncId:S.syncId, syncUlt:S.syncUlt, cofre:S.cofre, pinFallos:S.pinFallos,
     cambiadoEn:S.cambiadoEn,
     sesion: S.t0 ? {fecha:hoyISO(), dia:S.dia, t0:S.t0, acumPausa:S.acumPausa,
@@ -2350,6 +2365,7 @@ function retrato(g){
     sesiones: (g.hist || []).length,
     mediciones: (g.cuerpo || []).length,
     comida: Object.keys(g.comidas || {}).filter(f => (g.comidas[f] || []).length).length,
+    siesta: dias(g.siesta),
     pasos: dias(g.pasos), agua: dias(g.agua), sueno: dias(g.sueno), animo: dias(g.animo),
     pesos: dias(g.pesos),
     altura: (g.perfil || {}).altura || ""
@@ -2441,7 +2457,7 @@ async function bajarDatos(){
     S.pesos  = g.pesos  || {};
     S.hist   = Array.isArray(g.hist)   ? g.hist   : [];
     S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
-    ["comidas","pasos","agua","sueno","animo"].forEach(k => {
+    ["comidas","pasos","agua","sueno","siesta","animo"].forEach(k => {
       S[k] = (g[k] && typeof g[k] === "object") ? g[k] : {};
     });
     S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
@@ -2654,7 +2670,7 @@ function aplicarDatos(g, ts){
   S.pesos = g.pesos || {};
   S.hist = Array.isArray(g.hist) ? g.hist : [];
   S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
-  ["comidas","pasos","agua","sueno","animo"].forEach(k => {
+  ["comidas","pasos","agua","sueno","siesta","animo"].forEach(k => {
     S[k] = (g[k] && typeof g[k] === "object") ? g[k] : {};
   });
   S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
@@ -3036,7 +3052,7 @@ function pintarDiario(){
       chip("🍽", t.kcal ? Math.round(t.kcal) + " kcal" : "—", t.kcal > 0),
       chip("👟", pas ? pas : "—", !!pas),
       chip("💧", ag ? ag + "/" + VASOS : "—", !!ag),
-      chip("😴", su ? su + " h" : "—", !!su),
+      chip("😴", su ? (su + " h" + (S.siesta[f] ? " +" + S.siesta[f] + "m" : "")) : "—", !!su),
       chip((CARAS.find(c => c.v === an) || {e:"🙂"}).e, an ? (CARAS.find(c => c.v === an)||{}).t : "—", !!an)
     ].join("");
 
@@ -3319,6 +3335,66 @@ const CARAS = [{v:1,e:"😞",t:"Mal"},{v:2,e:"😐",t:"Regular"},
                {v:3,e:"🙂",t:"Bien"},{v:4,e:"😄",t:"Muy bien"}];
 const VASOS = 8;
 
+/* El sueño no es un dato que crece durante el día: pasó antes de empezarlo.
+   Se pregunta una vez, se contesta y se calla. La siesta es un añadido
+   aparte, porque esa sí ocurre dentro del día.                            */
+const HORAS_SUENO = [5, 6, 6.5, 7, 7.5, 8, 8.5, 9];
+function horasTxt(h){
+  const t = (Math.round(h * 10) / 10).toString().replace(".", ",");
+  return t + " h";
+}
+function pintarAnoche(){
+  const f = hoyISO(), caja = $("#pAnoche");
+  const h = S.sueno[f], si = S.siesta[f];
+
+  if(h == null){
+    caja.className = "bloque anoche destaca";
+    caja.innerHTML = '<div class="bloqueCab"><h2>Anoche</h2></div>' +
+      '<p class="preg2">¿Cuántas horas has dormido?</p>' +
+      '<div class="horas">' +
+      HORAS_SUENO.map(x => '<button class="hbot" data-h="' + x + '">' +
+        x.toString().replace(".", ",") + '</button>').join("") + '</div>' +
+      '<div class="horas" style="grid-template-columns:1fr 1fr;margin-bottom:0">' +
+      '<button class="hbot otro" data-h="otro">Otra cantidad</button>' +
+      '<button class="hbot otro" data-h="saltar">Hoy no lo apunto</button></div>';
+    return;
+  }
+
+  caja.className = "bloque anoche";
+  caja.innerHTML = '<div class="bloqueCab"><h2>Anoche</h2></div>' +
+    '<div class="resuelto"><span class="ic" style="font-size:1.05rem">😴</span>' +
+    '<span class="dato2">' + (h === 0 ? "Sin apuntar" : horasTxt(h)) + '</span>' +
+    (si ? '<span class="et2">+ siesta de ' + si + ' min</span>' : "") +
+    '<span class="mas">' +
+    (si ? "" : '<button data-anoche="siesta">+ siesta</button>') +
+    '<button data-anoche="cambiar">cambiar</button></span></div>';
+}
+$("#pAnoche").addEventListener("click", e => {
+  const b = e.target.closest("[data-h], [data-anoche]");
+  if(!b) return;
+  const f = hoyISO();
+  if(b.dataset.h){
+    const v = b.dataset.h;
+    if(v === "saltar") S.sueno[f] = 0;
+    else if(v === "otro"){
+      const p = prompt("¿Cuántas horas has dormido?", "7,5");
+      if(p === null) return;
+      const n = num(p);
+      if(n == null || n < 0 || n > 20){ alert("Pon un número de horas."); return; }
+      S.sueno[f] = n;
+    }else S.sueno[f] = parseFloat(v);
+  }else if(b.dataset.anoche === "siesta"){
+    const p = prompt("¿Cuántos minutos de siesta?", "30");
+    if(p === null) return;
+    const n = num(p);
+    if(n == null || n <= 0 || n > 600){ alert("Pon los minutos."); return; }
+    S.siesta[f] = Math.round(n);
+  }else if(b.dataset.anoche === "cambiar"){
+    delete S.sueno[f]; delete S.siesta[f];
+  }
+  guardar(); pintarAnoche(); pintarDiario();
+});
+
 function pintarInicio(){
   const f = hoyISO(), d = DIAS[S.dia], ids = listaEj(), hoy = new Date();
   $("#portadaHoy").textContent = d.n + ", " + hoy.getDate() + " de " + MESES[hoy.getMonth()] +
@@ -3374,7 +3450,7 @@ function pintarInicio(){
     '<button class="vaso' + (i < ag ? " lleno" : "") + '" data-vaso="' + (i+1) +
     '" aria-label="' + (i+1) + ' vasos"></button>').join("");
   $("#vAguaTxt").textContent = ag ? ag + " / " + VASOS : "";
-  $("#vSueno").value = S.sueno[f] || "";
+  pintarAnoche();
   const an = S.animo[f] || 0;
   $("#vAnimo").innerHTML = CARAS.map(c =>
     '<button class="cara' + (an === c.v ? " sel" : "") + '" data-animo="' + c.v +
@@ -3438,11 +3514,7 @@ $("#vAnimo").addEventListener("click", e => {
     $("#vPasosKcal").textContent = n && p != null ? "≈ " + Math.round(n*p*0.0004) + " kcal" : "";
     if(ev === "change"){ pintarInicio(); pintarComida(); }
   });
-  $("#vSueno").addEventListener(ev, e => {
-    const v = num(e.target.value);
-    if(v == null || v <= 0) delete S.sueno[hoyISO()]; else S.sueno[hoyISO()] = v;
-    guardar();
-  });
+
 });
 
 /* ============ PESTAÑAS Y SELECTORES ============ */
