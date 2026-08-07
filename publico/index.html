@@ -122,6 +122,28 @@ textarea{width:100%;resize:vertical;min-height:64px;line-height:1.45}
 .empezar:active{transform:translateY(1px)}
 
 .lista{display:flex;flex-direction:column;gap:8px;padding-bottom:34px}
+/* ---- Comida: navegar por dias ---- */
+.navDia{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.navDia .bt{padding:9px 12px}
+.navDia #comAnt,.navDia #comSig{flex:0 0 auto;font-size:1.05rem;line-height:1}
+.navDia input[type=date]{flex:1;min-width:0;padding:9px 11px;border-radius:9px;
+  border:1px solid var(--linea);background:var(--panel);color:var(--tinta);
+  font-family:var(--ui);font-size:.88rem}
+.avisoDia{background:var(--agua-claro);border:1px solid var(--agua);border-radius:10px;
+  padding:10px 12px;margin-bottom:12px;font-size:.84rem;line-height:1.4;color:var(--tinta)}
+.avisoDia b{color:var(--agua)}
+
+.filaDia{display:block;width:100%;text-align:left;background:var(--panel);
+  border:1px solid var(--linea);border-radius:10px;padding:11px 13px;margin-bottom:8px}
+.filaDia.aqui{border-color:var(--agua);border-width:2px}
+.fdCab{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.fdCab b{font-size:.92rem}
+.fdKcal{font-family:var(--mono);font-weight:700;font-size:.92rem;color:var(--agua)}
+.fdSub{font-size:.76rem;color:var(--acero);margin-top:2px}
+/* Que comiste, de un vistazo. Dos lineas: es un resumen, no la lista entera. */
+.fdQue{font-size:.78rem;color:var(--tinta-2);margin-top:5px;line-height:1.35;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
 /* ---- Una tarjeta a la vez: tira de progreso, navegacion y sesion completa ---- */
 .tira{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r);
       padding:10px 12px;margin-bottom:10px}
@@ -912,14 +934,23 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
 <main class="env panel-sec" id="p-comida" hidden>
   <div class="dia-cab" style="padding-top:6px">
     <div><h1 id="comFecha">Hoy</h1><div class="dia-sub" id="comSub">—</div></div>
-    <button class="enlace" id="comAyer">ver otro día</button>
   </div>
+
+  <!-- Cambiar de dia se hacia por un prompt donde habia que teclear
+       "2026-08-07" a mano. Existir, existia; encontrarlo, no. -->
+  <div class="navDia">
+    <button class="bt" id="comAnt" aria-label="Día anterior">←</button>
+    <input type="date" id="comFechaSel" aria-label="Ver otro día">
+    <button class="bt" id="comSig" aria-label="Día siguiente">→</button>
+    <button class="bt" id="comHoy">Hoy</button>
+  </div>
+  <div class="avisoDia" id="comAvisoDia" hidden></div>
 
   <div class="tarj" id="comResumen"></div>
 
   <!-- Primero lo que has comido: es la pregunta que te trae a esta
        pantalla. Antes estaba al final, detras de cuatro apartados. -->
-  <h2 class="sec">Lo que llevas hoy</h2>
+  <h2 class="sec" id="comTitLista">Lo que llevas hoy</h2>
   <div class="hist" id="comLista"></div>
 
   <!-- Todas las formas de apuntar, bajo un solo titulo. Eran tres
@@ -1665,7 +1696,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-08 · 25";
+const VERSION = "2026-08-08 · 26";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -5327,10 +5358,30 @@ function pintarComida(){
   if(typeof pintarSueles === "function") pintarSueles();
   const esHoy = comDia === hoyISO();
   const t = totalDe(comDia), gasto = gastoDe(comDia);
-  $("#comFecha").textContent = esHoy ? "Hoy" : comDia;
-  $("#comSub").textContent = comidasDe(comDia).length + " apuntes" +
+  $("#comFecha").textContent = esHoy ? "Hoy" : fechaCorta(comDia);
+  const nCom = comidasDe(comDia).length;
+  $("#comSub").textContent = (nCom === 1 ? "1 apunte" : nCom + " apuntes") +
     (esHoy ? "" : " · " + DIAS[new Date(comDia+"T00:00:00").getDay()].n);
-  $("#comAyer").textContent = esHoy ? "ver otro día" : "volver a hoy";
+
+  // Los botones de dia: no dejar pasar del dia de hoy.
+  $("#comFechaSel").value = comDia;
+  $("#comFechaSel").max = hoyISO();
+  $("#comSig").disabled = esHoy;
+  $("#comHoy").hidden = esHoy;
+
+  /* Si NO estas en hoy hay que decirlo bien claro, porque lo que apuntes ira a
+     ese dia: apuntar la cena de ayer creyendo que es la de hoy es un fallo que
+     no se nota hasta mucho despues. */
+  const av = $("#comAvisoDia");
+  av.hidden = esHoy;
+  if(!esHoy){
+    av.textContent = "";
+    const t1 = document.createElement("b");
+    t1.textContent = "Estás en el " + fechaCorta(comDia) + ".";
+    const t2 = document.createElement("span");
+    t2.textContent = " Lo que apuntes se guarda en ese día, no en hoy.";
+    av.appendChild(t1); av.appendChild(t2);
+  }
 
   let html = medidor("Calorías", t.kcal, OBJ.kcal, "kcal") +
              medidor("Proteína", t.prot, OBJ.prot, "g");
@@ -5358,21 +5409,39 @@ function pintarComida(){
     '<span class="mn">' + p.kcal + ' kcal · ' + p.prot + ' g</span></button>').join("");
 
   const l = comidasDe(comDia);
+  $("#comTitLista").textContent = esHoy ? "Lo que llevas hoy"
+                                        : "Lo que comiste el " + fechaCorta(comDia);
   $("#comLista").innerHTML = l.length
     ? l.map((c, i) => '<div class="comfila"><b>' + esc(c.n) + '</b>' +
         '<span class="mn">' + Math.round(nDe(c.kcal)) + ' kcal · ' + Math.round(nDe(c.prot)) + ' g</span>' +
         '<button data-borra="' + i + '" aria-label="Quitar">✕</button></div>').join("")
     : '<div class="vacio">Nada apuntado todavía. Empieza por tus comidas del plan, que son un toque.</div>';
 
-  const dias = Object.keys(S.comidas).filter(f => comidasDe(f).length).sort().reverse().slice(0, 10);
-  $("#comHist").innerHTML = dias.length
-    ? dias.map(f => {
-        const tt = totalDe(f), g = gastoDe(f);
-        return '<div class="comfila"><span class="mn">' + f + '</span><b style="margin-left:10px">' +
-          Math.round(tt.kcal) + ' kcal</b><span class="mn">' + Math.round(tt.prot) + ' g prot' +
-          (g ? " · " + (tt.kcal - g > 0 ? "+" : "") + Math.round(tt.kcal - g) : "") + '</span></div>';
-      }).join("")
-    : '<div class="vacio">Aquí se irán acumulando los días.</div>';
+  /* El historial era una lista muerta: fecha y totales, sin forma de abrir un
+     dia. Ahora cada fila lleva a ese dia, y dice de un vistazo QUE comiste,
+     que es lo que uno viene a mirar. */
+  const dias = Object.keys(S.comidas).filter(f => comidasDe(f).length).sort().reverse().slice(0, 30);
+  const hist = $("#comHist");
+  hist.innerHTML = "";
+  if(!dias.length){
+    hist.innerHTML = '<div class="vacio">Aquí se irán acumulando los días.</div>';
+    return;
+  }
+  dias.forEach(f => {
+    const tt = totalDe(f), g = gastoDe(f), l = comidasDe(f);
+    const b2 = document.createElement("button");
+    b2.className = "filaDia" + (f === comDia ? " aqui" : "");
+    const bal = g ? (tt.kcal - g > 0 ? "+" : "") + Math.round(tt.kcal - g) : null;
+    b2.innerHTML =
+      '<div class="fdCab"><b>' + esc(fechaCorta(f)) + '</b>' +
+      '<span class="fdKcal">' + Math.round(tt.kcal) + ' kcal</span></div>' +
+      '<div class="fdSub">' + Math.round(tt.prot) + ' g de proteína' +
+      (bal !== null ? ' · balance ' + bal : "") + ' · ' + l.length +
+      (l.length === 1 ? " apunte" : " apuntes") + '</div>' +
+      '<div class="fdQue">' + esc(l.map(c => c.n).join(" · ")) + '</div>';
+    b2.addEventListener("click", () => { irADiaComida(f); });
+    hist.appendChild(b2);
+  });
 }
 
 /* El único sitio por el que se apunta comida. Sin "dia" va al que estés
@@ -5498,22 +5567,27 @@ $("#mAdd").addEventListener("click", () => {
   $("#mNombre").value = ""; $("#mKcal").value = ""; $("#mProt").value = "";
   $("#alManualCaja").hidden = true;
 });
-$("#comAyer").addEventListener("click", () => {
-  if(comDia !== hoyISO()){ comDia = hoyISO(); pintarComida(); return; }
-  const f = prompt("¿Qué día quieres ver? (AAAA-MM-DD)", hoyISO());
-  if(f === null) return;                     // le ha dado a cancelar
-  /* El formato no basta: "2026-13-01" y "2026-02-30" lo cumplen y no existen.
-     Con una de esas, new Date da Invalid Date, DIAS[NaN] es undefined y
-     pintarComida reventaba a media pantalla —el titulo ya escrito con la fecha
-     inventada y el resto congelado en el dia anterior—, y a partir de ahi
-     fallaba en cada llamada. Peor: apuntar comida en ese estado SI guardaba, en
-     un dia fantasma que la app no iba a enseñar nunca. */
-  if(!fechaReal(f)){
-    aviso("Ese día no existe. Escríbelo como 2026-08-07.", true);
-    return;
-  }
+/* Ir a un dia: por los botones, por el calendario del movil o tocando el
+   historial. El prompt de teclear "2026-08-07" a mano se queda fuera. */
+function irADiaComida(f){
+  if(!fechaReal(f)){ aviso("Ese día no existe.", true); return; }
   if(f > hoyISO()){ aviso("Ese día todavía no ha llegado.", true); return; }
-  comDia = f; pintarComida();
+  comDia = f;
+  pintarComida();
+  $("#p-comida").scrollIntoView({block:"start"});
+}
+function moverDiaComida(paso){
+  const d = new Date(comDia + "T12:00:00");
+  d.setDate(d.getDate() + paso);
+  const f = hoyISO(d);
+  if(f > hoyISO()){ aviso("Ese día todavía no ha llegado.", true); return; }
+  irADiaComida(f);
+}
+$("#comAnt").addEventListener("click", () => moverDiaComida(-1));
+$("#comSig").addEventListener("click", () => moverDiaComida(1));
+$("#comHoy").addEventListener("click", () => irADiaComida(hoyISO()));
+$("#comFechaSel").addEventListener("change", e => {
+  if(e.target.value) irADiaComida(e.target.value);
 });
 
 /* ============ PORTADA: el diario de hoy ============ */
