@@ -19,7 +19,12 @@ const CABECERAS = {
   "Cache-Control": "no-store"
 };
 
-const LIMITE = 2 * 1024 * 1024;          // 2 MB: de sobra para años de registro
+/* 8 MB. Estaba en 2, que parecian de sobra hasta hacer la cuenta con una sesion
+   real: 1.823 bytes cada una, asi que el tope de 2.000 sesiones del cliente da
+   3,8 MB de JSON y 5,1 ya cifrado y en base64. KV admite valores de hasta 25 MB,
+   de modo que subir el limite cuesta cero y la alternativa era recortarle el
+   historial para que cupiera en un numero que me habia inventado. */
+const LIMITE = 8 * 1024 * 1024;
 const ID_VALIDO = /^[a-f0-9]{64}$/;      // exactamente un SHA-256 en hexadecimal
 
 const responde = (obj, estado) =>
