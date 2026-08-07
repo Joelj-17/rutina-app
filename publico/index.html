@@ -289,6 +289,7 @@ svg.esq{width:100%;max-width:340px;height:108px;color:var(--tinta);display:block
             color:var(--tinta)}
 .mini .lf em{font-style:normal;font-size:.74rem;color:var(--acero)}
 .mini .lf.ref i{color:var(--agua)}
+.mini .lcomp{font-size:.73rem;color:var(--acero);font-weight:600}
 .mini .lf.ref::after{content:"referencia";font-size:.62rem;text-transform:uppercase;
                      letter-spacing:.06em;color:var(--agua);opacity:.8;margin-left:auto}
 .mini .rango{display:flex;justify-content:space-between;font-size:.68rem;color:var(--acero);
@@ -1588,7 +1589,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-07 · 23";
+const VERSION = "2026-08-08 · 24";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -2681,42 +2682,29 @@ $("#cGuardar").addEventListener("click", () => {
 /* La medida de REFERENCIA de un dia: la de al despertar en ayunas si la hay,
    y si no, la mas temprana. Es la unica comparable de un dia a otro, porque
    es la unica tomada siempre en las mismas condiciones. */
-/* La ultima medida apuntada de un dia, sea o no la de referencia. Es la que
-   acabas de meter, y por tanto la que esperas ver reflejada en alguna parte. */
-function ultimaDelDia(p){
-  return [{v:p.v, h:p.hora, momento:p.momento, ref:true}]
-    .concat((p.otras || []).map(o => ({v:o.v, h:o.h, momento:o.momento, ref:false})))
-    .sort((a, b) => (a.h || "").localeCompare(b.h || "")).pop();
-}
-
 function refDelDia(lista){
   const ayunas = lista.filter(x => x.momento === "despertar");
   return (ayunas.length ? ayunas : lista).slice()
     .sort((a, b) => (a.h || "00:00").localeCompare(b.h || "00:00"))[0];
 }
 
-/* Un punto por dia sobre la referencia, MAS las demas pesadas de ese dia
-   aparte. Antes esto promediaba el dia entero: la linea quedaba comparable,
-   si, pero las pesadas que habias apuntado no se veian por ningun lado —y
-   apuntar varias al dia era justo para verlas—. Ahora estan las dos cosas:
-   la tendencia por la referencia, y la oscilacion del dia alrededor. */
+/* UN PUNTO POR MEDICION, en el orden en que las apuntaste, y las ultimas
+   PUNTOS_GRAFICA. No por dia.
+
+   Antes iba por dias: la linea pasaba por la pesada de referencia y las demas
+   del mismo dia se dibujaban encima, en la misma vertical. Con tres pesadas en
+   un dia salian tres puntos apilados en la misma x, que es un amasijo del que
+   no se lee nada. Ahora cada medicion ocupa su sitio en el eje y la linea las
+   recorre todas en orden: se ve el sube y baja de verdad. */
+const PUNTOS_GRAFICA = 20;
+
 function serie(campo){
-  const por = {};
-  S.cuerpo.filter(x => x[campo] != null).forEach(x => {
-    (por[x.f] = por[x.f] || []).push(x);
-  });
-  return Object.keys(por).sort().slice(-20).map(f => {
-    const ref = refDelDia(por[f]);
-    return {
-      f: f,
-      v: ref[campo],
-      hora: ref.h || "",
-      momento: ref.momento || "",
-      otras: por[f].filter(m => m !== ref)
-                   .sort((a, b) => (a.h || "").localeCompare(b.h || ""))
-                   .map(m => ({v:m[campo], h:m.h || "", momento:m.momento || ""}))
-    };
-  });
+  return S.cuerpo.filter(x => x[campo] != null)
+    .slice()
+    .sort((a, b) => ((a.f || "") + "T" + (a.h || "00:00"))
+                    .localeCompare((b.f || "") + "T" + (b.h || "00:00")))
+    .slice(-PUNTOS_GRAFICA)
+    .map(x => ({f:x.f, v:x[campo], hora:x.h || "", momento:x.momento || ""}));
 }
 
 /* Una gráfica por medida. Nunca las dos juntas: dos escalas en un mismo eje
@@ -2754,25 +2742,25 @@ function miniGrafica(campo, titulo, unidad, decimales){
   const cab = '<h4>' + titulo;
   if(d.length < 2){
     return '<div class="mini">' + cab + '</h4><div class="nada">' +
-      (d.length ? "Con una medición de otro día aparece la línea."
+      (d.length ? "Con una segunda medición aparece la línea."
                 : "Sin mediciones todavía.") +
       '</div></div>';
   }
 
   const vals = d.map(x => x.v);
-  const todas = vals.concat(d.reduce((a,x) => a.concat((x.otras||[]).map(o => o.v)), []));
+  const todas = vals;
   const dif = vals[vals.length-1] - vals[0];
   const signo = dif > 0 ? "+" : "";
   const color = dif < 0 ? "var(--hecho)" : dif > 0 ? "var(--descanso)" : "var(--acero)";
 
   const W = 300, H = 132, izq = 4, der = 40, arriba = 12, abajo = 20;
   const esc = escalaBonita(Math.min.apply(null, todas), Math.max.apply(null, todas), decimales);
-  const t0 = diaNum(d[0].f), t1 = diaNum(d[d.length-1].f);
-  const dias = Math.max(1, t1 - t0);
 
-  // El eje horizontal es tiempo de verdad: la distancia entre dos puntos es
-  // la distancia entre sus días.
-  const px = i => izq + (diaNum(d[i].f) - t0) / dias * (W - izq - der);
+  /* Una posicion por medicion, repartidas por igual. No por fecha: con dos o
+     tres pesadas del mismo dia, un eje de fechas las apilaba en la misma
+     vertical y no se leia ninguna. El eje dice "estas son tus ultimas
+     mediciones, en orden", y las fechas de los extremos van debajo. */
+  const px = i => izq + (d.length < 2 ? 0 : i / (d.length - 1) * (W - izq - der));
   const py = v => arriba + (esc.hasta - v) / (esc.hasta - esc.desde || 1) * (H - arriba - abajo);
 
   const linea = d.map((x,i) => (i ? "L" : "M") + px(i).toFixed(1) + " " + py(x.v).toFixed(1)).join(" ");
@@ -2792,24 +2780,6 @@ function miniGrafica(campo, titulo, unidad, decimales){
     '<text x="' + (W-der+6) + '" y="' + (py(v)+3.5).toFixed(1) + '" font-size="9.5" ' +
       'fill="var(--acero)" font-family="ui-monospace,monospace">' +
       v.toFixed(decEje) + '</text>').join("");
-
-  /* La oscilación del día: una barra vertical suave de la medida más baja a la
-     más alta de esa fecha. Sin ella, apuntar una pesada nueva no cambiaba nada
-     visible —un punto al 45% no es una respuesta— y parecía que no se guardaba. */
-  const rangos = d.map((x,i) => {
-    const delDia = [x.v].concat((x.otras || []).map(o => o.v));
-    if(delDia.length < 2) return "";
-    const lo = Math.min.apply(null, delDia), hi = Math.max.apply(null, delDia);
-    return '<line x1="' + px(i).toFixed(1) + '" y1="' + py(hi).toFixed(1) + '" x2="' +
-      px(i).toFixed(1) + '" y2="' + py(lo).toFixed(1) + '" stroke="var(--agua)" ' +
-      'stroke-width="5" stroke-linecap="round" opacity=".2"/>';
-  }).join("");
-
-  /* Las otras pesadas del día: puntos sobre la misma vertical, sin línea, para
-     que no compitan con la tendencia pero se vean. */
-  const sueltos = d.map((x,i) => (x.otras || []).map(o =>
-    '<circle cx="' + px(i).toFixed(1) + '" cy="' + py(o.v).toFixed(1) + '" r="2.7" ' +
-    'fill="var(--agua)" opacity=".75"/>').join("")).join("");
 
   const puntos = d.map((x,i) =>
     '<circle cx="' + px(i).toFixed(1) + '" cy="' + py(x.v).toFixed(1) + '" r="3.6" ' +
@@ -2843,30 +2813,24 @@ function miniGrafica(campo, titulo, unidad, decimales){
 
   return '<div class="mini" data-graf="' + campo + '">' + cab +
     '<span style="color:' + color + '">' + signo + dif.toFixed(decimales) + " " + unidad + '</span></h4>' +
-    '<div class="lectura pista" data-lectura="' + campo + '">Toca la gráfica para ver ' +
-      'las medidas de cada día.</div>' +
+    '<div class="lectura pista" data-lectura="' + campo + '">Toca la gráfica para ver cada medición.</div>' +
     '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + titulo + ', de ' +
       vals[0].toFixed(decimales) + ' a ' + ult.v.toFixed(decimales) + ' ' + unidad +
       ' entre el ' + d[0].f + ' y el ' + ult.f + '">' +
       rejilla +
       '<path d="' + area + '" fill="var(--agua)" opacity=".08"/>' +
-      rangos +
       '<path d="' + linea + '" fill="none" stroke="var(--agua)" stroke-width="2" ' +
         'stroke-linejoin="round" stroke-linecap="round"/>' +
       '<line class="cruz" x1="0" y1="0" x2="0" y2="' + (H-abajo) + '" ' +
         'stroke="var(--acero)" stroke-width="1" opacity="0"/>' +
-      sueltos + puntos +
+      puntos +
       etiqueta(0, "start") + etiqueta(d.length-1, "end") +
       bandas +
     '</svg>' +
     '<div class="rango"><span>' + fechaCorta(d[0].f) + '</span>' +
       '<span>' + fechaCorta(ult.f) + '</span></div>' +
-    (d.some(x => (x.otras || []).length)
-      ? '<p class="pieGraf">La línea pasa por la pesada de referencia de cada día ' +
-        '—la de al despertar si la hay—. Los puntos pequeños son las demás del ' +
-        'mismo día: eso es agua y comida, no grasa. <b>Toca la gráfica</b> para ' +
-        'ver los kilos de cada una.</p>'
-      : '<p class="pieGraf"><b>Toca la gráfica</b> para ver cada medición.</p>') +
+    '<p class="pieGraf">Tus últimas ' + d.length + ' mediciones, una por punto y en ' +
+      'orden. <b>Toca la gráfica</b> para ver la de cada punto.</p>' +
     '</div>';
 }
 
@@ -2900,21 +2864,28 @@ function conectarGraficas(){
       salida.textContent = "";
       salida.classList.remove("pista");
       const cab = document.createElement("b");
-      cab.textContent = fechaCorta(x.f);
+      // Un punto es UNA medicion: se dice cual, no el dia entero.
+      cab.textContent = fechaCorta(x.f) + (x.hora ? " · " + x.hora : "");
       salida.appendChild(cab);
-      const lista = [{v:x.v, h:x.hora, momento:x.momento, ref:true}].concat(x.otras || []);
-      lista.sort((a,b) => (a.h || "").localeCompare(b.h || ""));
-      lista.forEach(m => {
-        const fila = document.createElement("span");
-        fila.className = "lf" + (m.ref ? " ref" : "");
-        const val = document.createElement("i");
-        val.textContent = m.v.toFixed(dec) + " " + ud;
-        fila.appendChild(val);
-        const et = document.createElement("em");
-        et.textContent = [m.h || "", MOMENTOS_CORTO[m.momento] || ""].filter(Boolean).join(" · ");
-        fila.appendChild(et);
-        salida.appendChild(fila);
-      });
+      const fila = document.createElement("span");
+      fila.className = "lf";
+      const val = document.createElement("i");
+      val.textContent = x.v.toFixed(dec) + " " + ud;
+      fila.appendChild(val);
+      const et = document.createElement("em");
+      et.textContent = MOMENTOS_CORTO[x.momento] || "";
+      fila.appendChild(et);
+      salida.appendChild(fila);
+      // Cuanto ha cambiado respecto a la anterior: es lo que se mira al pasar.
+      const ant = datos[i-1];
+      if(ant){
+        const dv = x.v - ant.v;
+        const cmp = document.createElement("span");
+        cmp.className = "lcomp";
+        cmp.textContent = (dv > 0 ? "▲ +" : dv < 0 ? "▼ " : "= ") + dv.toFixed(dec) +
+          " " + ud + " desde la anterior";
+        salida.appendChild(cmp);
+      }
     };
 
     /* Para poder abrir un dia desde fuera: al apuntar una medida se abre sola
@@ -2946,7 +2917,7 @@ function conectarGraficas(){
       const cruz = svg.querySelector(".cruz");
       if(cruz) cruz.setAttribute("opacity", "0");
       salida.classList.add("pista");
-      salida.textContent = "Toca la gráfica para ver las medidas de cada día.";
+      salida.textContent = "Toca la gráfica para ver cada medición.";
     });
   });
 }
@@ -2977,17 +2948,20 @@ function pintarCuerpo(){
     const txt = arr.length < 2 ? "Primera medición"
       : (dif > 0 ? "▲ +" : dif < 0 ? "▼ " : "= ") + dif.toFixed(dec) + " " + ud;
 
-    /* El numero grande es la medida de REFERENCIA del ultimo dia, que es la
-       unica comparable con la de los dias anteriores. Pero si ese dia hay
-       alguna posterior hay que ensenarla: si no, apuntas una pesada de la
-       noche y la pantalla se queda igual, como si no hubiera entrado. */
+    /* El numero grande es tu ULTIMA medicion, sin mas. Debajo se dice cuando y
+       en que momento la tomaste, porque no es lo mismo recien levantado que
+       despues de cenar: entre esas dos hay un kilo largo de agua y comida, y
+       sin la etiqueta el numero no significa nada. */
     const p = arr[arr.length-1];
-    const ult = ultimaDelDia(p);
-    const quees = p.momento === "despertar" ? '<span class="quees">en ayunas</span>' : "";
-    const ultmed = ult.ref ? "" :
-      '<span class="ultmed">Última: <b>' + ult.v.toFixed(dec) + " " + ud + '</b>' +
-      (ult.h ? " · " + esc(ult.h) : "") +
-      (MOMENTOS_CORTO[ult.momento] ? " " + MOMENTOS_CORTO[ult.momento] : "") + '</span>';
+    const cuando = [p.hora, MOMENTOS_CORTO[p.momento] || ""].filter(Boolean).join(" · ");
+    const quees = cuando ? '<span class="quees">' + esc(cuando) + '</span>' : "";
+    /* Y la ultima en ayunas, que es la unica comparable de un dia a otro, si no
+       es ya la que se esta enseñando. */
+    const ayunas = arr.filter(x => x.momento === "despertar");
+    const ay = ayunas.length ? ayunas[ayunas.length-1] : null;
+    const ultmed = (!ay || ay === p) ? "" :
+      '<span class="ultmed">En ayunas: <b>' + ay.v.toFixed(dec) + " " + ud + '</b> · ' +
+      esc(fechaCorta(ay.f)) + '</span>';
 
     return '<div class="heroT"><div class="et">' + et + '</div>' +
       '<div class="val">' + ahora.toFixed(dec) + ' <small>' + ud + '</small></div>' + quees +
