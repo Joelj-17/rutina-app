@@ -2087,7 +2087,18 @@ function prepararSiguiente(id, recomendado){
   barraOff();
   const e = EJ[id], p = plan(id);
   BA.modo = "prep"; BA.ini = Date.now();
-  BA.accion = () => { barraOff(); pintarHoy(); };
+  /* "Ya estoy" tiene que LLEVARTE al ejercicio que la barra anuncia. Antes solo
+     repintaba, y como ahora el foco se queda en el que acabas de terminar, la
+     barra decia "Prepara el siguiente · Pajaro", pulsabas, y seguias en la
+     tarjeta del Remo. Un boton que no lleva a ninguna parte. */
+  BA.accion = () => {
+    barraOff();
+    S.foco = id;
+    guardarSinMarcar();
+    pintarHoy();
+    const c = $("#lista");
+    if(c) c.scrollIntoView({block:"start"});
+  };
   /* El nombre y el peso en lineas distintas. Juntos daban "Remo con mancuerna a
      una mano · 8 kg una mancuerna", que no cabe de ninguna manera en la barra y
      se cortaba justo por el peso, que es la mitad util del mensaje. */
@@ -2177,11 +2188,15 @@ function pintarReloj(){
        que tenias delante: arriba "Pajaro" y en la tarjeta el Remo. El nombre lo
        dice la tarjeta; aqui va el progreso, que es lo que no cabe alli. */
     const sig = siguienteId();
+    /* Los bloques (calentamiento, estiramientos) NO cuentan como serie, igual
+       que en la cabecera y en la pantalla final. Contandolos aqui salia "32
+       series" en el reloj y "30" en el resumen final de la misma sesion. */
     const seriesHechas = ids.reduce((a2, x) => {
-      const hh = S.hechos[x]; return a2 + (hh ? hh.series : 0);
+      const pp = plan(x), hh = S.hechos[x];
+      return a2 + (pp && hh ? Math.min(hh.series, pp.series) : 0);
     }, 0);
     const seriesTotal = ids.reduce((a2, x) => {
-      const pp = plan(x); return a2 + (pp ? pp.series : 1);
+      const pp = plan(x); return a2 + (pp ? pp.series : 0);
     }, 0);
     if(sig){
       $("#relojEt").textContent = S.pausadoEn ? "En pausa" : "Tiempo total";
