@@ -4162,6 +4162,13 @@ function cargarDatos(texto, origen){
   S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
   if(typeof g.fase === "number") S.fase = g.fase;
   if(g.inicio) S.inicio = g.inicio;
+  /* La fase y el dia puestos a mano. Se exportaban pero no se volvian a leer,
+     asi que restaurar una copia los devolvia a automatico sin decir nada y la
+     app te cambiaba la rutina que enseña. null es un valor legitimo aqui
+     —significa "automatico"—, por eso se copia tal cual y no con un if(g.x). */
+  S.faseManual = (typeof g.faseManual === "number") ? g.faseManual : null;
+  S.diaManual  = (typeof g.diaManual  === "number") ? g.diaManual  : null;
+  aplicarAuto();
   /* Las horas y las bajas vienen del archivo: importar significa "esto pasa a
      ser mis datos". Si se quedaran las de antes, apuntarían a cosas que ya no
      están, y una baja vieja podría borrar en silencio algo que acabas de
@@ -4204,6 +4211,13 @@ $("#listaCopias").addEventListener("click", e => {
   S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
   if(typeof g.fase === "number") S.fase = g.fase;
   if(g.inicio) S.inicio = g.inicio;
+  /* La fase y el dia puestos a mano. Se exportaban pero no se volvian a leer,
+     asi que restaurar una copia los devolvia a automatico sin decir nada y la
+     app te cambiaba la rutina que enseña. null es un valor legitimo aqui
+     —significa "automatico"—, por eso se copia tal cual y no con un if(g.x). */
+  S.faseManual = (typeof g.faseManual === "number") ? g.faseManual : null;
+  S.diaManual  = (typeof g.diaManual  === "number") ? g.diaManual  : null;
+  aplicarAuto();
   // Las horas y las bajas de la copia, igual que al importar: si se quedaran
   // las de ahora, una baja posterior borraría lo que acabas de restaurar.
   S.ts    = (g.ts    && typeof g.ts    === "object") ? g.ts    : {};
