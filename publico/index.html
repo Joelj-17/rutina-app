@@ -573,6 +573,28 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
            background:none;border:none;line-height:1}
 .quitarMed:active{color:var(--alerta)}
 
+/* ---- Sitio para el dedo ----
+   Se usa con una mano y a veces a media rutina. Medido a 375 px, el aspa de
+   quitar una medicion caia en 19x14 px y la de quitar una comida en 24x22:
+   dianas de dos milimetros, y ademas para BORRAR, que es lo que peor sienta
+   fallar. Los vasos de agua eran circulos de 17 px.
+   Se amplia la zona sensible con un pseudoelemento centrado, sin mover ni un
+   pixel de lo que se ve: el dibujo sigue siendo pequeno y discreto, la diana
+   no. Las medidas salen de las guias de Apple (44 pt) y Google (48 dp). */
+.quitarMed, .comfila [data-borra]{position:relative}
+.quitarMed::after, .comfila [data-borra]::after{
+  content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:44px;height:44px}
+
+/* Ocho vasos en fila no dan para 44 px cada uno, pero si para toda la altura
+   de la fila y el hueco entre ellos. */
+.vaso{position:relative}
+.vaso::after{content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:29px;height:40px}
+.cara{position:relative}
+.cara::after{content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:44px;height:44px}
+
 /* ---- Barras de pasos por dia ----
    Una barra por dia natural, huecos incluidos: si un dia no apuntaste, se ve.
    Esconder los huecos haria que la media pareciera mejor de lo que es. */
