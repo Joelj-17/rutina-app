@@ -4894,8 +4894,38 @@ function totalDe(f){
                              {kcal:0, prot:0});
 }
 /* Gasto estimado del día: metabolismo basal + vida normal + pasos + entrenamiento. */
+/* El peso que tenias EN esa fecha: la pesada de referencia del ultimo dia con
+   pesadas que no sea posterior a f. Si aun no habias empezado a pesarte, la
+   primera que haya. */
+function pesoEn(f){
+  const c = S.cuerpo.filter(x => x.peso != null);
+  if(!c.length) return null;
+  const dias = c.map(x => x.f).filter(d => d <= f).sort();
+  const dia = dias.length ? dias[dias.length-1]
+                          : c.map(x => x.f).sort()[0];
+  return refDelDia(c.filter(x => x.f === dia)).peso;
+}
+
+/* La edad que tenias en esa fecha, no la de hoy. */
+function edadEn(f){
+  if(!S.perfil.nacim) return null;
+  const n = new Date(S.perfil.nacim), h = new Date(f + "T12:00:00");
+  if(isNaN(n) || isNaN(h)) return null;
+  let a = h.getFullYear() - n.getFullYear();
+  const m = h.getMonth() - n.getMonth();
+  if(m < 0 || (m === 0 && h.getDate() < n.getDate())) a--;
+  return (a >= 0 && a < 120) ? a : null;
+}
+
 function gastoDe(f){
-  const alt = num(S.perfil.altura), pes = ultimoPeso(), ed = edad();
+  /* Con el peso y la edad DE ESE DIA. Antes salian los de hoy, asi que el
+     deficit del 3 de marzo cambiaba cada vez que te pesabas: el termino del
+     peso son unas 16,5 kcal al dia por kilo con 10.000 pasos, o sea que
+     adelgazar 8 kg movia el gasto estimado de todos los dias pasados unas 130
+     kcal y dias que quedaron en deficit pasaban a superavit sin haber tocado
+     ni la comida ni los pasos. Un historico que se reescribe solo no sirve
+     para decidir nada. */
+  const alt = num(S.perfil.altura), pes = pesoEn(f), ed = edadEn(f);
   if(!alt || pes == null || ed == null) return null;
   const tmb = 10*pes + 6.25*alt - 5*ed + (S.perfil.sexo === "m" ? -161 : 5);
   const pasos = (S.pasos[f] || 0) * pes * 0.0004;
