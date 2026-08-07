@@ -176,8 +176,55 @@ como cero en vez de propagar el fallo.
    - El **cronómetro solo aparece cuando hace falta** (sesión en marcha o
      pantalla de entrenamiento). Era la mitad de la sensación de agobio.
 
-   Queda para más adelante: la pantalla de entrenamiento sigue siendo una
-   lista larga, y las secciones de correr y otros deportes no existen todavía.
+   **Segunda pasada, 8 de agosto de 2026:** la pantalla de entrenamiento ya no
+   es una lista larga — se ve **una tarjeta a la vez**, con tira de puntos para
+   saltar a cualquiera, botones de anterior y siguiente, y la sesión entera
+   plegada al final. Al acabar cada ejercicio se apuntan además repeticiones
+   reales, zona de molestia y observaciones escritas.
+
+   Queda para más adelante: las secciones de correr y otros deportes no
+   existen todavía.
+
+1b. **Ajustes por ejercicio y progresión de carga** (pedido el 8 de agosto de
+   2026). Es el puente hasta el paso 2: se monta **encima** de la rutina fija
+   de hoy, sin esperar al modelo de datos.
+
+   **Lo que YA está hecho y no hay que rehacer.** La valoración por ejercicio
+   existe desde el rediseño del 8 de agosto: al terminar cada uno se marca con
+   un toque **Me sobraba / Justo / Casi al límite** (`VALORES`, guardado en
+   `S.marcas[id].esf`), y viaja con la sesión al histórico, a la exportación y
+   a la fusión entre dispositivos. Junto a eso ya se apuntan las
+   **repeticiones reales de cada serie** (`m.reps`), la **zona** donde ha
+   molestado (`m.zonas` + `m.zonaOtra`, con las articulaciones plausibles de
+   cada ejercicio) y las **observaciones escritas** (`m.nota`). Y hay un aviso
+   de «la última vez» que lo lee todo y ya dice *«te sobraba → prueba a subir
+   1 kg»* (`ultimaMarca`).
+
+   **Lo que falta de verdad:**
+   - **La regla de las dos seguidas.** Hoy el aviso mira **una sola** sesión
+     anterior. Hay que mirar las dos últimas en las que se hizo ese ejercicio:
+     dos «me sobraba» seguidas → proponer subir; «casi al límite» o molestia →
+     mantener o bajar. Y que la propuesta **se recuerde**, no que sea un texto
+     que aparece y se va.
+   - **Que el peso objetivo se pueda cambiar y se quede cambiado.** Hoy
+     `S.pesos[id+"|"+fase]` guarda lo que usaste, pero el objetivo sale de la
+     tabla `f:[[series, reps, peso], …]` escrita en el código.
+   - **Overlay de ajustes**, la pieza nueva: un `S.ajustes[id]` con
+     `{series, reps, peso}` que **pisa** al catálogo cuando existe. `plan(id)`
+     lo consulta primero y cae a la tabla fija si no hay nada. Así se editan
+     peso y series×reps desde la app sin tocar código, y el día que llegue el
+     paso 2 el overlay se convierte en el dato de verdad de la rutina en vez
+     de tirarse.
+   - Editable desde la propia tarjeta del ejercicio, que es donde estás cuando
+     te das cuenta de que el peso se queda corto.
+
+   **Por qué hace falta:** viene del waterpolo. En pierna va sobrado y en otros
+   ejercicios va justo, así que un peso «de tabla» igual para todo no le sirve.
+
+   **Ojo con la sincronización:** `S.ajustes` es estado del usuario, así que
+   necesita su ruta en `S.ts` para que la fusión sepa qué lado es más reciente,
+   y hay que decidir si es por fase o común a todas.
+
 2. **Modelo de datos**: separar catálogo de ejercicios, rutinas y sesiones
    (hoy están fundidos en el código)
 3. **Crear y guardar rutinas propias**
