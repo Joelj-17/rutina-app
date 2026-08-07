@@ -1588,7 +1588,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-07 · 22";
+const VERSION = "2026-08-07 · 23";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -1711,11 +1711,19 @@ function cargar(){
     // Sin fecha de inicio guardada, la deduce de la sesión más antigua.
     if(!S.inicio && S.hist.length) S.inicio = S.hist[S.hist.length-1].f;
     aplicarAuto();
-    /* Recien empezada cuenta aunque la fecha ya no sea la de hoy: es
-       exactamente el caso de la medianoche. La condicion es mas amplia que
-       antes, nunca mas estrecha, asi que no deja de recuperar nada. */
+    /* Recien empezada cuenta aunque la fecha ya no sea la de hoy: es el caso de
+       la medianoche. Pero SOLO ese caso. Con la ventana de 8 horas que puse
+       primero, una sesion de anoche abandonada a los tres ejercicios secuestraba
+       la manyana siguiente: abrias la app el viernes a las siete y te enseñaba
+       la rutina del jueves, sin boton de empezar —esta oculto mientras hay
+       sesion— y sin el de cerrar —la pantalla final no se pinta si quedan
+       ejercicios—. Solo se salia por Ajustes, que ademas se lleva la sesion por
+       delante. Entrenar de 23:30 a 00:20 son tres horas de sobra, y ademas se
+       exige que el ultimo latido sea reciente: si la app lleva horas cerrada,
+       no estabas entrenando. */
     const cruzaMedianoche = g.sesion && g.sesion.t0 &&
-      (Date.now() - g.sesion.t0) < 8 * 3600 * 1000;
+      (Date.now() - g.sesion.t0) < 3 * 3600 * 1000 &&
+      (!g.sesion.latido || (Date.now() - g.sesion.latido) < 2 * 3600 * 1000);
     if(g.sesion && ((g.sesion.dia === S.dia && g.sesion.fecha === hoyISO()) || cruzaMedianoche)){
       S.t0 = g.sesion.t0; S.acumPausa = g.sesion.acumPausa || 0;
       S.pausadoEn = g.sesion.pausadoEn || null; S.hechos = g.sesion.hechos || {};
@@ -2078,7 +2086,18 @@ function pintarHoy(){
   $("#diaSub").textContent = ids.length+" ejercicios · "+totalSeries+" series";
   $("#selDia").value = String(S.dia);
   $("#selFase").value = String(S.fase);
-  $("#btnEmpezar").hidden = !!S.t0;
+  /* La salida de emergencia. Si hay una sesion abierta que NO es de hoy, tiene
+     que haber una forma de dejarla desde esta misma pantalla: si no, la unica
+     salida son los Ajustes, que ademas la borran sin avisar. */
+  const sesionDeOtroDia = !!S.t0 && fechaSesion() !== hoyISO();
+  $("#btnEmpezar").hidden = !!S.t0 && !sesionDeOtroDia;
+  if(sesionDeOtroDia){
+    $("#btnEmpezar").textContent = "Descartar la de ayer y empezar hoy";
+    $("#btnEmpezar").dataset.descarta = "1";
+  }else{
+    $("#btnEmpezar").textContent = "Empezar la sesión";
+    delete $("#btnEmpezar").dataset.descarta;
+  }
 
   const dias = diasDesdeInicio();
   $("#autoInfo").firstChild.nodeValue = esManual()
@@ -2384,7 +2403,20 @@ function empezar(){
   guardar(); pitido(1); pintarHoy();
   ajustarCabecera();          // arranca la sesión: el reloj pasa a hacer falta
 }
-$("#btnEmpezar").addEventListener("click", empezar);
+$("#btnEmpezar").addEventListener("click", () => {
+  /* Si lo que hay abierto es de otro dia, se pregunta antes: puede que lo que
+     quiera sea guardarla, no tirarla. */
+  if($("#btnEmpezar").dataset.descarta){
+    const SL = String.fromCharCode(10);
+    if(!confirm("Tienes una sesión sin terminar del " + fechaCorta(fechaSesion()) + "." + SL + SL +
+                "Si sigues se descarta y empiezas la de hoy.")) return;
+    S.t0 = null; S.hechos = {}; S.marcas = {}; S.acumPausa = 0; S.pausadoEn = null;
+    S.latido = null; S.sesionF = null; S.sesionDia = null; S.sesionFase = null;
+    S.sesionId = null;
+    aplicarAuto();
+  }
+  empezar();
+});
 
 /* ---- Resumen final + cuestionario que alimenta el análisis ---- */
 function pintarFin(){
@@ -3947,7 +3979,15 @@ function copiaSeguridad(motivo){
         copiaDelDiaHecha = hoy;      // no volver a mirar en todo el dia
         return;
       }
-    }else{
+    }else if(motivo === "antes de traer de la nube"){
+      /* SOLO esta. Es la que se dispara en bucle —cada sincronizacion pasa por
+         aqui—, y sin freno llenaba las diez ranuras de copias identicas y se
+         comia el historico de dias atras. Pero el freno estaba cubriendo
+         tambien "antes de importar" y "antes de restaurar", que son justo las
+         dos copias que existen para que una operacion destructiva sea
+         reversible: con la sincronizacion activa la ultima copia siempre tenia
+         menos de 20 minutos, asi que esas dos no se hacian NUNCA, mientras el
+         dialogo seguia prometiendolas. */
       const ultima = lista[0];
       if(ultima && Date.now() - new Date(ultima.f).getTime() < 20*60*1000) return;
     }
@@ -3955,14 +3995,19 @@ function copiaSeguridad(motivo){
     // Solo ahora, que de verdad toca, se paga el precio de armar el paquete.
     const datos = paraSubir();
     const r = retrato(datos);
-    if(motivo === "del día") copiaDelDiaHecha = hoyISO();
     lista.unshift({f:new Date().toISOString(), motivo:motivo, r:r, datos:datos});
 
     // Si el almacén se queja, vamos soltando las más viejas antes de rendirnos.
     let n = Math.min(lista.length, COPIAS_MAX);
     while(n > 0){
-      try{ localStorage.setItem(COPIAS, JSON.stringify(lista.slice(0, n))); return; }
-      catch(e){ n--; }
+      try{
+        localStorage.setItem(COPIAS, JSON.stringify(lista.slice(0, n)));
+        /* La bandera se pone AQUI, no antes: si el almacen esta lleno y no se
+           escribe nada, marcarla habria impedido reintentarlo en todo el dia,
+           justo el dia en que la copia hace falta. */
+        if(motivo === "del día") copiaDelDiaHecha = hoyISO();
+        return;
+      }catch(e){ n--; }
     }
   }catch(e){ /* una copia que falla no puede tumbar lo que estabas haciendo */ }
 }
