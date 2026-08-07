@@ -563,6 +563,7 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
 .barraDia.hoy i{background:var(--hecho)}
 .barraDia span{font-size:.58rem;color:var(--acero);opacity:.75;white-space:nowrap}
 .pieBarras{margin:10px 0 0;font-size:.78rem;color:var(--acero);text-align:center}
+.pieGraf{margin:8px 0 0;font-size:.74rem;line-height:1.4;color:var(--acero)}
 
 /* ---- Aviso flotante ----
    Encima del menu, centrado y estrecho. No tapa nada importante y se va solo,
@@ -1524,7 +1525,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-07 · 18";
+const VERSION = "2026-08-07 · 19";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -2348,11 +2349,12 @@ const MOMENTOS = {despertar:"Al despertar", antes:"Antes de entrenar",
 function ultimoPeso(){
   const c = S.cuerpo.filter(x => x.peso != null);
   if(!c.length) return null;
+  /* La pesada de referencia del ultimo dia con pesadas, no la media ni la
+     ultima suelta: entre la de recien levantado y la de despues de cenar hay
+     un kilo largo de agua y comida, y el gasto estimado no puede saltar por
+     eso. */
   const dia = c[0].f;
-  const delDia = c.filter(x => x.f === dia).map(x => x.peso);
-  // A centesimas: la bascula da 94,35 y redondear a 94,4 se come justo la
-   // parte donde se ve el cambio de un dia para otro.
-  return Math.round(delDia.reduce((a,b) => a+b, 0) / delDia.length * 100) / 100;
+  return refDelDia(c.filter(x => x.f === dia)).peso;
 }
 function pintarPerfil(){
   $("#pAltura").value   = S.perfil.altura || "";
@@ -2472,16 +2474,37 @@ $("#cGuardar").addEventListener("click", () => {
 });
 
 /* Serie temporal de una medida, ordenada de antigua a reciente. */
-/* Un punto por DIA, con la media de ese dia. Si te pesas al despertar y
-   despues de cenar, la diferencia es agua y comida, no grasa: pintar las dos
-   como puntos sueltos haria una sierra que no significa nada. */
+/* La medida de REFERENCIA de un dia: la de al despertar en ayunas si la hay,
+   y si no, la mas temprana. Es la unica comparable de un dia a otro, porque
+   es la unica tomada siempre en las mismas condiciones. */
+function refDelDia(lista){
+  const ayunas = lista.filter(x => x.momento === "despertar");
+  return (ayunas.length ? ayunas : lista).slice()
+    .sort((a, b) => (a.h || "00:00").localeCompare(b.h || "00:00"))[0];
+}
+
+/* Un punto por dia sobre la referencia, MAS las demas pesadas de ese dia
+   aparte. Antes esto promediaba el dia entero: la linea quedaba comparable,
+   si, pero las pesadas que habias apuntado no se veian por ningun lado —y
+   apuntar varias al dia era justo para verlas—. Ahora estan las dos cosas:
+   la tendencia por la referencia, y la oscilacion del dia alrededor. */
 function serie(campo){
   const por = {};
   S.cuerpo.filter(x => x[campo] != null).forEach(x => {
-    (por[x.f] = por[x.f] || []).push(x[campo]);
+    (por[x.f] = por[x.f] || []).push(x);
   });
-  return Object.keys(por).sort().slice(-20)
-    .map(f => ({f:f, v:por[f].reduce((a,b) => a+b, 0) / por[f].length}));
+  return Object.keys(por).sort().slice(-20).map(f => {
+    const ref = refDelDia(por[f]);
+    return {
+      f: f,
+      v: ref[campo],
+      hora: ref.h || "",
+      momento: ref.momento || "",
+      otras: por[f].filter(m => m !== ref)
+                   .sort((a, b) => (a.h || "").localeCompare(b.h || ""))
+                   .map(m => ({v:m[campo], h:m.h || "", momento:m.momento || ""}))
+    };
+  });
 }
 
 /* Una gráfica por medida. Nunca las dos juntas: dos escalas en un mismo eje
@@ -2495,12 +2518,15 @@ function miniGrafica(campo, titulo, unidad, decimales){
       '</div></div>';
   }
   const vals = d.map(x => x.v);
+  // Para la escala cuentan todas las pesadas, tambien las de dentro del dia:
+  // si no, las que se salgan del rango se dibujarian fuera del recuadro.
+  const todas = vals.concat(d.reduce((a,x) => a.concat((x.otras||[]).map(o => o.v)), []));
   const dif = vals[vals.length-1] - vals[0];
   const signo = dif > 0 ? "+" : "";
   const color = dif < 0 ? "var(--hecho)" : dif > 0 ? "var(--descanso)" : "var(--acero)";
 
   const W = 260, H = 88, mx = 6, arriba = 12, abajo = 14;
-  let min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+  let min = Math.min.apply(null, todas), max = Math.max.apply(null, todas);
   const holgura = Math.max((max - min) * 0.18, decimales ? 0.4 : 1);
   min -= holgura; max += holgura;
   const px = i => mx + i * (W - mx*2 - 30) / (d.length - 1);
@@ -2509,10 +2535,22 @@ function miniGrafica(campo, titulo, unidad, decimales){
   const linea = d.map((x,i) => (i ? "L" : "M") + px(i).toFixed(1) + " " + py(x.v).toFixed(1)).join(" ");
   const area  = linea + " L" + px(d.length-1).toFixed(1) + " " + (H-abajo) +
                 " L" + px(0).toFixed(1) + " " + (H-abajo) + " Z";
+  const MOM = {despertar:"al despertar", antes:"antes de entrenar",
+               despues:"después de entrenar", noche:"por la noche"};
+  const comoFue = x => (x.momento && MOM[x.momento] ? ", " + MOM[x.momento] : "") +
+                       (x.hora || x.h ? " (" + (x.hora || x.h) + ")" : "");
+
+  /* Las otras pesadas del dia: puntos pequeños y translucidos sobre la misma
+     vertical. Ni linea ni relleno, para que no compitan con la tendencia. */
+  const sueltos = d.map((x,i) => (x.otras || []).map(o =>
+    '<circle cx="' + px(i).toFixed(1) + '" cy="' + py(o.v).toFixed(1) + '" r="2.6" ' +
+    'fill="var(--agua)" opacity=".42"><title>' + x.f + ": " + o.v.toFixed(decimales) +
+    " " + unidad + esc(comoFue(o)) + '</title></circle>').join("")).join("");
+
   const puntos = d.map((x,i) =>
     '<circle cx="' + px(i).toFixed(1) + '" cy="' + py(x.v).toFixed(1) + '" r="4.5" ' +
     'fill="var(--panel)" stroke="var(--agua)" stroke-width="2"><title>' +
-    x.f + ": " + x.v.toFixed(decimales) + " " + unidad + '</title></circle>').join("");
+    x.f + ": " + x.v.toFixed(decimales) + " " + unidad + esc(comoFue(x)) + '</title></circle>').join("");
   const ult = d[d.length-1];
 
   return '<div class="mini">' + cab +
@@ -2524,12 +2562,17 @@ function miniGrafica(campo, titulo, unidad, decimales){
       '<path d="' + area + '" fill="var(--agua)" opacity=".10"/>' +
       '<path d="' + linea + '" fill="none" stroke="var(--agua)" stroke-width="2" ' +
         'stroke-linejoin="round" stroke-linecap="round"/>' +
-      puntos +
+      sueltos + puntos +
       '<text x="' + (px(d.length-1)+9).toFixed(1) + '" y="' + (py(ult.v)+4).toFixed(1) +
         '" font-size="12" font-weight="700" fill="var(--tinta)" font-family="ui-monospace,monospace">' +
         ult.v.toFixed(decimales) + '</text>' +
     '</svg>' +
     '<div class="rango"><span>' + d[0].f.slice(5) + '</span><span>' + ult.f.slice(5) + '</span></div>' +
+    (d.some(x => (x.otras || []).length)
+      ? '<p class="pieGraf">La línea pasa por la pesada de referencia de cada día ' +
+        '—la de al despertar si la hay—. Los puntos pequeños son las demás del ' +
+        'mismo día: eso es agua y comida, no grasa.</p>'
+      : "") +
     '</div>';
 }
 function pintarCuerpo(){
