@@ -1589,7 +1589,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-08 · 24";
+const VERSION = "2026-08-08 · 25";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -2674,7 +2674,7 @@ $("#cGuardar").addEventListener("click", () => {
   $("#cPeso").value = ""; $("#cCintura").value = ""; $("#cNota").value = "";
   $("#cHora").value = horaAhora();
   pintarCuerpo(); pintarPerfil(); pintarInicio();
-  mostrarEnGrafica(peso != null ? "peso" : cintura != null ? "cintura" : "", f);
+  mostrarEnGrafica(peso != null ? "peso" : cintura != null ? "cintura" : "", reg.id);
   aviso("Medición guardada.");
 });
 
@@ -2704,7 +2704,7 @@ function serie(campo){
     .sort((a, b) => ((a.f || "") + "T" + (a.h || "00:00"))
                     .localeCompare((b.f || "") + "T" + (b.h || "00:00")))
     .slice(-PUNTOS_GRAFICA)
-    .map(x => ({f:x.f, v:x[campo], hora:x.h || "", momento:x.momento || ""}));
+    .map(x => ({id:x.id, f:x.f, v:x[campo], hora:x.h || "", momento:x.momento || ""}));
 }
 
 /* Una gráfica por medida. Nunca las dos juntas: dos escalas en un mismo eje
@@ -2888,10 +2888,15 @@ function conectarGraficas(){
       }
     };
 
-    /* Para poder abrir un dia desde fuera: al apuntar una medida se abre sola
-       la de ese dia, que es la prueba de que ha entrado. */
-    caja.__abrirFecha = fecha => {
-      const i = datos.findIndex(x => x.f === fecha);
+    /* Para poder senyalar una medicion desde fuera: al apuntar una, se abre
+       sola LA QUE ACABAS DE METER, que es la prueba de que ha entrado.
+       Por identificador. Buscarla por fecha valia cuando la grafica iba por
+       dias; ahora hay varios puntos por fecha y abria el primero del dia —te
+       enseñaba la pesada de la manyana justo despues de apuntar la de la
+       noche—. Si no se encuentra, la ultima, que es lo mas parecido. */
+    caja.__abrirPunto = id => {
+      let i = id ? datos.findIndex(x => x.id === id) : -1;
+      if(i < 0) i = datos.length - 1;
       if(i >= 0) marcar(i);
     };
 
@@ -2925,11 +2930,11 @@ function conectarGraficas(){
 /* El formulario esta debajo de la grafica, asi que al guardar la grafica queda
    fuera de la pantalla y parece que no ha pasado nada. Se sube hasta ella y se
    abre el dia recien apuntado, con todas sus medidas. */
-function mostrarEnGrafica(campo, f){
+function mostrarEnGrafica(campo, id){
   if(!campo) return;
   const caja = document.querySelector('.mini[data-graf="' + campo + '"]');
   if(!caja) return;
-  if(caja.__abrirFecha) caja.__abrirFecha(f);
+  if(caja.__abrirPunto) caja.__abrirPunto(id);
   caja.scrollIntoView({block:"center"});
 }
 
