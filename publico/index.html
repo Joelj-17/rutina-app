@@ -66,9 +66,16 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 #reloj{background:var(--panel);border-bottom:1px solid var(--linea)}
 #reloj.corriendo{background:var(--agua);border-bottom-color:var(--agua);color:#fff}
 #reloj.descansando{background:var(--descanso);border-bottom-color:var(--descanso);color:#fff}
-.reloj-in{display:flex;align-items:center;gap:14px;padding:10px 0 11px}
-.crono{font-family:var(--mono);font-size:2.15rem;font-weight:700;letter-spacing:-.02em;
-       font-variant-numeric:tabular-nums;line-height:1}
+/* padding lateral de .env incluido: escribiendo solo "10px 0 11px" se anulaba
+   y el numero del cronometro quedaba pegado al borde izquierdo de la pantalla. */
+.reloj-in{display:flex;align-items:center;gap:14px;padding:10px 14px 11px}
+/* Mas pequeño que la cuenta atras de abajo, y a proposito. Los dos son numeros
+   grandes en mono y llegaron a verse a la vez marcando lo mismo: uno el total
+   de la sesion y otro el descanso, indistinguibles de un vistazo. El de abajo
+   es el que hay que mirar AHORA, asi que manda el; este es referencia. */
+.crono{font-family:var(--mono);font-size:1.7rem;font-weight:700;letter-spacing:-.02em;
+       font-variant-numeric:tabular-nums;line-height:1;opacity:.95}
+.reloj-tit{font-variant-numeric:tabular-nums}
 .reloj-txt{flex:1;min-width:0}
 .reloj-et{font-size:.68rem;text-transform:uppercase;letter-spacing:.11em;opacity:.72;font-weight:600}
 .reloj-tit{font-size:.95rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -115,6 +122,66 @@ textarea{width:100%;resize:vertical;min-height:64px;line-height:1.45}
 .empezar:active{transform:translateY(1px)}
 
 .lista{display:flex;flex-direction:column;gap:8px;padding-bottom:34px}
+/* ---- Una tarjeta a la vez: tira de progreso, navegacion y sesion completa ---- */
+.tira{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r);
+      padding:10px 12px;margin-bottom:10px}
+.tiraCab{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.tiraCab b{font-family:var(--mono);font-size:.92rem}
+.tiraCab span{font-size:.74rem;color:var(--acero)}
+/* Los puntos son la unica forma de ver de un vistazo cuanto queda cuando solo
+   hay una tarjeta en pantalla. Se desbordan a lo ancho con scroll propio, que
+   con 18 ejercicios no caben en 375 px. */
+.tiraPuntos{display:flex;gap:5px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+.tp{flex:0 0 auto;width:26px;height:26px;border-radius:99px;border:1px solid var(--linea);
+    background:transparent;color:var(--acero);font-family:var(--mono);font-size:.7rem;
+    font-weight:700;display:grid;place-items:center;position:relative}
+.tp::after{content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+           width:34px;height:40px}
+.tp.hecho{background:var(--hecho);border-color:var(--hecho);color:#fff}
+.tp.saltado{background:transparent;border-color:var(--acero);color:var(--acero);text-decoration:line-through}
+.tp.aqui{border-color:var(--agua);border-width:2px;color:var(--tinta);box-shadow:0 0 0 3px var(--agua-claro)}
+
+.navEj{display:flex;gap:8px;margin-top:10px}
+.navEj .bt{flex:1;justify-content:center}
+.navEj .bt:disabled{opacity:.4}
+
+.todaLaSesion{margin-top:12px;background:var(--panel);border:1px solid var(--linea);
+              border-radius:var(--r);overflow:hidden}
+.todaLaSesion>summary{padding:12px 14px;font-size:.86rem;font-weight:600;cursor:pointer}
+.filaSes{display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+         padding:10px 14px;background:transparent;border:none;border-top:1px solid var(--linea-2)}
+.filaSes.aqui{background:var(--agua-claro)}
+.filaSes.hecho .fst{color:var(--acero)}
+.fsn{width:22px;flex:0 0 22px;text-align:center;font-family:var(--mono);font-size:.74rem;
+     font-weight:700;color:var(--acero)}
+.filaSes.hecho .fsn{color:var(--hecho)}
+.fst{flex:1;min-width:0;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fsd{font-size:.72rem;color:var(--acero);font-family:var(--mono)}
+
+/* ---- Repeticiones reales de cada serie ---- */
+/* Estos controles viven DENTRO de la tarjeta verde de serie hecha, asi que no
+   pueden usar los colores de texto normales: medido, el "−" quedaba con
+   contraste 1,02 sobre el verde (invisible, se veian dos cuadros vacios) y el
+   numero con 2,41, por debajo del minimo legible. Aqui el fondo es fijo, asi
+   que el texto tambien: oscuro sobre verde. */
+.reps{display:flex;align-items:center;gap:3px;margin-top:4px}
+.rb{width:26px;height:26px;border-radius:7px;border:none;background:rgba(255,255,255,.85);
+    color:#121a1c;font-size:1.05rem;font-weight:700;line-height:1;display:grid;place-items:center;
+    position:relative}
+.rb::after{content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+           width:36px;height:40px}
+.rn{min-width:28px;text-align:center;font-family:var(--mono);font-size:1rem;font-weight:700;
+    color:#121a1c}
+.serie.ok small{color:#121a1c;opacity:.72}
+
+/* ---- Lo que escribe a mano ---- */
+.campoLibre{width:100%;margin-top:8px;padding:9px 11px;border-radius:9px;
+            border:1px solid var(--linea);background:var(--fondo);color:var(--tinta);
+            font-family:var(--ui);font-size:.88rem;line-height:1.4}
+.campoLibre::placeholder{color:var(--acero)}
+.notaEj{resize:vertical;min-height:52px}
+.pistaNota{font-size:.8rem;color:var(--acero);font-style:italic;margin-top:6px;line-height:1.4}
+
 .ej{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r);
     box-shadow:var(--sombra);overflow:hidden}
 .ej.activo{border-color:var(--agua);border-width:2px}
@@ -317,15 +384,24 @@ svg.esq{width:100%;max-width:340px;height:108px;color:var(--tinta);display:block
 #barraAbajo.activo{background:var(--agua)}
 #barraAbajo.cambio{background:var(--descanso)}
 .desc-in{max-width:660px;margin:0 auto;display:flex;align-items:center;gap:16px}
+/* 92 px de ancho minimo para "0:12" dejaban al nombre del ejercicio sin sitio
+   y lo partian en tres lineas. Con 68 cabe hasta "10:00" y sobra ancho. */
 .desc-n{font-family:var(--mono);font-size:2.6rem;font-weight:700;line-height:1;
-        font-variant-numeric:tabular-nums;min-width:92px}
+        font-variant-numeric:tabular-nums;min-width:68px}
 .desc-n.grande{font-size:3.4rem}
 .desc-t{flex:1;min-width:0}
-.desc-et{font-size:.68rem;text-transform:uppercase;letter-spacing:.11em;opacity:.85;font-weight:600}
-.desc-p{font-size:.92rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.desc-et{font-size:.68rem;text-transform:uppercase;letter-spacing:.09em;opacity:.85;font-weight:600;
+         line-height:1.3}
+/* Sin nowrap: "Pajaro · 2-3 kg por mano" acababa en "Pajaro · 2-3 kg po...",
+   que es justo la parte que hacia falta. Cabe en dos lineas de sobra. */
+.desc-p{font-size:.9rem;font-weight:600;line-height:1.25;
+        display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .desc-btn{background:rgba(255,255,255,.22);padding:12px 16px;border-radius:9px;font-weight:700;
           font-size:.85rem;white-space:nowrap}
-.desc-btn.fuerte{background:#fff;color:var(--tinta)}
+/* Color FIJO, no var(--tinta): esa variable se invierte con el tema, asi que
+   sobre un boton blanco fijo el texto salia casi blanco en modo oscuro —#e8eeee
+   sobre #ffffff, ilegible—. Como el fondo no cambia, el texto tampoco puede. */
+.desc-btn.fuerte{background:#fff;color:#121a1c}
 .btTiempo{width:100%;background:var(--agua);color:#fff;padding:15px;border-radius:10px;
           font-size:.98rem;font-weight:700;margin-bottom:12px}
 
@@ -1595,6 +1671,7 @@ let S = {
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
   t0:null, pausadoEn:null, acumPausa:0, latido:null,
   sesionF:null, sesionDia:null, sesionFase:null, sesionId:null,  // la sesion abierta
+  foco:null,                                     // que ejercicio estas viendo
   hechos:{}, pesos:{}, marcas:{}, hist:[],
   comidas:{}, pasos:{}, agua:{}, sueno:{}, siesta:{}, animo:{}, syncId:null, syncUlt:null,
   cofre:null, pinFallos:0, cambiadoEn:null,
@@ -1606,6 +1683,31 @@ let S = {
   cuerpo:[]
 };
 /* Cómo terminaste cada ejercicio. Es lo que decide si toca subir peso. */
+/* Donde puede molestar CADA ejercicio. Ofrecer las quince articulaciones del
+   cuerpo en todos convierte la pregunta en un formulario; ofrecer las tres o
+   cuatro que de verdad pueden doler en ese movimiento la convierte en un toque.
+   Siempre queda "Otra" con campo de texto, porque el cuerpo no lee catalogos. */
+const ZONAS = {
+  dominada:["Hombro","Codo","Muñeca","Antebrazo"],
+  remo:    ["Lumbar","Hombro","Codo","Muñeca"],
+  pajaro:  ["Hombro","Cuello","Lumbar"],
+  goblet:  ["Rodilla","Cadera","Lumbar","Muñeca"],
+  rumano:  ["Lumbar","Isquios","Cadera"],
+  zancadas:["Rodilla","Cadera","Tobillo"],
+  hombro:  ["Hombro","Codo","Muñeca","Cuello"],
+  laterales:["Hombro","Cuello","Trapecio"],
+  pecho:   ["Hombro","Codo","Muñeca","Pecho"],
+  flex:    ["Hombro","Muñeca","Codo","Lumbar"],
+  curl:    ["Codo","Muñeca","Antebrazo"],
+  triceps: ["Codo","Hombro","Muñeca"],
+  plancha: ["Lumbar","Hombro","Muñeca","Cuello"],
+  planchaL:["Hombro","Lumbar","Cadera","Muñeca"],
+  bicho:   ["Lumbar","Cuello","Cadera"],
+  talones: ["Tobillo","Gemelo","Rodilla"],
+  paseo:   ["Trapecio","Muñeca","Antebrazo","Lumbar"]
+};
+const zonasDe = id => ZONAS[id] || ["Hombro","Codo","Lumbar","Rodilla"];
+
 const VALORES = [
   {v:"sobra",  t:"Me sobraba",  ayuda:"Podías con 3 o más repes de más"},
   {v:"justo",  t:"Justo",       ayuda:"Acabaste con 2-3 en la recámara"},
@@ -1736,6 +1838,8 @@ function cargar(){
          coincide con ultimoHecho, y no habia otra forma de abrirlo. Y esa
          valoracion es justo lo que decide si la proxima vez toca subir peso. */
       S.ultimoHecho = g.sesion.ultimoHecho || null;
+      // Volver justo al ejercicio que tenias delante, no al principio.
+      S.foco = g.sesion.foco || null;
       S.sesionF = g.sesion.fecha || hoyISO();
       S.sesionDia = (typeof g.sesion.dia === "number") ? g.sesion.dia : S.dia;
       S.sesionFase = (typeof g.sesion.fase === "number") ? g.sesion.fase : S.fase;
@@ -1783,6 +1887,7 @@ function paquete(){
     sesion: S.t0 ? {fecha:fechaSesion(), dia:diaSesion(), fase:S.sesionFase,
                     sesionId:S.sesionId || null,
                     t0:S.t0, acumPausa:S.acumPausa, ultimoHecho:S.ultimoHecho || null,
+                    foco:S.foco || null,
                     pausadoEn:S.pausadoEn, hechos:S.hechos, marcas:S.marcas,
                     latido:S.latido || Date.now()} : null
   };
@@ -1909,9 +2014,12 @@ let BA = {modo:null, timer:null, fin:0, ini:0, avisado:false, accion:null};
 function barraOn(clase){
   const b = $("#barraAbajo");
   b.className = "on " + clase;
-  // Hueco para la barra de descanso Y para el menú, que está debajo de ella.
+  /* Hueco para la barra Y para el menu, que esta debajo de ella. Se MIDE, no se
+     estima: estaba fijo en 104 px y la barra crece cuando el nombre del
+     ejercicio ocupa dos lineas, con lo que tapaba los botones de navegar. */
+  const alto = Math.ceil(b.getBoundingClientRect().height) + 12;
   document.body.style.paddingBottom =
-    "calc(var(--menuAlto) + 104px + env(safe-area-inset-bottom))";
+    "calc(var(--menuAlto) + " + alto + "px + env(safe-area-inset-bottom))";
   $("#reloj").classList.toggle("descansando", clase === "descanso" || clase === "cambio");
 }
 function barraOff(){
@@ -1949,10 +2057,15 @@ function prepararSiguiente(id, recomendado){
   const e = EJ[id], p = plan(id);
   BA.modo = "prep"; BA.ini = Date.now();
   BA.accion = () => { barraOff(); pintarHoy(); };
-  $("#baEt").textContent = "Prepara el siguiente";
-  $("#baP").textContent = e.bloque ? e.n
-    : e.n + (p.peso !== "—" && p.peso !== "sin peso" ? " · " + p.peso + " kg " + (e.carga || "") : "");
-  $("#baBtn").textContent = "Empezar";
+  /* El nombre y el peso en lineas distintas. Juntos daban "Remo con mancuerna a
+     una mano · 8 kg una mancuerna", que no cabe de ninguna manera en la barra y
+     se cortaba justo por el peso, que es la mitad util del mensaje. */
+  const pesoTxt = (!e.bloque && p.peso !== "—" && p.peso !== "sin peso")
+    ? " · " + p.peso + " kg " + (e.carga || "") : "";
+  $("#baEt").textContent = "Prepara el siguiente" + pesoTxt;
+  $("#baP").textContent = e.n;
+  // "Empezar" a secas se confundia con el boton de empezar la SESION.
+  $("#baBtn").textContent = "Ya estoy";
   $("#baBtn").classList.add("fuerte");
   barraOn("prep");
   BA.timer = setInterval(() => {
@@ -2028,13 +2141,24 @@ function pintarReloj(){
     r.classList.add("corriendo");
     $("#btnPausa").hidden = false;
     $("#btnPausa").textContent = S.pausadoEn ? "Seguir" : "Pausa";
+    /* Dice lo que es —tiempo total— y cuanto llevas. Antes ponia el nombre del
+       siguiente ejercicio, que con una tarjeta a la vez se contradecia con lo
+       que tenias delante: arriba "Pajaro" y en la tarjeta el Remo. El nombre lo
+       dice la tarjeta; aqui va el progreso, que es lo que no cabe alli. */
     const sig = siguienteId();
+    const seriesHechas = ids.reduce((a2, x) => {
+      const hh = S.hechos[x]; return a2 + (hh ? hh.series : 0);
+    }, 0);
+    const seriesTotal = ids.reduce((a2, x) => {
+      const pp = plan(x); return a2 + (pp ? pp.series : 1);
+    }, 0);
     if(sig){
-      $("#relojEt").textContent = (S.pausadoEn ? "En pausa · " : "Ahora · ")+hechos+" de "+ids.length;
-      $("#relojTit").textContent = EJ[sig].n;
+      $("#relojEt").textContent = S.pausadoEn ? "En pausa" : "Tiempo total";
+      $("#relojTit").textContent = hechos + "/" + ids.length + " ejercicios · " +
+                                   seriesHechas + "/" + seriesTotal + " series";
     }else{
       $("#relojEt").textContent = "Completada";
-      $("#relojTit").textContent = "Sesión terminada";
+      $("#relojTit").textContent = ids.length + " ejercicios · " + seriesTotal + " series";
     }
   }
 }
@@ -2074,11 +2198,61 @@ function ultimaMarca(id){
   }
   return null;
 }
+/* Lo que se guarda de CADA ejercicio. Antes solo esf y cuatro banderas; ahora
+   ademas las repeticiones reales de cada serie —el dato con el que se decide
+   si toca subir kilo, que hasta ahora era "llegue o no llegue"—, donde molesto
+   y lo que quieras escribir. Los campos viejos se conservan tal cual: las
+   sesiones ya guardadas siguen leyendose. */
 function marcaDe(id){
-  if(!S.marcas[id]) S.marcas[id] = {esf:null};
-  return S.marcas[id];
+  const m = S.marcas[id] || (S.marcas[id] = {esf:null});
+  if(!Array.isArray(m.reps))  m.reps = [];    // repeticiones por serie
+  if(!Array.isArray(m.zonas)) m.zonas = [];   // donde ha molestado
+  if(typeof m.zonaOtra !== "string") m.zonaOtra = "";
+  if(typeof m.nota !== "string") m.nota = "";
+  return m;
 }
 /* ============ HOY ============ */
+
+/* UNA TARJETA A LA VEZ.
+   Antes eran los 18 ejercicios en una lista larga y bastaba un roce para
+   perder donde estabas y tener que buscarlo otra vez a media serie. Ahora se
+   ve solo el ejercicio en el que estas.
+   Lo que NO puede perderse por el camino: con la lista podias mirar atras y
+   corregir. Por eso hay tira de progreso arriba —tocable, para ir a
+   cualquiera—, boton de anterior, y la sesion entera plegada al final. Y se
+   cambia de ejercicio con botones, no deslizando, que es justo el gesto que
+   daba problemas. */
+let verTodaLaSesion = false;
+function ejercicioEnFoco(){
+  const ids = listaEj();
+  if(S.foco && ids.indexOf(S.foco) >= 0) return S.foco;
+  return siguienteId() || ids[ids.length-1] || null;
+}
+function irAEjercicio(id){
+  const ids = listaEj();
+  if(ids.indexOf(id) < 0) return;
+  S.foco = id;
+  guardarSinMarcar();            // mirar no es un cambio que haya que sincronizar
+  pintarHoy();
+  const c = $("#lista");
+  if(c) c.scrollIntoView({block:"start"});
+}
+function moverFoco(paso){
+  const ids = listaEj(), i = ids.indexOf(ejercicioEnFoco());
+  const j = Math.max(0, Math.min(ids.length-1, i + paso));
+  if(j !== i) irAEjercicio(ids[j]);
+}
+
+/* Las repeticiones que TOCABAN, para dejarlas puestas y que confirmar sea un
+   toque. De "12 por brazo" salen 12; de "10-12", 12. */
+function repesObjetivo(id){
+  const p = plan(id);
+  if(!p || !p.reps) return null;
+  const nums = String(p.reps).match(/\d+/g);
+  if(!nums || !nums.length) return null;
+  return Number(nums[nums.length-1]);
+}
+
 function pintarHoy(){
   const d = DIAS[S.dia], ids = listaEj();
   $("#diaNom").textContent = d.n;
@@ -2108,8 +2282,36 @@ function pintarHoy(){
 
   const sig = siguienteId(), cont = $("#lista");
   cont.innerHTML = "";
-  ids.forEach((id, i) => {
-    const e = EJ[id], p = plan(id), hecho = estaHecho(id), activo = S.t0 && id === sig, h = S.hechos[id];
+  const focoId = ejercicioEnFoco();
+
+  /* Tira de progreso: donde estas, cuanto llevas, y un atajo a cualquiera. */
+  if(focoId){
+    const tira = document.createElement("div");
+    tira.className = "tira";
+    const cab = document.createElement("div");
+    cab.className = "tiraCab";
+    cab.innerHTML = '<b>' + (ids.indexOf(focoId)+1) + ' de ' + ids.length + '</b>' +
+      '<span>' + ids.filter(estaHecho).length + ' hechos</span>';
+    tira.appendChild(cab);
+    const puntos = document.createElement("div");
+    puntos.className = "tiraPuntos";
+    ids.forEach((x, k) => {
+      const b2 = document.createElement("button");
+      const hh = S.hechos[x];
+      b2.className = "tp" + (estaHecho(x) ? (hh && hh.saltado ? " saltado" : " hecho") : "") +
+                     (x === focoId ? " aqui" : "");
+      b2.textContent = String(k+1);
+      b2.setAttribute("aria-label", (k+1) + ". " + EJ[x].n);
+      b2.addEventListener("click", () => irAEjercicio(x));
+      puntos.appendChild(b2);
+    });
+    tira.appendChild(puntos);
+    cont.appendChild(tira);
+  }
+
+  [focoId].filter(Boolean).forEach(id => {
+    const i = ids.indexOf(id);
+    const e = EJ[id], p = plan(id), hecho = estaHecho(id), activo = true, h = S.hechos[id];
     const card = document.createElement("section");
     card.className = "ej" + (activo ? " activo" : "") + (hecho ? " listo" : "");
     const conPeso = !e.bloque && p.peso !== "—" && p.peso !== "sin peso";
@@ -2126,7 +2328,10 @@ function pintarHoy(){
         : hecho && h && h.fin != null ? '<div class="split">' + mmss(h.fin) + '</div>' : "") + '</div>';
 
     // Al acabar un ejercicio: un toque obligatorio y los avisos que quieras añadir.
-    if(hecho && S.t0 && id === S.ultimoHecho && !e.bloque && !(h && h.saltado)){
+    /* Antes solo aparecia para el recien terminado (S.ultimoHecho). Ahora que se
+       puede volver a cualquiera, se ve siempre que mires uno acabado: si te
+       equivocaste al valorar, puedes arreglarlo. */
+    if(hecho && !e.bloque && !(h && h.saltado)){
       const m = marcaDe(id);
       const val = document.createElement("div");
       val.className = "ej-cuerpo valorar";
@@ -2161,6 +2366,36 @@ function pintarHoy(){
       val.appendChild(ops2);
 
       if(m.molestia){
+        /* Donde. Solo las articulaciones que este movimiento puede fastidiar:
+           ofrecer las quince del cuerpo en todos los ejercicios convierte la
+           pregunta en un formulario. Y "Otra" con campo de texto, porque el
+           cuerpo no lee catalogos. */
+        const pz = document.createElement("div");
+        pz.className = "preg"; pz.style.marginTop = "12px";
+        pz.textContent = "¿Dónde?";
+        val.appendChild(pz);
+        const opz = document.createElement("div"); opz.className = "opts";
+        zonasDe(id).forEach(z => {
+          const b = document.createElement("button");
+          b.className = "opt chico"; b.textContent = z;
+          b.setAttribute("aria-pressed", String(m.zonas.indexOf(z) >= 0));
+          b.addEventListener("click", () => {
+            const k = m.zonas.indexOf(z);
+            if(k >= 0) m.zonas.splice(k, 1); else m.zonas.push(z);
+            guardar(); pintarHoy();
+          });
+          opz.appendChild(b);
+        });
+        val.appendChild(opz);
+
+        const otra = document.createElement("input");
+        otra.className = "campoLibre"; otra.type = "text";
+        otra.placeholder = "Otra zona, o descríbelo con tus palabras";
+        otra.setAttribute("aria-label", "Dónde te ha molestado, escrito a mano");
+        otra.value = m.zonaOtra;
+        otra.addEventListener("input", () => { m.zonaOtra = otra.value; guardar(); });
+        val.appendChild(otra);
+
         const av = document.createElement("div");
         av.className = "nota rojo"; av.style.marginBottom = "0";
         av.innerHTML = "<p>Anotado. Si se repite en este ejercicio dos días más, <strong>sáltalo " +
@@ -2175,6 +2410,20 @@ function pintarHoy(){
                        "rota el ejercicio deja de trabajar lo que debería.</p>";
         val.appendChild(av);
       }
+      /* Observaciones de ESTE ejercicio. Se guardan con el, asi que la proxima
+         vez que toque se te puede recordar lo que escribiste. */
+      const pn = document.createElement("div");
+      pn.className = "preg"; pn.style.marginTop = "12px";
+      pn.textContent = "Observaciones (opcional)";
+      val.appendChild(pn);
+      const ta = document.createElement("textarea");
+      ta.className = "campoLibre notaEj"; ta.rows = 2;
+      ta.placeholder = "La mancuerna se resbalaba, el banco estaba bajo…";
+      ta.setAttribute("aria-label", "Observaciones sobre " + e.n);
+      ta.value = m.nota;
+      ta.addEventListener("input", () => { m.nota = ta.value; guardar(); });
+      val.appendChild(ta);
+
       card.appendChild(val);
     }
 
@@ -2233,7 +2482,40 @@ function pintarHoy(){
         }
 
         const fila = document.createElement("div"); fila.className = "series";
+        const marcaEj = marcaDe(id);
         for(let s=1; s<=p.series; s++){
+          if(s <= yaHechas && !e.tiempo){
+            /* Serie hecha: en vez de un "hecha" mudo, las repeticiones que
+               hiciste, ajustables sin salir de aqui. */
+            const caja = document.createElement("div");
+            caja.className = "serie ok";
+            caja.innerHTML = '<span class="sn">' + s + '</span>';
+            const st = document.createElement("div");
+            st.className = "reps";
+            const menos = document.createElement("button");
+            menos.className = "rb"; menos.textContent = "−";
+            menos.setAttribute("aria-label", "Una repetición menos en la serie " + s);
+            const num = document.createElement("span");
+            num.className = "rn";
+            const val = () => marcaEj.reps[s-1];
+            num.textContent = val() == null ? "—" : val();
+            const mas = document.createElement("button");
+            mas.className = "rb"; mas.textContent = "+";
+            mas.setAttribute("aria-label", "Una repetición más en la serie " + s);
+            const pon = d => {
+              const v = Math.max(0, Math.min(999, (val() == null ? (repesObjetivo(id) || 0) : val()) + d));
+              marcaEj.reps[s-1] = v; num.textContent = v; guardar();
+            };
+            menos.addEventListener("click", () => pon(-1));
+            mas.addEventListener("click", () => pon(1));
+            st.appendChild(menos); st.appendChild(num); st.appendChild(mas);
+            caja.appendChild(st);
+            const et = document.createElement("small");
+            et.textContent = "repes";
+            caja.appendChild(et);
+            fila.appendChild(caja);
+            continue;
+          }
           const b = document.createElement("button");
           b.className = "serie" + (s <= yaHechas ? " ok" : (s === yaHechas+1 ? " siguiente" : ""));
           b.innerHTML = '<span class="sn">' + s + '</span>' + (s <= yaHechas ? "hecha" : "de " + p.series);
@@ -2267,13 +2549,23 @@ function pintarHoy(){
           else if(ult.esf === "sobra")   avisos.push("te sobraba → <b>prueba a subir 1 kg</b>");
           else if(ult.esf === "limite")  avisos.push("acabaste casi al límite → <b>mantén el peso</b>");
           else if(ult.esf === "justo")   avisos.push("fue justo → <b>mantén el peso</b>");
-          if(ult.molestia) avisos.push("<b>te molestó</b>, vigílalo");
-          if(ult.repes)    avisos.push("no llegaste a las repes");
+          if(ult.molestia) avisos.push("<b>te molestó</b>" +
+            ((ult.zonas && ult.zonas.length) ? " en " + esc(ult.zonas.join(" y ")) : "") +
+            (ult.zonaOtra ? " (" + esc(ult.zonaOtra) + ")" : "") + ", vigílalo");
+          if(ult.reps && ult.reps.length) avisos.push("hiciste " + ult.reps.join("-") + " repes");
+          else if(ult.repes) avisos.push("no llegaste a las repes");
           if(avisos.length){
             const pista = document.createElement("div");
             pista.className = "pista" + (ult.molestia || ult.tecnica || ult.forzado || ult.esf === "limite" ? " baja" : "");
             pista.innerHTML = "La última vez: " + avisos.join(" · ") + ".";
             cuerpo.appendChild(pista);
+            // Y lo que escribiste, con tus palabras.
+            if(ult.nota){
+              const nn = document.createElement("div");
+              nn.className = "pistaNota";
+              nn.textContent = "Apuntaste: “" + ult.nota + "”";
+              cuerpo.appendChild(nn);
+            }
           }
         }
       }
@@ -2299,6 +2591,47 @@ function pintarHoy(){
     }
     cont.appendChild(card);
   });
+
+  /* Ir y volver con botones. Deslizar es justo lo que daba problemas. */
+  if(focoId){
+    const i = ids.indexOf(focoId);
+    const nav = document.createElement("div");
+    nav.className = "navEj";
+    const ant = document.createElement("button");
+    ant.className = "bt"; ant.textContent = "← Anterior";
+    ant.disabled = i <= 0;
+    ant.addEventListener("click", () => moverFoco(-1));
+    const sigB = document.createElement("button");
+    sigB.className = "bt" + (estaHecho(focoId) ? " p" : "");
+    sigB.textContent = i >= ids.length-1 ? "Último ejercicio" : "Siguiente →";
+    sigB.disabled = i >= ids.length-1;
+    sigB.addEventListener("click", () => moverFoco(1));
+    nav.appendChild(ant); nav.appendChild(sigB);
+    cont.appendChild(nav);
+
+    /* La sesion entera, plegada. Es el mapa que se pierde al ver una sola
+       tarjeta: cuanto queda, que viene despues, y un atajo a cualquiera. */
+    const det = document.createElement("details");
+    det.className = "todaLaSesion";
+    if(verTodaLaSesion) det.open = true;
+    det.addEventListener("toggle", () => { verTodaLaSesion = det.open; });
+    const sum = document.createElement("summary");
+    sum.textContent = "Ver toda la sesión (" + ids.filter(estaHecho).length + " de " + ids.length + ")";
+    det.appendChild(sum);
+    ids.forEach((x, k) => {
+      const hh = S.hechos[x], f = document.createElement("button");
+      f.className = "filaSes" + (estaHecho(x) ? " hecho" : "") + (x === focoId ? " aqui" : "");
+      const marca = estaHecho(x) ? (hh && hh.saltado ? "–" : "✓") : String(k+1);
+      f.innerHTML = '<span class="fsn">' + marca + '</span>' +
+        '<span class="fst">' + esc(EJ[x].n) + '</span>' +
+        '<span class="fsd">' + (hh && hh.saltado ? "saltado"
+          : estaHecho(x) ? mmss(hh && hh.fin) : (plan(x) ? plan(x).series + " series" : "")) + '</span>';
+      f.addEventListener("click", () => { irAEjercicio(x); });
+      det.appendChild(f);
+    });
+    cont.appendChild(det);
+  }
+
   pintarFin();
   pintarReloj();
 }
@@ -2312,9 +2645,31 @@ function marcarSerie(id){
   if(campoPeso && campoPeso.value.trim()) S.pesos[id+"|"+S.fase] = campoPeso.value.trim();
   const h = S.hechos[id] || {series:0, fin:null};
   h.series++;
+  /* Se deja puesto el numero que TOCABA. Asi confirmar es no hacer nada, y
+     corregir es un toque en el menos. Antes solo se guardaba la bandera "repes
+     de menos", que no distingue quedarse en 11 de quedarse en 6 —y esa
+     diferencia es justo la que decide si la proxima vez subes kilo. */
+  if(!e.bloque && !e.tiempo){
+    const mm = marcaDe(id), obj = repesObjetivo(id);
+    if(obj != null && mm.reps[h.series-1] == null) mm.reps[h.series-1] = obj;
+  }
   const total = p ? p.series : 1;
   const ejercicioTerminado = h.series >= total;
-  if(ejercicioTerminado){ h.fin = transcurrido(); S.ultimoHecho = id; }
+  if(ejercicioTerminado){
+    h.fin = transcurrido(); S.ultimoHecho = id;
+    /* El foco se queda AQUI. Saltar solo al siguiente en cuanto acabas la
+       ultima serie se llevaria por delante el panel de "¿como ha ido?", que es
+       justo donde se apuntan las repes, la molestia y la observacion. Se avanza
+       con el boton, cuando hayas terminado de apuntar.
+       Salvo el calentamiento y los estiramientos: ahi no hay nada que apuntar,
+       asi que quedarse seria hacerle dar un toque de mas. */
+    if(e.bloque){
+      const idsB = listaEj(), jB = idsB.indexOf(id);
+      S.foco = (jB >= 0 && jB < idsB.length-1) ? idsB[jB+1] : id;
+    }else{
+      S.foco = id;
+    }
+  }
   S.hechos[id] = h;
   guardar();
 
@@ -2388,6 +2743,9 @@ function saltarEjercicio(id){
               "empezar la sesión de nuevo.")) return;
   const p = plan(id);
   S.hechos[id] = {series: p ? p.series : 1, fin: transcurrido(), saltado: true};
+  // Saltado no tiene nada que apuntar, asi que este si avanza solo.
+  const idsS = listaEj(), jS = idsS.indexOf(id);
+  S.foco = (jS >= 0 && jS < idsS.length-1) ? idsS[jS+1] : null;
   guardar();
   const quedan = siguienteId();
   if(quedan) prepararSiguiente(quedan, 20);
@@ -2400,6 +2758,7 @@ function empezar(){
   S.t0 = Date.now(); S.acumPausa = 0; S.pausadoEn = null; S.hechos = {};
   S.marcas = {}; S.ultimoHecho = null; S.latido = Date.now();
   S.sesionF = hoyISO(); S.sesionDia = S.dia; S.sesionFase = S.fase; S.sesionId = null;
+  S.foco = null;                                 // al primero que quede
   if(!S.inicio) S.inicio = hoyISO();
   guardar(); pitido(1); pintarHoy();
   ajustarCabecera();          // arranca la sesión: el reloj pasa a hacer falta
@@ -2510,7 +2869,7 @@ function pintarFin(){
   b.addEventListener("click", () => {
     guardaEnt(); barraOff();
     S.t0 = null; S.hechos = {}; S.acumPausa = 0; S.pausadoEn = null; S.latido = null;
-    S.sesionF = null; S.sesionDia = null; S.sesionFase = null; S.sesionId = null;
+    S.sesionF = null; S.sesionDia = null; S.sesionFase = null; S.sesionId = null; S.foco = null;
     /* Al cerrar hay que recalcular: mientras habia sesion, aplicarAuto clavaba
        el dia al de la sesion, y nadie lo deshacia. Tras una sesion que cruzo la
        medianoche, el dia se quedaba en el de ayer hasta recargar la app. */
@@ -4509,7 +4868,7 @@ $("#btnBorrar").addEventListener("click", () => {
   S.perfil = {altura:"",nacim:"",sexo:"",nivel:"",objetivo:""};
   S.inicio = null; S.faseManual = null; S.diaManual = null;
   S.t0 = null; S.hechos = {}; S.marcas = {}; S.acumPausa = 0; S.pausadoEn = null;
-  S.sesionF = null; S.sesionDia = null; S.sesionFase = null; S.sesionId = null;
+  S.sesionF = null; S.sesionDia = null; S.sesionFase = null; S.sesionId = null; S.foco = null;
   S.ultimoHecho = null; S.latido = null;
   S.syncUlt = null; S.cambiadoEn = null;
   guardarSinMarcar();
@@ -5476,7 +5835,7 @@ $("#selDia").addEventListener("change", e => {
   }
   S.diaManual = nuevo;
   S.t0 = null; S.hechos = {}; S.marcas = {}; S.acumPausa = 0; S.pausadoEn = null;
-  S.sesionF = null; S.sesionDia = null; S.sesionFase = null; S.sesionId = null;
+  S.sesionF = null; S.sesionDia = null; S.sesionFase = null; S.sesionId = null; S.foco = null;
   aplicarAuto(); barraOff(); guardar(); pintarHoy(); pintarSemana();
 });
 $("#selFase").addEventListener("change", e => {
@@ -5491,7 +5850,7 @@ $("#btnAjustes").addEventListener("click", () => {
 $("#btnAuto").addEventListener("click", () => {
   S.diaManual = null; S.faseManual = null;
   S.t0 = null; S.hechos = {}; S.marcas = {}; S.acumPausa = 0; S.pausadoEn = null;
-  S.sesionF = null; S.sesionDia = null; S.sesionFase = null; S.sesionId = null;
+  S.sesionF = null; S.sesionDia = null; S.sesionFase = null; S.sesionId = null; S.foco = null;
   aplicarAuto(); barraOff(); guardar(); pintarHoy(); pintarSemana();
   $("#ajustes").hidden = true;
   $("#btnAjustes").setAttribute("aria-expanded", "false");
