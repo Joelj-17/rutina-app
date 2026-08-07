@@ -2970,7 +2970,17 @@ function pintarCuerpo(){
   /* --- Cuánto queda hasta la diana de cintura --- */
   let prog = "";
   if(cin.length && diana){
-    const ini = cin[0].v, ahora = cin[cin.length-1].v;
+    /* El punto de partida es la PRIMERA medida que tomaste, no la primera de
+       las que caben en la grafica. serie() se queda con los ultimos 20 dias, y
+       usar ese origen hacia que el porcentaje se recalculara sobre una
+       referencia que avanza: empezando en 104 con diana 90 y yendo por 93 eras
+       el 79%, y en cuanto una medicion nueva empujaba a la mas vieja fuera de
+       la ventana pasabas al 40% de golpe, sin que tu cintura hubiera cambiado.
+       Una barra de progreso que retrocede sola no mide nada. */
+    const primera = S.cuerpo.filter(x => x.cintura != null)
+      .slice().sort((x, y) => (x.f || "").localeCompare(y.f || ""))[0];
+    const ini = primera ? primera.cintura : cin[0].v;
+    const ahora = cin[cin.length-1].v;
     const total = ini - diana, hecho = ini - ahora;
     const pct = total > 0 ? Math.max(0, Math.min(100, hecho/total*100)) : 100;
     prog = '<div class="progT"><div class="cabP"><b>Camino hasta ' + diana + ' cm de cintura</b>' +
@@ -4757,14 +4767,21 @@ function pintarPasos(){
         'Apunta unos días y aquí saldrá tu media, lo que llevas de semana y a dónde ' +
         'vas a llegar si sigues así.</p>';
     }else{
+      /* Las dos cifras de la semana se calculaban con reglas contrarias: la
+         suma contaba los dias sin apuntar como cero y la proyeccion los
+         ignoraba. Con 3 dias de 7 apuntados a 9.000 pasos salia "27.000" al
+         lado de "63.000", una junto a otra, sin que nada dijera que solo habia
+         tres dias medidos. Ahora se dice cuantos son. */
       let sem = 0, conDato = 0;
       for(let i = 0; i < 7; i++){ const x = S.pasos[diaMenos(i)] || 0; sem += x; if(x > 0) conDato++; }
       const proyectada = m7.media * 7;
+      const etSuma = conDato === 7 ? "Últimos 7 días"
+                                   : "Sumado (" + conDato + " de 7 días)";
       const kcalDia = pes != null ? Math.round(m7.media * pes * 0.0004) : null;
       const dif = hoyV ? Math.round((hoyV - m7.media) / m7.media * 100) : null;
       prev.innerHTML =
         '<div class="balanceDia" style="border:none;padding:0;margin:0">' +
-        '<div><b>' + sem.toLocaleString("es-ES") + '</b><span>Últimos 7 días</span></div>' +
+        '<div><b>' + sem.toLocaleString("es-ES") + '</b><span>' + etSuma + '</span></div>' +
         '<div><b>' + proyectada.toLocaleString("es-ES") + '</b><span>A tu media, la semana</span></div>' +
         (kcalDia ? '<div><b>' + kcalDia + '</b><span>kcal al día</span></div>' : "") +
         '</div>' +
