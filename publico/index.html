@@ -274,8 +274,14 @@ svg.esq{width:100%;max-width:340px;height:108px;color:var(--tinta);display:block
 .mini svg{width:100%;height:auto;aspect-ratio:300/132;display:block;margin-top:6px;
           overflow:visible;touch-action:pan-y}
 /* La lectura de la gráfica: el valor manda, la etiqueta acompaña. */
+/* min-height reservado y SIN hidden: si el panel entrara en el flujo al tocar,
+   empujaria la grafica 66 px hacia abajo —casi media altura del dibujo— justo
+   en el momento del toque, y el dedo dejaria de estar donde crees. El hueco
+   esta siempre, con una pista dentro mientras no has tocado nada. */
 .mini .lectura{margin-top:8px;padding:9px 11px;border-radius:9px;background:var(--agua-claro);
-               display:flex;flex-direction:column;gap:3px}
+               display:flex;flex-direction:column;gap:3px;min-height:58px;
+               justify-content:center}
+.mini .lectura.pista{color:var(--acero);font-size:.78rem;font-weight:600}
 .mini .lectura>b{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;
                  color:var(--acero);font-weight:700}
 .mini .lf{display:flex;align-items:baseline;gap:8px}
@@ -649,7 +655,14 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
 /* ---- Login ---- */
 #login{position:fixed;inset:0;z-index:200;background:var(--fondo);display:none;
        overflow-y:auto;padding:0 20px}
-#login.on{display:flex;align-items:center;justify-content:center}
+/* align-items:center dentro de un contenedor con scroll deja fuera de alcance
+   lo que se sale por ARRIBA: medido en 375x667 la caja son 762 px y quedaba en
+   top:-48, con el titulo cortado y sin forma de subir. Con flex-start y margen
+   automatico se centra cuando cabe y se comporta como una pagina normal cuando
+   no cabe. */
+#login.on{display:flex;align-items:flex-start;justify-content:center;
+          padding-top:16px;padding-bottom:16px}
+#login.on > *{margin:auto 0}
 .loginCaja{width:100%;max-width:330px;text-align:center;padding:36px 0}
 .loginCaja h1{font-size:1.55rem;margin:0 0 4px;letter-spacing:-.025em}
 .loginCaja .lsub{color:var(--acero);font-size:.87rem;margin:0 0 30px}
@@ -1575,7 +1588,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-07 · 21";
+const VERSION = "2026-08-07 · 22";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -2465,6 +2478,10 @@ function pintarFin(){
     guardaEnt(); barraOff();
     S.t0 = null; S.hechos = {}; S.acumPausa = 0; S.pausadoEn = null; S.latido = null;
     S.sesionF = null; S.sesionDia = null; S.sesionFase = null; S.sesionId = null;
+    /* Al cerrar hay que recalcular: mientras habia sesion, aplicarAuto clavaba
+       el dia al de la sesion, y nadie lo deshacia. Tras una sesion que cruzo la
+       medianoche, el dia se quedaba en el de ayer hasta recargar la app. */
+    aplicarAuto();
     guardar(); pintarHoy(); pintarSemana();
     ajustarCabecera();        // se acabó la sesión: el reloj deja de hacer falta
   });
@@ -2731,12 +2748,18 @@ function miniGrafica(campo, titulo, unidad, decimales){
                 " L" + px(0).toFixed(1) + " " + (H-abajo) + " Z";
 
   /* Rejilla recesiva: está para leer la escala, no para mirarla. */
+  /* Los decimales de la escala los manda el paso, no la unidad. La cintura se
+     apunta en medios centimetros (step 0,5), asi que con cortes en 102,5 y 103
+     y decimales=0 se rotulaban "103" y "103": dos etiquetas iguales, y la linea
+     de 102,5 mintiendo. */
+  const decEje = Math.max(decimales,
+    esc.paso >= 1 ? 0 : esc.paso >= 0.1 ? 1 : 2);
   const rejilla = esc.cortes.map(v =>
     '<line x1="' + izq + '" y1="' + py(v).toFixed(1) + '" x2="' + (W-der) +
       '" y2="' + py(v).toFixed(1) + '" stroke="var(--linea-2)" stroke-width="1"/>' +
     '<text x="' + (W-der+6) + '" y="' + (py(v)+3.5).toFixed(1) + '" font-size="9.5" ' +
       'fill="var(--acero)" font-family="ui-monospace,monospace">' +
-      v.toFixed(decimales) + '</text>').join("");
+      v.toFixed(decEje) + '</text>').join("");
 
   /* La oscilación del día: una barra vertical suave de la medida más baja a la
      más alta de esa fecha. Sin ella, apuntar una pesada nueva no cambiaba nada
@@ -2788,7 +2811,8 @@ function miniGrafica(campo, titulo, unidad, decimales){
 
   return '<div class="mini" data-graf="' + campo + '">' + cab +
     '<span style="color:' + color + '">' + signo + dif.toFixed(decimales) + " " + unidad + '</span></h4>' +
-    '<div class="lectura" data-lectura="' + campo + '" hidden></div>' +
+    '<div class="lectura pista" data-lectura="' + campo + '">Toca la gráfica para ver ' +
+      'las medidas de cada día.</div>' +
     '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + titulo + ', de ' +
       vals[0].toFixed(decimales) + ' a ' + ult.v.toFixed(decimales) + ' ' + unidad +
       ' entre el ' + d[0].f + ' y el ' + ult.f + '">' +
@@ -2842,6 +2866,7 @@ function conectarGraficas(){
       }
       // Texto, no HTML: lo que se escribe aquí sale de los datos del usuario.
       salida.textContent = "";
+      salida.classList.remove("pista");
       const cab = document.createElement("b");
       cab.textContent = fechaCorta(x.f);
       salida.appendChild(cab);
@@ -2858,7 +2883,6 @@ function conectarGraficas(){
         fila.appendChild(et);
         salida.appendChild(fila);
       });
-      salida.hidden = false;
     };
 
     /* Para poder abrir un dia desde fuera: al apuntar una medida se abre sola
@@ -2889,7 +2913,8 @@ function conectarGraficas(){
     svg.addEventListener("mouseleave", () => {
       const cruz = svg.querySelector(".cruz");
       if(cruz) cruz.setAttribute("opacity", "0");
-      salida.hidden = true;
+      salida.classList.add("pista");
+      salida.textContent = "Toca la gráfica para ver las medidas de cada día.";
     });
   });
 }
