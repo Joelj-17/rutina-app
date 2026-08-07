@@ -612,7 +612,13 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
 /* ---- Aviso flotante ----
    Encima del menu, centrado y estrecho. No tapa nada importante y se va solo,
    salvo los errores, que se quedan hasta el siguiente aviso. */
-#avisoFlot{position:fixed;left:12px;right:12px;z-index:60;
+/* pointer-events:none es lo importante aqui. El aviso se pinta justo encima de
+   la barra de descanso —medido a 375x667, la barra ocupa de 535 a 611 y el
+   aviso de 556 a 599, en pleno centro— y como no tiene ningun manejador, el
+   toque se lo tragaba el: la cuenta atras y el boton de saltar el descanso
+   dejaban de responder. Que no reciba toques resuelve las dos cosas a la vez,
+   porque ademas el aviso no es algo que haya que pulsar. */
+#avisoFlot{position:fixed;left:12px;right:12px;z-index:60;pointer-events:none;
            bottom:calc(var(--menuAlto) + 12px + env(safe-area-inset-bottom));
            max-width:420px;margin:0 auto;padding:12px 15px;border-radius:11px;
            background:var(--tinta);color:var(--fondo);font-size:.87rem;
@@ -1693,6 +1699,12 @@ function cargar(){
       S.pausadoEn = g.sesion.pausadoEn || null; S.hechos = g.sesion.hechos || {};
       S.marcas = g.sesion.marcas || {};
       S.latido = g.sesion.latido || null;
+      /* Sin esto, recargar justo despues de acabar una serie —bloquear el movil,
+         abrir un video de tecnica— hacia desaparecer para siempre el panel de
+         "¿como has acabado?" de ese ejercicio: solo se pinta para la tarjeta que
+         coincide con ultimoHecho, y no habia otra forma de abrirlo. Y esa
+         valoracion es justo lo que decide si la proxima vez toca subir peso. */
+      S.ultimoHecho = g.sesion.ultimoHecho || null;
       S.sesionF = g.sesion.fecha || hoyISO();
       S.sesionDia = (typeof g.sesion.dia === "number") ? g.sesion.dia : S.dia;
       S.sesionFase = (typeof g.sesion.fase === "number") ? g.sesion.fase : S.fase;
@@ -1739,7 +1751,7 @@ function paquete(){
     cambiadoEn:S.cambiadoEn,
     sesion: S.t0 ? {fecha:fechaSesion(), dia:diaSesion(), fase:S.sesionFase,
                     sesionId:S.sesionId || null,
-                    t0:S.t0, acumPausa:S.acumPausa,
+                    t0:S.t0, acumPausa:S.acumPausa, ultimoHecho:S.ultimoHecho || null,
                     pausadoEn:S.pausadoEn, hechos:S.hechos, marcas:S.marcas,
                     latido:S.latido || Date.now()} : null
   };
@@ -3007,9 +3019,11 @@ function mostrarAviso(t, tipo){
   p.className = tipo || "";
   p.hidden = false;
   clearTimeout(mostrarAviso._t);
-  if(tipo !== "mal"){
-    mostrarAviso._t = setTimeout(() => { p.hidden = true; }, 4000);
-  }
+  /* Los errores se quedaban en pantalla hasta que otro aviso los sustituyera.
+     Con la barra de descanso debajo, un fallo de red en el gimnasio te dejaba
+     un rectangulo rojo tapandola el resto de la sesion. Duran mas, porque hay
+     que poder leerlos, pero se van. */
+  mostrarAviso._t = setTimeout(() => { p.hidden = true; }, tipo === "mal" ? 9000 : 4000);
 }
 function aviso(t, malo){ mostrarAviso(t, malo ? "mal" : ""); }
 
@@ -4020,9 +4034,42 @@ function aplicarDatos(g, ts){
     ? null : new Date().toISOString();
   guardarSinMarcar();
   if(typeof sellarCambios === "function"){ fotoPrevia = null; sellarCambios(); }
+  repintarCuandoSePueda();
+  return r;
+}
+
+/* Repintar TODO destruye y recrea los campos de texto —el peso de cada
+   ejercicio y la nota final son nodos nuevos en cada repintado—. Si eso pasa
+   mientras escribes, en el movil se cierra el teclado y las teclas siguientes
+   no van a ninguna parte: apuntas 12,5 y queda 12, sin ningun aviso. Y pasa
+   solo, porque la subida automatica salta 3 segundos despues del ultimo
+   cambio, o sea justo mientras coges la mancuerna con el campo abierto.
+   Asi que si hay algo enfocado, se espera a que lo suelte. */
+function repintarTodo(){
   pintarHoy(); pintarPerfil(); pintarCuerpo(); pintarSemana();
   pintarComida(); pintarDiario(); pintarInicio(); pintarEstadoSync();
-  return r;
+}
+const escribiendoAhora = () => {
+  const el = document.activeElement;
+  return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+};
+let repintePendiente = false;
+function repintarCuandoSePueda(){
+  if(!escribiendoAhora()){ repintePendiente = false; repintarTodo(); return; }
+  if(repintePendiente) return;          // ya hay uno esperando: no acumular
+  repintePendiente = true;
+  /* Se comprueba cada segundo y medio en vez de esperar al evento "blur".
+     Parece mas tosco y lo es, pero blur NO siempre llega: si el campo se
+     destruye, o si la ventana pierde el foco, no se dispara y el repintado se
+     quedaria pendiente para siempre —la pantalla congelada con datos viejos,
+     que es peor que el problema que vengo a resolver—. Sondear no puede
+     quedarse colgado. */
+  const intenta = () => {
+    if(escribiendoAhora()){ setTimeout(intenta, 1500); return; }
+    repintePendiente = false;
+    repintarTodo();
+  };
+  setTimeout(intenta, 1500);
 }
 
 /* Para comparar dos estados sin que el ruido de la comparacion mienta: el

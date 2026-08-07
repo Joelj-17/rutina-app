@@ -32,6 +32,10 @@ self.addEventListener("activate", e => {
   );
 });
 
+/* Una respuesta solo se guarda si es del propio sitio y ha ido bien. Guardar un
+   error es peor que no guardar nada: se sirve luego como si fuera la app. */
+const guardable = r => r && r.ok && r.status === 200 && r.type === "basic";
+
 self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET") return;
@@ -55,8 +59,15 @@ self.addEventListener("fetch", e => {
     e.respondWith(
       fetch(req)
         .then(r => {
-          const copia = r.clone();
-          caches.open(CACHE).then(c => c.put(req, copia)).catch(() => {});
+          /* Solo se guarda una respuesta BUENA. Sin esta comprobacion, un 500
+             del hosting durante un despliegue —o el 502 de un portal cautivo,
+             como el wifi de un gimnasio— sustituia la copia offline de la app
+             por la pagina de error, y luego, sin cobertura, eso era lo que se
+             pintaba: la app no arrancaba hasta que volviera la red. */
+          if (guardable(r)) {
+            const copia = r.clone();
+            caches.open(CACHE).then(c => c.put(req, copia)).catch(() => {});
+          }
           return r;
         })
         .catch(() => caches.match(req).then(r => r || caches.match(BASE + "index.html")))
@@ -67,8 +78,10 @@ self.addEventListener("fetch", e => {
   // Resto (iconos, manifiesto): caché primero.
   e.respondWith(
     caches.match(req).then(r => r || fetch(req).then(resp => {
-      const copia = resp.clone();
-      caches.open(CACHE).then(c => c.put(req, copia)).catch(() => {});
+      if (guardable(resp)) {
+        const copia = resp.clone();
+        caches.open(CACHE).then(c => c.put(req, copia)).catch(() => {});
+      }
       return resp;
     }))
   );
