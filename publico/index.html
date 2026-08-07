@@ -1199,7 +1199,7 @@ const EJ = {
     f:[[2,"10","6"],[2,"10","7"],[3,"10","8"]],
     v:"press militar con mancuernas técnica",
     pos:"<b>Los dos brazos a la vez</b>, una mancuerna en cada mano a la altura del hombro.",
-    tip:"Sube sin bloquear del todo el codo y baja controlado. <b>Si te molesta el hombro, usa agarre neutro</b> (palmas mirándose). Una vez por semana hazlo brazo a brazo: con tu pasado de waterpolo conviene comprobar si un lado se queda corto.",
+    tip:"Sube sin bloquear del todo el codo y baja controlado. <b>Si te molesta el hombro, usa agarre neutro</b> (palmas mirándose). Una vez por semana hazlo brazo a brazo: con tu historial de natación conviene comprobar si un lado se queda corto.",
     err:"Arquear la lumbar para ayudarse a subir. Aprieta abdomen y glúteo y desaparece."},
   laterales:{n:"Aperturas laterales", carga:"por mano", r:45, zona:"hombro",
     f:[[2,"12","3"],[2,"15","4"],[3,"15","4"]],
@@ -1552,6 +1552,7 @@ let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
   t0:null, pausadoEn:null, acumPausa:0, latido:null,
+  sesionF:null, sesionDia:null, sesionId:null,   // de que dia es la sesion abierta
   hechos:{}, pesos:{}, marcas:{}, hist:[],
   comidas:{}, pasos:{}, agua:{}, sueno:{}, siesta:{}, animo:{}, syncId:null, syncUlt:null,
   cofre:null, pinFallos:0, cambiadoEn:null,
@@ -1584,6 +1585,16 @@ function hoyISO(d){
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 }
 
+/* La sesion pertenece al dia en que EMPEZO, no a aquel en que la cierras.
+   Entrenar de 23:30 a 00:20 la archivaba en la fecha siguiente y con el nombre
+   de la rutina del dia siguiente; y al recargar pasada la medianoche se
+   descartaba entera, porque para recuperarla exigia que la fecha guardada
+   fuese la de hoy. Una hora de entrenamiento perdida por cambiar de fecha. */
+function fechaSesion(){ return S.sesionF || hoyISO(); }
+function diaSesion(){
+  return (S.sesionDia === null || S.sesionDia === undefined) ? S.dia : S.sesionDia;
+}
+
 /* --- El día y la fase se ponen solos --- */
 function diasDesdeInicio(){
   if(!S.inicio) return 0;
@@ -1598,6 +1609,13 @@ function faseAuto(){
 function aplicarAuto(){
   S.dia  = (S.diaManual  === null || S.diaManual  === undefined) ? new Date().getDay() : S.diaManual;
   S.fase = (S.faseManual === null || S.faseManual === undefined) ? faseAuto()          : S.faseManual;
+  /* Con una sesion abierta manda la sesion, no el calendario: si empezaste el
+     jueves a las 23:30 sigues haciendo la rutina del jueves aunque ya sea
+     viernes. Tiene que estar AQUI y no solo al cargar, porque esta funcion se
+     vuelve a llamar sola —al arrancar y cada vez que cambia el dia con la app
+     abierta— y deshacia el arreglo. */
+  const hayManual = !(S.diaManual === null || S.diaManual === undefined);
+  if(S.t0 && !hayManual && S.sesionDia !== null && S.sesionDia !== undefined) S.dia = S.sesionDia;
 }
 function esManual(){ return S.diaManual !== null || S.faseManual !== null; }
 function cargar(){
@@ -1632,11 +1650,20 @@ function cargar(){
     // Sin fecha de inicio guardada, la deduce de la sesión más antigua.
     if(!S.inicio && S.hist.length) S.inicio = S.hist[S.hist.length-1].f;
     aplicarAuto();
-    if(g.sesion && g.sesion.dia === S.dia && g.sesion.fecha === hoyISO()){
+    /* Recien empezada cuenta aunque la fecha ya no sea la de hoy: es
+       exactamente el caso de la medianoche. La condicion es mas amplia que
+       antes, nunca mas estrecha, asi que no deja de recuperar nada. */
+    const cruzaMedianoche = g.sesion && g.sesion.t0 &&
+      (Date.now() - g.sesion.t0) < 8 * 3600 * 1000;
+    if(g.sesion && ((g.sesion.dia === S.dia && g.sesion.fecha === hoyISO()) || cruzaMedianoche)){
       S.t0 = g.sesion.t0; S.acumPausa = g.sesion.acumPausa || 0;
       S.pausadoEn = g.sesion.pausadoEn || null; S.hechos = g.sesion.hechos || {};
       S.marcas = g.sesion.marcas || {};
       S.latido = g.sesion.latido || null;
+      S.sesionF = g.sesion.fecha || hoyISO();
+      S.sesionDia = (typeof g.sesion.dia === "number") ? g.sesion.dia : S.dia;
+      S.sesionId = g.sesion.sesionId || null;
+      aplicarAuto();   // ahora que se sabe de que dia es la sesion
       // Con la app cerrada no estabas entrenando: ese rato no cuenta en el cronómetro.
       if(S.latido && !S.pausadoEn){
         const fuera = Date.now() - S.latido;
@@ -1648,19 +1675,29 @@ function cargar(){
 cargar();
 aplicarAuto();
 
+/* Cuanto historico se conserva. Estaba en 200 sesiones y 500 mediciones, que
+   entrenando cuatro dias por semana y pesandose a diario se agotan en poco mas
+   de un anyo: a partir de ahi cada guardado tiraba la sesion mas antigua sin
+   avisar, y ademas lo hacia tambien al fusionar, asi que no habia forma de
+   recuperarla. Con estos numeros son mas de diez anyos. La cuenta: una sesion
+   ocupa ~400 bytes y una medicion ~130, o sea 800 KB + 400 KB en el peor caso,
+   holgado frente a los 5 MB de localStorage y a los 2 MB del servidor. */
+const TOPE_HIST = 2000, TOPE_CUERPO = 3000;
+
 function paquete(){
   return {
     v:2, exportado:new Date().toISOString(),
     fase:S.fase, faseManual:S.faseManual, diaManual:S.diaManual, inicio:S.inicio,
     material:S.material,
-    pesos:S.pesos, hist:S.hist.slice(0,200),
-    perfil:S.perfil, cuerpo:S.cuerpo.slice(0,500),
+    pesos:S.pesos, hist:S.hist.slice(0,TOPE_HIST),
+    perfil:S.perfil, cuerpo:S.cuerpo.slice(0,TOPE_CUERPO),
     comidas:S.comidas, pasos:S.pasos, agua:S.agua, sueno:S.sueno, siesta:S.siesta,
     animo:S.animo,
     ts:S.ts || {}, bajas:S.bajas || {},
     syncId:S.syncId, syncUlt:S.syncUlt, cofre:S.cofre, pinFallos:S.pinFallos,
     cambiadoEn:S.cambiadoEn,
-    sesion: S.t0 ? {fecha:hoyISO(), dia:S.dia, t0:S.t0, acumPausa:S.acumPausa,
+    sesion: S.t0 ? {fecha:fechaSesion(), dia:diaSesion(), sesionId:S.sesionId || null,
+                    t0:S.t0, acumPausa:S.acumPausa,
                     pausadoEn:S.pausadoEn, hechos:S.hechos, marcas:S.marcas,
                     latido:S.latido || Date.now()} : null
   };
@@ -2201,10 +2238,25 @@ function marcarSerie(id){
    guardaba nunca: la pantalla final aparecia igual —su condicion es otra— y el
    cuestionario no tenia donde escribir. Una hora de entrenamiento perdida sin
    ningun aviso. Ahora cierran por aqui los dos caminos. */
+/* La entrada del historial que corresponde a la sesion que tienes abierta.
+   Por identificador; por fecha y rutina solo para las de antes de que las
+   sesiones tuvieran identidad propia. */
+function sesionActual(){
+  if(S.sesionId){
+    const x = S.hist.find(h => h.id === S.sesionId);
+    if(x) return x;
+  }
+  return S.hist.find(h => h.f === fechaSesion() && h.d === DIAS[diaSesion()].n) || null;
+}
+
 function cerrarEntreno(){
   barraOff();
   pitido(3);
-  if(S.hist.some(x => x.f === hoyISO() && x.d === DIAS[S.dia].n)) return;
+  /* Que no se guarde dos veces. El guardia era "ya hay una sesion de hoy con
+     esta rutina", que de paso impedia repetir la misma rutina el mismo dia: la
+     segunda no se guardaba y no se avisaba de nada. Ahora cada sesion se
+     identifica a si misma. */
+  if(S.sesionId && S.hist.some(x => x.id === S.sesionId)) return;
   // Foto completa de la sesión: pesos, tiempos por ejercicio y valoraciones.
   const usados = {}, detalle = {};
   listaEj().forEach(x => {
@@ -2212,8 +2264,9 @@ function cerrarEntreno(){
     const hh = S.hechos[x];
     if(hh) detalle[x] = {fin:Math.round(hh.fin || 0), series:hh.series, saltado:!!hh.saltado};
   });
-  S.hist.unshift({id:Date.now(), ts:new Date().toISOString(),
-                  f:hoyISO(), d:DIAS[S.dia].n, seg:Math.round(transcurrido()),
+  S.sesionId = Date.now();
+  S.hist.unshift({id:S.sesionId, ts:new Date().toISOString(),
+                  f:fechaSesion(), d:DIAS[diaSesion()].n, seg:Math.round(transcurrido()),
                   ej:listaEj().length, fase:S.fase+1, rpe:null, molestias:[], nota:"",
                   pesos:usados, marcas:JSON.parse(JSON.stringify(S.marcas)),
                   orden:listaEj().slice(), detalle:detalle,
@@ -2236,6 +2289,7 @@ function empezar(){
   barraOff();
   S.t0 = Date.now(); S.acumPausa = 0; S.pausadoEn = null; S.hechos = {};
   S.marcas = {}; S.ultimoHecho = null; S.latido = Date.now();
+  S.sesionF = hoyISO(); S.sesionDia = S.dia; S.sesionId = null;
   if(!S.inicio) S.inicio = hoyISO();
   guardar(); pitido(1); pintarHoy();
   ajustarCabecera();          // arranca la sesión: el reloj pasa a hacer falta
@@ -2248,7 +2302,7 @@ function pintarFin(){
   if(!S.t0 || siguienteId()) return;
   const ids = listaEj();
   const series = ids.reduce((a,i) => { const p = plan(i); return a + (p ? p.series : 0); }, 0);
-  const ent = S.hist.find(x => x.f === hoyISO() && x.d === DIAS[S.dia].n) || {};
+  const ent = sesionActual() || {};
   // Entradas antiguas o importadas pueden venir incompletas: no deben tumbar la pantalla final.
   if(!Array.isArray(ent.molestias)) ent.molestias = [];
   if(ent.rpe === undefined) ent.rpe = null;
@@ -2266,7 +2320,7 @@ function pintarFin(){
     '</div>';
 
   const guardaEnt = () => {
-    let e2 = S.hist.find(x => x.f === hoyISO() && x.d === DIAS[S.dia].n);
+    let e2 = sesionActual();
     if(e2){
       e2.rpe = ent.rpe; e2.molestias = ent.molestias; e2.nota = ent.nota;
       /* Y su hora: la fusión se queda con la versión más reciente de cada
@@ -2333,6 +2387,7 @@ function pintarFin(){
   b.addEventListener("click", () => {
     guardaEnt(); barraOff();
     S.t0 = null; S.hechos = {}; S.acumPausa = 0; S.pausadoEn = null; S.latido = null;
+    S.sesionF = null; S.sesionDia = null; S.sesionId = null;
     guardar(); pintarHoy(); pintarSemana();
     ajustarCabecera();        // se acabó la sesión: el reloj deja de hacer falta
   });
@@ -3255,7 +3310,7 @@ function fundir(mio, otro){
   r.hist = Object.keys(hs).map(k => hs[k])
     .filter(h => !(bajas[h.id] && masNuevo(bajas[h.id], h.ts)))
     .sort((x, y) => (y.f || "").localeCompare(x.f || ""))
-    .slice(0, 200);
+    .slice(0, TOPE_HIST);
 
   /* Mediciones: una por IDENTIFICADOR, no por dia. Puede haber varias el
      mismo dia —al despertar, despues de entrenar— y son datos distintos.
@@ -3271,7 +3326,7 @@ function fundir(mio, otro){
     .filter(m => !(bajas[m.id] && masNuevo(bajas[m.id], m.ts)))
     .sort((x, y) => ((y.f || "") + "T" + (y.h || "00:00"))
                     .localeCompare((x.f || "") + "T" + (x.h || "00:00")))
-    .slice(0, 500);
+    .slice(0, TOPE_CUERPO);
 
   // Valores sueltos.
   ["pasos","agua","sueno","siesta","animo"].forEach(k => {
@@ -4181,6 +4236,7 @@ $("#btnBorrar").addEventListener("click", () => {
   S.perfil = {altura:"",nacim:"",sexo:"",nivel:"",objetivo:""};
   S.inicio = null; S.faseManual = null; S.diaManual = null;
   S.t0 = null; S.hechos = {}; S.marcas = {}; S.acumPausa = 0; S.pausadoEn = null;
+  S.sesionF = null; S.sesionDia = null; S.sesionId = null;
   S.ultimoHecho = null; S.latido = null;
   S.syncUlt = null; S.cambiadoEn = null;
   guardarSinMarcar();
@@ -5096,6 +5152,7 @@ $("#selDia").addEventListener("change", e => {
   }
   S.diaManual = nuevo;
   S.t0 = null; S.hechos = {}; S.marcas = {}; S.acumPausa = 0; S.pausadoEn = null;
+  S.sesionF = null; S.sesionDia = null; S.sesionId = null;
   aplicarAuto(); barraOff(); guardar(); pintarHoy(); pintarSemana();
 });
 $("#selFase").addEventListener("change", e => {
@@ -5110,6 +5167,7 @@ $("#btnAjustes").addEventListener("click", () => {
 $("#btnAuto").addEventListener("click", () => {
   S.diaManual = null; S.faseManual = null;
   S.t0 = null; S.hechos = {}; S.marcas = {}; S.acumPausa = 0; S.pausadoEn = null;
+  S.sesionF = null; S.sesionDia = null; S.sesionId = null;
   aplicarAuto(); barraOff(); guardar(); pintarHoy(); pintarSemana();
   $("#ajustes").hidden = true;
   $("#btnAjustes").setAttribute("aria-expanded", "false");
