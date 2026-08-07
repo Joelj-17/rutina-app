@@ -1608,6 +1608,15 @@ const EXTRAS = [
    no estabas entrenando. Por debajo de ese margen el reloj sigue, para no
    penalizar que mires un vídeo de técnica durante el descanso. */
 const AUSENCIA = 120000;
+/* Que la fecha exista de verdad, no solo que tenga la pinta. Se comprueba
+   reconstruyendola: si al volver a formatearla no sale la misma cadena, es que
+   el navegador la ha corregido o rechazado. */
+function fechaReal(f){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(f)) return false;
+  const d = new Date(f + "T00:00:00");
+  return !isNaN(d) && hoyISO(d) === f;
+}
+
 function hoyISO(d){
   d = d || new Date();
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
@@ -2335,6 +2344,15 @@ function cerrarEntreno(){
 
 /* Saltar un ejercicio: cuenta como resuelto pero queda marcado como no hecho. */
 function saltarEjercicio(id){
+  /* Con confirmacion. El boton mide 62x38 y va a 8 px del de "Tecnica": a
+     media sesion, con la mano sudada, el dedo se va y el ejercicio se marca
+     saltado al instante. Y no habia vuelta atras: S.hechos solo se vacia
+     entero, y vaciarlo se lleva por delante la sesion empezada. */
+  const e = EJ[id];
+  const SL = String.fromCharCode(10);
+  if(!confirm("¿Saltarte " + ((e && e.n) || "este ejercicio") + "?" + SL + SL +
+              "Quedará marcado como no hecho y no se puede deshacer sin " +
+              "empezar la sesión de nuevo.")) return;
   const p = plan(id);
   S.hechos[id] = {series: p ? p.series : 1, fin: transcurrido(), saltado: true};
   guardar();
@@ -3428,8 +3446,15 @@ function fundir(mio, otro){
     const ha = (a.ts || {})[ruta], hb = (b.ts || {})[ruta];
     const va = (a.perfil || {})[c], vb = (b.perfil || {})[c];
     const gana = masNuevo(ha, hb) ? va : vb;
-    r.perfil[c] = (gana === undefined || gana === null || gana === "")
-      ? (va || vb || "") : gana;
+    /* Vaciar un campo a proposito es una decision suya: S.perfil[campo] guarda
+       "" y sellarCambios sella la ruta. Si al ganar por hora se descartaba el
+       vacio y se recuperaba el valor del otro lado, borrar la fecha de
+       nacimiento no servia de nada: volvia sola en la siguiente fusion. Solo se
+       recurre al otro lado cuando NO hay horas con las que decidir. */
+    const hayHoras = !!(ha || hb);
+    r.perfil[c] = (gana === undefined || gana === null)
+      ? (va || vb || "")
+      : (gana === "" && !hayHoras ? (va || vb || "") : gana);
     const hora = masNuevo(ha, hb) ? ha : hb;
     if(hora) ts[ruta] = hora;
   });
@@ -3860,13 +3885,22 @@ function leerCopias(){
 }
 
 /* Nunca guardamos una copia vacía: taparía las buenas al ir rotando. */
+/* La copia del dia ya hecha, recordada aparte. guardar() esta enganchado a los
+   eventos "input" —el peso de cada ejercicio, la nota final, los pasos, el
+   perfil—, o sea que esto se llamaba UNA VEZ POR TECLA. Y antes de decidir que
+   no habia nada que hacer ya habia armado el paquete entero y parseado las diez
+   copias completas: megabytes por pulsacion en el movil, a media rutina. Ahora
+   el caso normal —"la de hoy ya esta"— se resuelve con una comparacion de
+   cadenas y no toca localStorage. */
+let copiaDelDiaHecha = null;
+
 function copiaSeguridad(motivo){
   try{
+    // Lo barato primero. Este es el 99,9% de las llamadas.
+    if(motivo === "del día" && copiaDelDiaHecha === hoyISO()) return;
     if(!hayAlgoQueAportar()) return;
-    const datos = paraSubir();
-    const r = retrato(datos);
-    const lista = leerCopias();
 
+    const lista = leerCopias();
     /* Una automática por día. Y las de "antes de una operación" tampoco pueden
        ir siempre: cada sincronización pasa por aquí, así que en una tarde de
        uso normal las diez ranuras se llenaban de copias idénticas y el
@@ -3874,11 +3908,19 @@ function copiaSeguridad(motivo){
        seguridad, borrándose sola. Se guarda una como mucho cada 20 minutos. */
     if(motivo === "del día"){
       const hoy = hoyISO();
-      if(lista.some(c => c.motivo === "del día" && (c.f || "").slice(0,10) === hoy)) return;
+      if(lista.some(c => c.motivo === "del día" && (c.f || "").slice(0,10) === hoy)){
+        copiaDelDiaHecha = hoy;      // no volver a mirar en todo el dia
+        return;
+      }
     }else{
       const ultima = lista[0];
       if(ultima && Date.now() - new Date(ultima.f).getTime() < 20*60*1000) return;
     }
+
+    // Solo ahora, que de verdad toca, se paga el precio de armar el paquete.
+    const datos = paraSubir();
+    const r = retrato(datos);
+    if(motivo === "del día") copiaDelDiaHecha = hoyISO();
     lista.unshift({f:new Date().toISOString(), motivo:motivo, r:r, datos:datos});
 
     // Si el almacén se queja, vamos soltando las más viejas antes de rendirnos.
@@ -5004,7 +5046,19 @@ $("#mAdd").addEventListener("click", () => {
 $("#comAyer").addEventListener("click", () => {
   if(comDia !== hoyISO()){ comDia = hoyISO(); pintarComida(); return; }
   const f = prompt("¿Qué día quieres ver? (AAAA-MM-DD)", hoyISO());
-  if(f && /^\d{4}-\d{2}-\d{2}$/.test(f)){ comDia = f; pintarComida(); }
+  if(f === null) return;                     // le ha dado a cancelar
+  /* El formato no basta: "2026-13-01" y "2026-02-30" lo cumplen y no existen.
+     Con una de esas, new Date da Invalid Date, DIAS[NaN] es undefined y
+     pintarComida reventaba a media pantalla —el titulo ya escrito con la fecha
+     inventada y el resto congelado en el dia anterior—, y a partir de ahi
+     fallaba en cada llamada. Peor: apuntar comida en ese estado SI guardaba, en
+     un dia fantasma que la app no iba a enseñar nunca. */
+  if(!fechaReal(f)){
+    aviso("Ese día no existe. Escríbelo como 2026-08-07.", true);
+    return;
+  }
+  if(f > hoyISO()){ aviso("Ese día todavía no ha llegado.", true); return; }
+  comDia = f; pintarComida();
 });
 
 /* ============ PORTADA: el diario de hoy ============ */
