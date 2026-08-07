@@ -125,6 +125,10 @@ textarea{width:100%;resize:vertical;min-height:64px;line-height:1.45}
 /* ---- Comida: navegar por dias ---- */
 .navDia{display:flex;gap:8px;align-items:center;margin-bottom:10px}
 .navDia .bt{padding:9px 12px}
+/* Que un boton que no hace nada SE VEA que no hace nada. Estando en hoy, la
+   flecha de siguiente seguia igual que la otra y al tocarla no pasaba nada:
+   a una mano y sudando eso se lee como que la app se ha colgado. */
+.navDia .bt:disabled{opacity:.35}
 .navDia #comAnt,.navDia #comSig{flex:0 0 auto;font-size:1.05rem;line-height:1}
 .navDia input[type=date]{flex:1;min-width:0;padding:9px 11px;border-radius:9px;
   border:1px solid var(--linea);background:var(--panel);color:var(--tinta);
@@ -1701,7 +1705,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-08 · 27";
+const VERSION = "2026-08-08 · 28";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -2387,6 +2391,7 @@ function pintarHoy(){
     const e = EJ[id], p = plan(id), hecho = estaHecho(id), activo = true, h = S.hechos[id];
     const card = document.createElement("section");
     card.className = "ej" + (activo ? " activo" : "") + (hecho ? " listo" : "");
+    card.dataset.ej = id;
     const conPeso = !e.bloque && p.peso !== "—" && p.peso !== "sin peso";
     const dg = desglose(id);
     const sub = e.bloque ? e.dur + " · " + e.d.split(" · ")[0] + "…"
@@ -2725,7 +2730,13 @@ function marcarSerie(id){
   if(S.pausadoEn){ S.acumPausa += Date.now() - S.pausadoEn; S.pausadoEn = null; }
   const e = EJ[id], p = plan(id);
   // Guarda el peso aunque no lo hayas tocado: el sugerido también es un dato.
-  const campoPeso = document.querySelector(".ej.activo .peso");
+  /* De la tarjeta de ESTE ejercicio, no de "la que este activa". Cuando la
+     tarjeta activa era por construccion la del ejercicio que se marcaba daba
+     igual; ahora es la que estas MIRANDO, y correrTiempo llama aqui decenas de
+     segundos despues desde su temporizador: si mientras tanto habias cambiado
+     de tarjeta, el peso del ejercicio cronometrado se guardaba con el numero
+     del campo de otro. */
+  const campoPeso = document.querySelector('.ej[data-ej="' + id + '"] .peso');
   if(campoPeso && campoPeso.value.trim()) S.pesos[id+"|"+S.fase] = campoPeso.value.trim();
   const h = S.hechos[id] || {series:0, fin:null};
   h.series++;
@@ -5465,7 +5476,9 @@ function pintarComida(){
   // Los botones de dia: no dejar pasar del dia de hoy.
   $("#comFechaSel").value = comDia;
   $("#comFechaSel").max = hoyISO();
+  $("#comFechaSel").min = primerDiaComida();
   $("#comSig").disabled = esHoy;
+  $("#comAnt").disabled = comDia <= primerDiaComida();
   $("#comHoy").hidden = esHoy;
 
   /* Si NO estas en hoy hay que decirlo bien claro, porque lo que apuntes ira a
@@ -5679,18 +5692,37 @@ $("#mAdd").addEventListener("click", () => {
 /* Ir a un dia: por los botones, por el calendario del movil o tocando el
    historial. El prompt de teclear "2026-08-07" a mano se queda fuera. */
 function irADiaComida(f){
-  if(!fechaReal(f)){ aviso("Ese día no existe.", true); return; }
-  if(f > hoyISO()){ aviso("Ese día todavía no ha llegado.", true); return; }
+  /* Si se rechaza hay que REPINTAR igual: el selector se quedaba mostrando la
+     fecha rechazada mientras el titulo seguia en la buena, y lo que apuntases
+     iba a la del titulo. Dos fechas distintas en la misma pantalla. */
+  if(!fechaReal(f)){ aviso("Ese día no existe.", true); pintarComida(); return; }
+  if(f > hoyISO()){ aviso("Ese día todavía no ha llegado.", true); pintarComida(); return; }
+  if(f < primerDiaComida()){
+    aviso("No hay nada anotado antes de esa fecha.", true); pintarComida(); return;
+  }
   comDia = f;
   pintarComida();
-  $("#p-comida").scrollIntoView({block:"start"});
+  subirALaVista($("#p-comida"));
+}
+
+/* Hasta donde tiene sentido retroceder: el dia mas antiguo del que se sabe
+   algo, o un anyo atras. Sin tope se podia seguir hacia atras indefinidamente
+   por dias vacios sin que nada lo indicara. */
+function primerDiaComida(){
+  const dias = Object.keys(S.comidas || {}).filter(f => comidasDe(f).length);
+  (S.hist || []).forEach(h => { if(h.f) dias.push(h.f); });
+  (S.cuerpo || []).forEach(m => { if(m.f) dias.push(m.f); });
+  if(S.inicio) dias.push(S.inicio);
+  // El respaldo SOLO si no hay ningun dato: metiendolo en la lista ganaba
+  // siempre el, porque es el mas antiguo, y el tope no servia de nada.
+  if(dias.length) return dias.sort()[0];
+  const hace1 = new Date(); hace1.setFullYear(hace1.getFullYear() - 1);
+  return hoyISO(hace1);
 }
 function moverDiaComida(paso){
   const d = new Date(comDia + "T12:00:00");
   d.setDate(d.getDate() + paso);
-  const f = hoyISO(d);
-  if(f > hoyISO()){ aviso("Ese día todavía no ha llegado.", true); return; }
-  irADiaComida(f);
+  irADiaComida(hoyISO(d));
 }
 $("#comAnt").addEventListener("click", () => moverDiaComida(-1));
 $("#comSig").addEventListener("click", () => moverDiaComida(1));
@@ -5827,10 +5859,16 @@ function pintarMapa(){
 }
 
 /* Solo hay fecha corta en un par de sitios; no merece una función mayor. */
+/* Con el anyo si NO es el de ahora. Sin el, un dia de 2024 se lee igual que uno
+   de esta semana — y con el calendario del movil llegar alli es un gesto. El
+   aviso de "estas en el 7 de agosto", que existe justamente para que no apuntes
+   en el dia equivocado, decia lo mismo para dos fechas distintas. */
 function fechaCorta(iso){
   if(!iso) return "—";
-  const p = iso.split("-");
-  return Number(p[2]) + " de " + MESES[Number(p[1]) - 1];
+  const p = String(iso).split("-");
+  const dia = Number(p[2]), mes = MESES[Number(p[1]) - 1], anyo = Number(p[0]);
+  const txt = dia + " de " + mes;
+  return anyo === new Date().getFullYear() ? txt : txt + " de " + anyo;
 }
 
 function pintarInicio(){
