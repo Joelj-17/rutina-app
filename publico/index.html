@@ -155,9 +155,27 @@ textarea{width:100%;resize:vertical;min-height:64px;line-height:1.45}
 .tiraCab b{font-family:var(--mono);font-size:.92rem}
 .tiraCab span{font-size:.74rem;color:var(--acero)}
 /* Los puntos son la unica forma de ver de un vistazo cuanto queda cuando solo
-   hay una tarjeta en pantalla. Se desbordan a lo ancho con scroll propio, que
-   con 18 ejercicios no caben en 375 px. */
-.tiraPuntos{display:flex;gap:5px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+   hay una tarjeta en pantalla. Con 17 ejercicios no caben en 375 px, asi que la
+   tira se arrastra a lo ancho.
+   Sin barra de scroll: no aporta nada —se arrastra con el dedo— y ensucia una
+   fila que es puro indicador. Y solo a lo ancho: "overflow-x:auto" convierte el
+   vertical en "auto" por su cuenta, y ahi no hay nada que desplazar. */
+.tiraPuntos{display:flex;gap:5px;overflow-x:auto;overflow-y:hidden;padding-bottom:2px;
+            -webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;
+            scroll-behavior:auto}
+.tiraPuntos::-webkit-scrollbar{display:none}
+/* Un difuminado en los bordes para que se vea que la fila sigue: quitada la
+   barra, era lo unico que lo decia. */
+.tiraEnv{position:relative}
+/* Solo en el lado donde de verdad sigue habiendo puntos. Puesto siempre,
+   apagaba el primer punto estando al principio de la fila, que es cuando no hay
+   nada escondido a la izquierda. */
+.tiraEnv::before,.tiraEnv::after{content:"";position:absolute;top:0;bottom:0;width:16px;
+  pointer-events:none;z-index:1;opacity:0;transition:opacity .15s ease}
+.tiraEnv::before{left:0;background:linear-gradient(to right,var(--panel),transparent)}
+.tiraEnv::after{right:0;background:linear-gradient(to left,var(--panel),transparent)}
+.tiraEnv.hayIzq::before{opacity:1}
+.tiraEnv.hayDer::after{opacity:1}
 .tp{flex:0 0 auto;width:26px;height:26px;border-radius:99px;border:1px solid var(--linea);
     background:transparent;color:var(--acero);font-family:var(--mono);font-size:.7rem;
     font-weight:700;display:grid;place-items:center;position:relative}
@@ -1705,7 +1723,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-08 · 28";
+const VERSION = "2026-08-08 · 29";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -2370,6 +2388,8 @@ function pintarHoy(){
     cab.innerHTML = '<b>' + (ids.indexOf(focoId)+1) + ' de ' + ids.length + '</b>' +
       '<span>' + ids.filter(estaHecho).length + ' hechos</span>';
     tira.appendChild(cab);
+    const env = document.createElement("div");
+    env.className = "tiraEnv";
     const puntos = document.createElement("div");
     puntos.className = "tiraPuntos";
     ids.forEach((x, k) => {
@@ -2382,8 +2402,24 @@ function pintarHoy(){
       b2.addEventListener("click", () => irAEjercicio(x));
       puntos.appendChild(b2);
     });
-    tira.appendChild(puntos);
+    env.appendChild(puntos);
+    tira.appendChild(env);
     cont.appendChild(tira);
+    /* Traer el punto en el que estas al centro de la fila. Sin esto, pasado el
+       septimo ejercicio el indicador se queda fuera de la parte visible y la
+       tira deja de decirte donde estas, que es para lo unico que existe. */
+    const aqui = puntos.querySelector(".tp.aqui");
+    if(aqui){
+      const dest = aqui.offsetLeft - (puntos.clientWidth - aqui.offsetWidth) / 2;
+      puntos.scrollLeft = Math.max(0, dest);
+    }
+    const bordes = () => {
+      env.classList.toggle("hayIzq", puntos.scrollLeft > 2);
+      env.classList.toggle("hayDer",
+        puntos.scrollLeft + puntos.clientWidth < puntos.scrollWidth - 2);
+    };
+    puntos.addEventListener("scroll", bordes, {passive:true});
+    bordes();
   }
 
   [focoId].filter(Boolean).forEach(id => {
