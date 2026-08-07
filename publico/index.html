@@ -245,6 +245,11 @@ svg.esq{width:100%;max-width:340px;height:108px;color:var(--tinta);display:block
 .heroT .delta.baja{color:var(--hecho)} .heroT .delta.sube{color:var(--descanso)}
 .heroT .delta.igual{color:var(--acero)}
 .heroT .desde{font-size:.7rem;color:var(--acero);display:block;font-weight:400;font-family:var(--ui)}
+.heroT .quees{font-size:.62rem;text-transform:uppercase;letter-spacing:.07em;color:var(--acero);
+  font-weight:700;display:block;margin:-3px 0 3px}
+.heroT .ultmed{font-size:.71rem;color:var(--acero);display:block;font-weight:400;font-family:var(--ui);
+  margin-top:6px;padding-top:6px;border-top:1px solid var(--linea-2);line-height:1.35}
+.heroT .ultmed b{font-family:var(--mono);color:var(--tinta-2);font-weight:700}
 
 .progT{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r);
        padding:15px 17px;box-shadow:var(--sombra);margin-bottom:10px}
@@ -1542,7 +1547,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-07 · 20";
+const VERSION = "2026-08-07 · 21";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -2487,6 +2492,7 @@ $("#cGuardar").addEventListener("click", () => {
   $("#cPeso").value = ""; $("#cCintura").value = ""; $("#cNota").value = "";
   $("#cHora").value = horaAhora();
   pintarCuerpo(); pintarPerfil(); pintarInicio();
+  mostrarEnGrafica(peso != null ? "peso" : cintura != null ? "cintura" : "", f);
   aviso("Medición guardada.");
 });
 
@@ -2494,6 +2500,14 @@ $("#cGuardar").addEventListener("click", () => {
 /* La medida de REFERENCIA de un dia: la de al despertar en ayunas si la hay,
    y si no, la mas temprana. Es la unica comparable de un dia a otro, porque
    es la unica tomada siempre en las mismas condiciones. */
+/* La ultima medida apuntada de un dia, sea o no la de referencia. Es la que
+   acabas de meter, y por tanto la que esperas ver reflejada en alguna parte. */
+function ultimaDelDia(p){
+  return [{v:p.v, h:p.hora, momento:p.momento, ref:true}]
+    .concat((p.otras || []).map(o => ({v:o.v, h:o.h, momento:o.momento, ref:false})))
+    .sort((a, b) => (a.h || "").localeCompare(b.h || "")).pop();
+}
+
 function refDelDia(lista){
   const ayunas = lista.filter(x => x.momento === "despertar");
   return (ayunas.length ? ayunas : lista).slice()
@@ -2551,7 +2565,7 @@ function escalaBonita(min, max, decimales){
   const hasta = Math.ceil(max / paso) * paso;
   const cortes = [];
   for(let v = desde; v <= hasta + paso/100; v += paso) cortes.push(Number(v.toFixed(6)));
-  return {desde:desde, hasta:hasta, cortes:cortes};
+  return {desde:desde, hasta:hasta, cortes:cortes, paso:paso};
 }
 
 function miniGrafica(campo, titulo, unidad, decimales){
@@ -2592,11 +2606,23 @@ function miniGrafica(campo, titulo, unidad, decimales){
       'fill="var(--acero)" font-family="ui-monospace,monospace">' +
       v.toFixed(decimales) + '</text>').join("");
 
-  /* Las otras pesadas del día: puntos pequeños sobre la misma vertical, sin
-     línea, para que no compitan con la tendencia. */
+  /* La oscilación del día: una barra vertical suave de la medida más baja a la
+     más alta de esa fecha. Sin ella, apuntar una pesada nueva no cambiaba nada
+     visible —un punto al 45% no es una respuesta— y parecía que no se guardaba. */
+  const rangos = d.map((x,i) => {
+    const delDia = [x.v].concat((x.otras || []).map(o => o.v));
+    if(delDia.length < 2) return "";
+    const lo = Math.min.apply(null, delDia), hi = Math.max.apply(null, delDia);
+    return '<line x1="' + px(i).toFixed(1) + '" y1="' + py(hi).toFixed(1) + '" x2="' +
+      px(i).toFixed(1) + '" y2="' + py(lo).toFixed(1) + '" stroke="var(--agua)" ' +
+      'stroke-width="5" stroke-linecap="round" opacity=".2"/>';
+  }).join("");
+
+  /* Las otras pesadas del día: puntos sobre la misma vertical, sin línea, para
+     que no compitan con la tendencia pero se vean. */
   const sueltos = d.map((x,i) => (x.otras || []).map(o =>
-    '<circle cx="' + px(i).toFixed(1) + '" cy="' + py(o.v).toFixed(1) + '" r="2.8" ' +
-    'fill="var(--agua)" opacity=".45"/>').join("")).join("");
+    '<circle cx="' + px(i).toFixed(1) + '" cy="' + py(o.v).toFixed(1) + '" r="2.7" ' +
+    'fill="var(--agua)" opacity=".75"/>').join("")).join("");
 
   const puntos = d.map((x,i) =>
     '<circle cx="' + px(i).toFixed(1) + '" cy="' + py(x.v).toFixed(1) + '" r="3.6" ' +
@@ -2606,8 +2632,12 @@ function miniGrafica(campo, titulo, unidad, decimales){
      cada punto es ruido, no información. */
   const ult = d[d.length-1];
   /* Separadas del punto lo suficiente para no rozar los numeros de la escala,
-     que viven a la misma altura al otro lado. */
+     que viven a la misma altura al otro lado. Y si el punto cae justo SOBRE una
+     linea de la escala, su numero ya esta escrito ahi: repetirlo deja la misma
+     cifra dos veces a dos dedos de distancia, que se lee como un error. */
+  const enLaEscala = v => esc.cortes.some(c => Math.abs(c - v) < esc.paso / 100);
   const etiqueta = (i, anclaje) =>
+    enLaEscala(d[i].v) ? "" :
     '<text x="' + (px(i) + (anclaje === "end" ? -8 : 6)).toFixed(1) + '" y="' +
       (py(d[i].v) - 11).toFixed(1) + '" font-size="10.5" font-weight="700" ' +
       'text-anchor="' + (anclaje === "end" ? "end" : "start") + '" ' +
@@ -2632,6 +2662,7 @@ function miniGrafica(campo, titulo, unidad, decimales){
       ' entre el ' + d[0].f + ' y el ' + ult.f + '">' +
       rejilla +
       '<path d="' + area + '" fill="var(--agua)" opacity=".08"/>' +
+      rangos +
       '<path d="' + linea + '" fill="none" stroke="var(--agua)" stroke-width="2" ' +
         'stroke-linejoin="round" stroke-linecap="round"/>' +
       '<line class="cruz" x1="0" y1="0" x2="0" y2="' + (H-abajo) + '" ' +
@@ -2698,6 +2729,13 @@ function conectarGraficas(){
       salida.hidden = false;
     };
 
+    /* Para poder abrir un dia desde fuera: al apuntar una medida se abre sola
+       la de ese dia, que es la prueba de que ha entrado. */
+    caja.__abrirFecha = fecha => {
+      const i = datos.findIndex(x => x.f === fecha);
+      if(i >= 0) marcar(i);
+    };
+
     const desdeEvento = e => {
       const r = svg.getBoundingClientRect();
       const rel = (e.clientX - r.left) / r.width * 300;   // al sistema del viewBox
@@ -2724,6 +2762,17 @@ function conectarGraficas(){
   });
 }
 
+/* El formulario esta debajo de la grafica, asi que al guardar la grafica queda
+   fuera de la pantalla y parece que no ha pasado nada. Se sube hasta ella y se
+   abre el dia recien apuntado, con todas sus medidas. */
+function mostrarEnGrafica(campo, f){
+  if(!campo) return;
+  const caja = document.querySelector('.mini[data-graf="' + campo + '"]');
+  if(!caja) return;
+  if(caja.__abrirFecha) caja.__abrirFecha(f);
+  caja.scrollIntoView({block:"center"});
+}
+
 function pintarCuerpo(){
   const pes = serie("peso"), cin = serie("cintura");
   const alt = num(S.perfil.altura);
@@ -2738,11 +2787,25 @@ function pintarCuerpo(){
     const cls = arr.length < 2 ? "igual" : dif < 0 ? "baja" : dif > 0 ? "sube" : "igual";
     const txt = arr.length < 2 ? "Primera medición"
       : (dif > 0 ? "▲ +" : dif < 0 ? "▼ " : "= ") + dif.toFixed(dec) + " " + ud;
+
+    /* El numero grande es la medida de REFERENCIA del ultimo dia, que es la
+       unica comparable con la de los dias anteriores. Pero si ese dia hay
+       alguna posterior hay que ensenarla: si no, apuntas una pesada de la
+       noche y la pantalla se queda igual, como si no hubiera entrado. */
+    const p = arr[arr.length-1];
+    const ult = ultimaDelDia(p);
+    const quees = p.momento === "despertar" ? '<span class="quees">en ayunas</span>' : "";
+    const ultmed = ult.ref ? "" :
+      '<span class="ultmed">Última: <b>' + ult.v.toFixed(dec) + " " + ud + '</b>' +
+      (ult.h ? " · " + esc(ult.h) : "") +
+      (MOMENTOS_CORTO[ult.momento] ? " " + MOMENTOS_CORTO[ult.momento] : "") + '</span>';
+
     return '<div class="heroT"><div class="et">' + et + '</div>' +
-      '<div class="val">' + ahora.toFixed(dec) + ' <small>' + ud + '</small></div>' +
+      '<div class="val">' + ahora.toFixed(dec) + ' <small>' + ud + '</small></div>' + quees +
       '<div class="delta ' + cls + '">' + txt +
-      '<span class="desde">' + (arr.length < 2 ? "el " + arr[0].f : "desde el " + arr[0].f) +
-      '</span></div></div>';
+      '<span class="desde">' + (arr.length < 2 ? "el " + fechaCorta(arr[0].f)
+                                             : "desde el " + fechaCorta(arr[0].f)) +
+      '</span></div>' + ultmed + '</div>';
   };
   $("#heroCuerpo").innerHTML = '<div class="hero">' +
     tile("Peso", pes, "kg", 2) + tile("Cintura", cin, "cm", 0) + '</div>';
