@@ -855,7 +855,7 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
           <option value="noche">Por la noche</option>
         </select></div>
       <div class="campo"><label for="cPeso">Peso (kg)</label>
-        <input id="cPeso" type="number" inputmode="decimal" step="0.1" min="30" max="250" placeholder="98"></div>
+        <input id="cPeso" type="number" inputmode="decimal" step="0.01" min="30" max="250" placeholder="93,70"></div>
       <div class="campo"><label for="cCintura">Cintura (cm)</label>
         <input id="cCintura" type="number" inputmode="decimal" step="0.5" min="40" max="200" placeholder="104"></div>
     </div>
@@ -1524,7 +1524,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-06 · 17";
+const VERSION = "2026-08-07 · 18";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -2350,7 +2350,9 @@ function ultimoPeso(){
   if(!c.length) return null;
   const dia = c[0].f;
   const delDia = c.filter(x => x.f === dia).map(x => x.peso);
-  return Math.round(delDia.reduce((a,b) => a+b, 0) / delDia.length * 10) / 10;
+  // A centesimas: la bascula da 94,35 y redondear a 94,4 se come justo la
+   // parte donde se ve el cambio de un dia para otro.
+  return Math.round(delDia.reduce((a,b) => a+b, 0) / delDia.length * 100) / 100;
 }
 function pintarPerfil(){
   $("#pAltura").value   = S.perfil.altura || "";
@@ -2551,7 +2553,7 @@ function pintarCuerpo(){
       '</span></div></div>';
   };
   $("#heroCuerpo").innerHTML = '<div class="hero">' +
-    tile("Peso", pes, "kg", 1) + tile("Cintura", cin, "cm", 0) + '</div>';
+    tile("Peso", pes, "kg", 2) + tile("Cintura", cin, "cm", 0) + '</div>';
 
   /* --- Cuánto queda hasta la diana de cintura --- */
   let prog = "";
@@ -2572,7 +2574,7 @@ function pintarCuerpo(){
 
   /* --- Evolución: una gráfica por medida, cada una con su escala --- */
   $("#graficasCuerpo").innerHTML = '<div class="gemelas">' +
-    miniGrafica("peso", "Peso", "kg", 1) + miniGrafica("cintura", "Cintura", "cm", 0) + '</div>';
+    miniGrafica("peso", "Peso", "kg", 2) + miniGrafica("cintura", "Cintura", "cm", 0) + '</div>';
 
   /* --- Dónde caes en la escala cintura/altura --- */
   let ind = "";
@@ -2604,7 +2606,7 @@ function pintarCuerpo(){
     ? S.cuerpo.slice(0,40).map((c, i) =>
         '<div class="hfila"><div class="lin1"><span class="hf">' + esc(fechaCorta(c.f)) +
         (c.h ? " · " + esc(c.h) : "") + '</span>' +
-        '<b>' + (c.peso != null ? c.peso.toFixed(1) + " kg" : "—") + '</b>' +
+        '<b>' + (c.peso != null ? c.peso.toFixed(2) + " kg" : "—") + '</b>' +
         '<span class="hf">' + (c.cintura != null ? "cintura " + c.cintura + " cm" : "") + '</span>' +
         '<button class="quitarMed" data-med="' + i + '" aria-label="Quitar esta medición">✕</button>' +
         '</div>' +
@@ -4044,7 +4046,7 @@ function pintarDiario(){
         '</span><span>' + Math.round(c.kcal) + ' kcal · ' + Math.round(c.prot) + ' g</span></div>').join("");
     }
     if(med) det += '<h5>Medición</h5><div class="comidaL"><span style="color:var(--tinta);font-family:var(--ui)">' +
-      (med.peso != null ? med.peso.toFixed(1) + " kg" : "—") +
+      (med.peso != null ? med.peso.toFixed(2) + " kg" : "—") +
       (med.cintura != null ? " · cintura " + med.cintura + " cm" : "") + '</span></div>' +
       (med.nota ? '<p style="font-size:.82rem;color:var(--acero);margin:6px 0 0">' + esc(med.nota) + '</p>' : "");
     if(!det) det = '<p style="font-size:.84rem;color:var(--acero);margin:12px 0 0">Solo registros del día, sin sesión ni comidas apuntadas.</p>';
@@ -4630,7 +4632,7 @@ function pintarMapa(){
      v:(S.pasos[f] ? S.pasos[f].toLocaleString("es-ES") : "—"), ok:!!S.pasos[f]},
     {t:"cuerpo", ic:"📏", n:"Cuerpo",
      e:ultMed ? "Última medida el " + fechaCorta(ultMed.f) : "Sin ninguna medida",
-     v:pes != null ? pes + " kg" : "—"},
+     v:pes != null ? pes.toFixed(2) + " kg" : "—"},
     {t:"diario", ic:"📅", n:"Diario",
      e:S.hist.length ? "Todo lo registrado, día a día" : "Aquí se irá guardando cada día",
      v:S.hist.length ? S.hist.length + (S.hist.length === 1 ? " sesión" : " sesiones") : ""}
