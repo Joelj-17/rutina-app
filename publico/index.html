@@ -2239,7 +2239,9 @@ $("#btnPausa").addEventListener("click", () => {
 /* Cómo terminaste este ejercicio la última vez que lo hiciste. */
 function ultimaMarca(id){
   for(const h of S.hist){
-    if(h.marcas && h.marcas[id]) return h.marcas[id];
+    // Las vacias no cuentan: si no, un dia en que solo miraste el ejercicio
+    // tapa el consejo del dia en que si lo apuntaste.
+    if(h.marcas && h.marcas[id] && !marcaVacia(h.marcas[id])) return h.marcas[id];
     if(h.esfuerzo && h.esfuerzo[id]) return {esf:h.esfuerzo[id]};   // sesiones antiguas
   }
   return null;
@@ -2290,13 +2292,21 @@ function moverFoco(paso){
 }
 
 /* Las repeticiones que TOCABAN, para dejarlas puestas y que confirmar sea un
-   toque. De "12 por brazo" salen 12; de "10-12", 12. */
+   toque. De "12 por brazo" salen 12; de "10-12", 12 (el alto del rango).
+
+   Se lee el numero DEL PRINCIPIO, no el ultimo. Cogiendo el ultimo, "15 ·
+   bajada 3 s + pausa" —la sentadilla goblet de fase 3, cuatro dias por
+   semana— se apuntaba como 3 repeticiones, y "5 negativas o 3 completas"
+   como 3. Y ese numero no se enseña para confirmarlo: se escribe directo en
+   el registro. */
 function repesObjetivo(id){
   const p = plan(id);
   if(!p || !p.reps) return null;
-  const nums = String(p.reps).match(/\d+/g);
-  if(!nums || !nums.length) return null;
-  return Number(nums[nums.length-1]);
+  const txt = String(p.reps).trim();
+  const rango = /^(\d+)\s*[-–]\s*(\d+)/.exec(txt);
+  if(rango) return Number(rango[2]);
+  const uno = /^(\d+)/.exec(txt);
+  return uno ? Number(uno[1]) : null;
 }
 
 function pintarHoy(){
@@ -2389,7 +2399,7 @@ function pintarHoy(){
         b.className = "opt"; b.textContent = x.t; b.title = x.ayuda;
         b.setAttribute("aria-pressed", String(m.esf === x.v));
         b.addEventListener("click", () => {
-          m.esf = (m.esf === x.v) ? null : x.v; guardar(); pintarHoy();
+          m.esf = (m.esf === x.v) ? null : x.v; guardarMarca(); pintarHoy();
         });
         ops.appendChild(b);
       });
@@ -2406,7 +2416,7 @@ function pintarHoy(){
         b.className = "opt chico" + (x.k === "molestia" ? " dolor" : "");
         b.textContent = x.t; b.title = x.ayuda;
         b.setAttribute("aria-pressed", String(!!m[x.k]));
-        b.addEventListener("click", () => { m[x.k] = !m[x.k]; guardar(); pintarHoy(); });
+        b.addEventListener("click", () => { m[x.k] = !m[x.k]; guardarMarca(); pintarHoy(); });
         ops2.appendChild(b);
       });
       val.appendChild(ops2);
@@ -2428,7 +2438,7 @@ function pintarHoy(){
           b.addEventListener("click", () => {
             const k = m.zonas.indexOf(z);
             if(k >= 0) m.zonas.splice(k, 1); else m.zonas.push(z);
-            guardar(); pintarHoy();
+            guardarMarca(); pintarHoy();
           });
           opz.appendChild(b);
         });
@@ -2439,7 +2449,7 @@ function pintarHoy(){
         otra.placeholder = "Otra zona, o descríbelo con tus palabras";
         otra.setAttribute("aria-label", "Dónde te ha molestado, escrito a mano");
         otra.value = m.zonaOtra;
-        otra.addEventListener("input", () => { m.zonaOtra = otra.value; guardar(); });
+        otra.addEventListener("input", () => { m.zonaOtra = otra.value; guardarMarca(); });
         val.appendChild(otra);
 
         const av = document.createElement("div");
@@ -2467,7 +2477,7 @@ function pintarHoy(){
       ta.placeholder = "La mancuerna se resbalaba, el banco estaba bajo…";
       ta.setAttribute("aria-label", "Observaciones sobre " + e.n);
       ta.value = m.nota;
-      ta.addEventListener("input", () => { m.nota = ta.value; guardar(); });
+      ta.addEventListener("input", () => { m.nota = ta.value; guardarMarca(); });
       val.appendChild(ta);
 
       card.appendChild(val);
@@ -2550,7 +2560,7 @@ function pintarHoy(){
             mas.setAttribute("aria-label", "Una repetición más en la serie " + s);
             const pon = d => {
               const v = Math.max(0, Math.min(999, (val() == null ? (repesObjetivo(id) || 0) : val()) + d));
-              marcaEj.reps[s-1] = v; num.textContent = v; guardar();
+              marcaEj.reps[s-1] = v; num.textContent = v; guardarMarca();
             };
             menos.addEventListener("click", () => pon(-1));
             mas.addEventListener("click", () => pon(1));
@@ -2683,7 +2693,10 @@ function pintarHoy(){
 }
 
 function marcarSerie(id){
-  if(!S.t0) empezar();
+  /* empezar() pone S.foco a null para ir al primero pendiente. Llamandolo
+     desde aqui te sacaba del ejercicio que acabas de tocar y te devolvia al
+     calentamiento en el mismo gesto. */
+  if(!S.t0){ empezar(); S.foco = id; }
   if(S.pausadoEn){ S.acumPausa += Date.now() - S.pausadoEn; S.pausadoEn = null; }
   const e = EJ[id], p = plan(id);
   // Guarda el peso aunque no lo hayas tocado: el sugerido también es un dato.
@@ -2743,12 +2756,51 @@ function marcarSerie(id){
 /* La entrada del historial que corresponde a la sesion que tienes abierta.
    Por identificador; por fecha y rutina solo para las de antes de que las
    sesiones tuvieran identidad propia. */
+/* Tras cerrarEntreno la sesion YA esta en el historico, pero el panel de
+   valorar sigue en pantalla y ahora se puede volver a cualquier ejercicio. Lo
+   que se apunte a partir de ahi tiene que ir tambien a la entrada archivada, o
+   sencillamente no existe: cerrarEntreno hace una copia congelada de S.marcas
+   y al pulsar "Cerrar y empezar otra" S.marcas se tira.
+   Era el fallo que dejaba en nada la funcion que acabo de anyadir: podias
+   corregir la valoracion, se veia corregida, y no se guardaba. */
+function guardarMarca(){
+  const e2 = (typeof sesionActual === "function") ? sesionActual() : null;
+  if(e2){
+    e2.marcas = marcasUtiles();
+    // Su hora, o la fusion se queda con la version sin corregir del otro aparato.
+    e2.ts = new Date().toISOString();
+  }
+  guardar();
+}
+
+/* Una marca en la que no has apuntado NADA. marcaDe() se llama en cada
+   repintado, asi que basta con mirar un ejercicio para que exista; si esas se
+   archivan, ultimaMarca() encuentra una vacia y el consejo de la proxima vez
+   desaparece. */
+function marcaVacia(m){
+  if(!m) return true;
+  if(m.esf || m.tecnica || m.molestia || m.repes || m.forzado) return false;
+  if((m.reps || []).some(x => x != null)) return false;
+  if((m.zonas || []).length) return false;
+  if((m.zonaOtra || "").trim() || (m.nota || "").trim()) return false;
+  return true;
+}
+
 function sesionActual(){
   if(S.sesionId){
     const x = S.hist.find(h => h.id === S.sesionId);
     if(x) return x;
   }
   return S.hist.find(h => h.f === fechaSesion() && h.d === DIAS[diaSesion()].n) || null;
+}
+
+/* Solo las marcas con algo apuntado. */
+function marcasUtiles(){
+  const q = {};
+  Object.keys(S.marcas || {}).forEach(k => {
+    if(!marcaVacia(S.marcas[k])) q[k] = JSON.parse(JSON.stringify(S.marcas[k]));
+  });
+  return q;
 }
 
 function cerrarEntreno(){
@@ -2770,7 +2822,7 @@ function cerrarEntreno(){
   S.hist.unshift({id:S.sesionId, ts:new Date().toISOString(),
                   f:fechaSesion(), d:DIAS[diaSesion()].n, seg:Math.round(transcurrido()),
                   ej:listaEj().length, fase:S.fase+1, rpe:null, molestias:[], nota:"",
-                  pesos:usados, marcas:JSON.parse(JSON.stringify(S.marcas)),
+                  pesos:usados, marcas:marcasUtiles(),
                   orden:listaEj().slice(), detalle:detalle,
                   saltados:Object.keys(S.hechos).filter(k => S.hechos[k].saltado)});
   guardar(); syncAuto();
@@ -2778,6 +2830,11 @@ function cerrarEntreno(){
 
 /* Saltar un ejercicio: cuenta como resuelto pero queda marcado como no hecho. */
 function saltarEjercicio(id){
+  /* Sin sesion abierta, S.hechos no se serializa —paquete() solo lo guarda
+     dentro de "sesion"— asi que el salto se perdia y la pantalla quedaba
+     contradictoria: el reloj decia "Sin empezar", el boton de empezar seguia
+     ahi, y la barra de descanso contando. */
+  if(!S.t0){ empezar(); S.foco = id; }
   /* Con confirmacion. El boton mide 62x38 y va a 8 px del de "Tecnica": a
      media sesion, con la mano sudada, el dedo se va y el ejercicio se marca
      saltado al instante. Y no habia vuelta atras: S.hechos solo se vacia
@@ -5429,7 +5486,8 @@ function pintarComida(){
   $("#comLista").innerHTML = l.length
     ? l.map((c, i) => '<div class="comfila"><b>' + esc(c.n) + '</b>' +
         '<span class="mn">' + Math.round(nDe(c.kcal)) + ' kcal · ' + Math.round(nDe(c.prot)) + ' g</span>' +
-        '<button data-borra="' + i + '" aria-label="Quitar">✕</button></div>').join("")
+        '<button data-borra="' + esc(c.id || String(i)) + '" aria-label="Quitar ' +
+        esc(c.n) + '">✕</button></div>').join("")
     : '<div class="vacio">Nada apuntado todavía. Empieza por tus comidas del plan, que son un toque.</div>';
 
   /* El historial era una lista muerta: fecha y totales, sin forma de abrir un
@@ -5530,9 +5588,17 @@ $("#comPlan").addEventListener("click", e => {
    pasar por aqui: si uno se salta la baja, ese apunte vuelve desde el otro
    dispositivo en la siguiente sincronizacion. Pasaba en dos de los tres
    sitios que habia. */
-function quitarComida(f, i){
+/* Por IDENTIFICADOR, no por la posicion en pantalla. La fusion reordena la
+   lista por hora y anotar() mete al final, asi que el indice que se pinto puede
+   no apuntar ya a la misma comida — y entonces se borraba, y se lapidaba, la
+   que no era. El indice se acepta todavia para las llamadas antiguas. */
+function quitarComida(f, ref){
   const l = S.comidas[f];
-  if(!l || i < 0 || i >= l.length) return;
+  if(!l || !l.length) return;
+  let i = -1;
+  if(typeof ref === "string"){ i = l.findIndex(c => c.id === ref); }
+  else if(typeof ref === "number" && ref >= 0 && ref < l.length){ i = ref; }
+  if(i < 0) return;
   const fuera = l.splice(i, 1)[0];
   if(fuera && fuera.id) S.bajas[fuera.id] = new Date().toISOString();
   guardar();
@@ -5541,7 +5607,8 @@ function quitarComida(f, i){
 $("#comLista").addEventListener("click", e => {
   const b = e.target.closest("[data-borra]");
   if(!b) return;
-  quitarComida(comDia, Number(b.dataset.borra));
+  const ref = b.dataset.borra;
+  quitarComida(comDia, /^\d+$/.test(ref) ? Number(ref) : ref);
   pintarComida(); pintarInicio();
 });
 
@@ -5884,7 +5951,13 @@ function irA(t){
   document.querySelectorAll('#menu button[data-t]').forEach(b =>
     b.setAttribute("aria-selected", String(b.dataset.t === t)));
   if(t === "inicio") pintarInicio();
-  if(t === "comida") pintarComida();
+  /* Entrar en Comida vuelve SIEMPRE a hoy. comDia es una variable de modulo:
+     una vez que mirabas un dia pasado te quedabas en el aunque salieras a
+     Inicio, entrenaras y volvieras horas despues —incluso pasada la
+     medianoche—. Y todas las formas de apuntar van al dia que estes viendo,
+     asi que "+ Anyadir otra cosa" de la portada, que esta bajo el titulo
+     "Comida de hoy", te metia la comida en el dia viejo. */
+  if(t === "comida"){ comDia = hoyISO(); pintarComida(); }
   if(t === "diario") pintarDiario();
   if(t === "semana") pintarSemana();
   if(t === "cuerpo"){ pintarPerfil(); pintarCuerpo(); }
