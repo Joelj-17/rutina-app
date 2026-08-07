@@ -293,7 +293,9 @@ svg.esq{width:100%;max-width:340px;height:108px;color:var(--tinta);display:block
 .comfila button{color:var(--alerta);font-size:1.1rem;line-height:1;padding:2px 5px}
 
 /* ---- Portada ---- */
-.portada{padding:22px 0 40px}
+/* Igual que .panel-sec: el "0" lateral borraba el padding de .env y la portada
+   entera quedaba pegada a los dos bordes. */
+.portada{padding:22px 14px 40px}
 .portada h1{font-size:1.4rem;margin:0 0 2px;letter-spacing:-.02em;font-weight:700}
 .portada .hoy{color:var(--acero);font-size:.84rem;margin:0 0 18px}
 .menu{display:grid;gap:11px}
@@ -445,7 +447,10 @@ svg.esq{width:100%;max-width:340px;height:108px;color:var(--tinta);display:block
 .opt.chico[aria-pressed="true"]{background:var(--descanso);border-color:var(--descanso);color:#fff}
 .alerta{color:var(--alerta);font-size:.72rem}
 
-.panel-sec{padding:18px 0 40px}
+/* El padding lateral es el de .env (14px). Escribiendo aqui "18px 0 40px" se
+   borraba, y como .panel-sec va despues gana: TODAS las pantallas menos la de
+   entrenar tenian su contenido pegado a los dos bordes de la pantalla. */
+.panel-sec{padding:18px 14px 40px}
 h2.sec{font-size:1.15rem;margin:26px 0 10px;letter-spacing:-.01em}
 h2.sec:first-child{margin-top:6px}
 .tarj{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r);
@@ -1696,7 +1701,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-08 · 26";
+const VERSION = "2026-08-08 · 27";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -2096,8 +2101,7 @@ function prepararSiguiente(id, recomendado){
     S.foco = id;
     guardarSinMarcar();
     pintarHoy();
-    const c = $("#lista");
-    if(c) c.scrollIntoView({block:"start"});
+    subirALaVista($("#lista"));
   };
   /* El nombre y el peso en lineas distintas. Juntos daban "Remo con mancuerna a
      una mano · 8 kg una mancuerna", que no cabe de ninguna manera en la barra y
@@ -2276,14 +2280,27 @@ function ejercicioEnFoco(){
   if(S.foco && ids.indexOf(S.foco) >= 0) return S.foco;
   return siguienteId() || ids[ids.length-1] || null;
 }
+/* Subir un elemento a la vista SIN que se lo coma la cabecera pegajosa (el
+   reloj se ve siempre con la sesion abierta) ni la barra de descanso de abajo.
+   scrollIntoView no las conoce: con block:"start" la tira de puntos quedaba
+   detras del reloj, y con block:"center" la fila de series acababa debajo de
+   la barra de descanso, que es justo lo que ibas a pulsar. */
+function subirALaVista(el, margen){
+  if(!el) return;
+  const cab = document.querySelector("#cabecera");
+  const alto = (cab && getComputedStyle(cab).position === "sticky")
+    ? cab.getBoundingClientRect().height : 0;
+  const y = el.getBoundingClientRect().top + window.scrollY - alto - (margen || 10);
+  window.scrollTo(0, Math.max(0, y));
+}
+
 function irAEjercicio(id){
   const ids = listaEj();
   if(ids.indexOf(id) < 0) return;
   S.foco = id;
   guardarSinMarcar();            // mirar no es un cambio que haya que sincronizar
   pintarHoy();
-  const c = $("#lista");
-  if(c) c.scrollIntoView({block:"start"});
+  subirALaVista($("#lista"));
 }
 function moverFoco(paso){
   const ids = listaEj(), i = ids.indexOf(ejercicioEnFoco());
@@ -2526,7 +2543,7 @@ function pintarHoy(){
         const yaHechas = h ? h.series : 0;
 
         // Ejercicios de aguante: el contador los lleva por ti.
-        if(e.tiempo){
+        if(e.tiempo && !hecho){
           const bt2 = document.createElement("button");
           bt2.className = "btTiempo";
           const seg = e.tiempo.seg[S.fase];
@@ -2540,7 +2557,9 @@ function pintarHoy(){
         const fila = document.createElement("div"); fila.className = "series";
         const marcaEj = marcaDe(id);
         for(let s=1; s<=p.series; s++){
-          if(s <= yaHechas && !e.tiempo){
+          /* Un ejercicio SALTADO no tiene repeticiones que ajustar: enseñaba
+             las cajas como si lo hubieras hecho entero. */
+          if(s <= yaHechas && !e.tiempo && !(h && h.saltado)){
             /* Serie hecha: en vez de un "hecha" mudo, las repeticiones que
                hiciste, ajustables sin salir de aqui. */
             const caja = document.createElement("div");
@@ -2637,11 +2656,17 @@ function pintarHoy(){
                       (e.err ? '<p class="mal"><strong>Error típico:</strong> ' + e.err + '</p>' : "");
       bt.addEventListener("click", () => { tip.hidden = !tip.hidden; bt.setAttribute("aria-expanded", String(!tip.hidden)); });
       acc.appendChild(bt);
-      const bs = document.createElement("button");
-      bs.className = "bt"; bs.textContent = "Saltar";
-      bs.title = "Sáltalo si te falta material o si hoy te molesta algo";
-      bs.addEventListener("click", () => saltarEjercicio(id));
-      acc.appendChild(bs);
+      /* Saltar solo tiene sentido en uno que no has hecho. Antes la tarjeta se
+         plegaba al terminarla y el boton desaparecia solo; ahora el rediseño te
+         devuelve a las terminadas para valorarlas, y ahi Saltar machacaba el
+         registro de lo que si habias hecho. */
+      if(!hecho){
+        const bs = document.createElement("button");
+        bs.className = "bt"; bs.textContent = "Saltar";
+        bs.title = "Sáltalo si te falta material o si hoy te molesta algo";
+        bs.addEventListener("click", () => saltarEjercicio(id));
+        acc.appendChild(bs);
+      }
       cuerpo.appendChild(acc); cuerpo.appendChild(tip);
       card.appendChild(cuerpo);
     }
@@ -2744,8 +2769,10 @@ function marcarSerie(id){
     cerrarEntreno();
   }
   pintarHoy();
-  const act = document.querySelector(".ej.activo");
-  if(act) act.scrollIntoView({behavior:"smooth", block:"center"});
+  /* A la fila de series, que es lo siguiente que vas a pulsar, y por encima de
+     la barra de descanso. Centrar la tarjeta entera la dejaba debajo. */
+  const fila = document.querySelector(".ej.activo .series");
+  subirALaVista(fila || document.querySelector(".ej.activo"), 90);
 }
 
 /* Guarda la sesion en el historial. Vivia dentro de marcarSerie, asi que si el
