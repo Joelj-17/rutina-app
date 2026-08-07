@@ -1780,6 +1780,11 @@ function desglose(id){
   return d;
 }
 function mmss(seg){
+  /* Una sesion importada de una version vieja, o llegada a medias en una
+     fusion, puede no traer los segundos. Sin esto salia "NaN:NaN" en la
+     tarjeta de hoy, que se ve desde todas las pantallas. */
+  seg = Number(seg);
+  if(!isFinite(seg)) seg = 0;
   seg = Math.max(0, Math.floor(seg));
   return Math.floor(seg/60)+":"+String(seg%60).padStart(2,"0");
 }
@@ -4921,8 +4926,10 @@ function pintarMapa(){
     entValor = mmss(transcurrido());
   }else if(yaHecha){
     // Hecha: interesa lo que hiciste, no lo que estaba previsto.
-    const h = S.hist.find(x => x.f === f);
-    entEstado = mmss(h.seg) + " · " + h.ej + " ejercicios" +
+    const h = S.hist.find(x => x.f === f) || {};
+    // Sin numero de ejercicios se dice el tiempo y punto, no "undefined ejercicios".
+    const nEj = Number(h.ej);
+    entEstado = mmss(h.seg) + (isFinite(nEj) && nEj > 0 ? " · " + nEj + " ejercicios" : "") +
                 (h.rpe ? " · esfuerzo " + h.rpe + "/10" : "");
     entValor = "✓ hecha"; entOk = true;
   }else{
