@@ -682,7 +682,8 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
 .atajos{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:4px}
 .atajo{background:transparent;border:1px solid var(--linea);border-radius:9px;padding:10px 6px;
        font-size:.74rem;font-weight:600;color:var(--acero)}
-.atajo span{display:block;font-size:.95rem;margin-bottom:2px;filter:grayscale(1);opacity:.6}
+.atajo span:first-child{display:block;font-size:.95rem;margin-bottom:2px;filter:grayscale(1);opacity:.6}
+.atajo .atajoTxt{display:inline;font-size:inherit;margin:0;filter:none;opacity:1}
 
 /* ---- El mapa de la portada: qué hay aquí, antes que qué hacer ----
    Lo primero que se ve no debe ser el entrenamiento, sino las secciones y en
@@ -955,6 +956,7 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
   <!-- Lo de consulta y lo de configurar: no hace falta en el menú de abajo,
        pero sí tiene que verse que existe. -->
   <div class="atajos">
+    <button class="atajo" data-ir="compra"><span>🛒</span><span class="atajoTxt" id="atajoCompra">La compra</span></button>
     <button class="atajo" data-ir="semana"><span>🗓️</span>La semana</button>
     <button class="atajo" data-ir="guia"><span>📖</span>Guía</button>
   </div>
@@ -1048,25 +1050,6 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
   <h2 class="sec" id="comTitLista">Lo que llevas hoy</h2>
   <div class="hist" id="comLista"></div>
 
-  <!-- Lo que se consulta de vez en cuando va plegado. El estado de abierto o
-       cerrado sobrevive a los repintados porque el details no se reescribe:
-       solo se reescribe lo de dentro. -->
-  <details class="plegable" id="plegCompra">
-    <summary id="compraTit">La compra</summary>
-    <div class="tarj" id="compraCaja">
-      <div id="compraLista"></div>
-      <div class="fila" style="margin-top:10px;gap:8px">
-        <input id="compraNuevo" type="text" placeholder="Añadir: pollo, arroz…"
-               autocomplete="off" style="flex:1;min-width:0">
-        <button class="bt p" id="compraAdd">Añadir</button>
-      </div>
-      <div class="acciones" style="margin-top:10px">
-        <button class="bt" id="compraPlan">Poner la compra del plan</button>
-        <button class="bt" id="compraLimpiar" hidden>Quitar lo comprado</button>
-      </div>
-    </div>
-  </details>
-
   <details class="plegable">
     <summary>Últimos días</summary>
     <div class="hist" id="comHist"></div>
@@ -1075,8 +1058,33 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
   <!-- Los pasos no son comida, pero es lo que ajusta el gasto del dia,
        asi que se quedan aqui abajo en vez de partir la pantalla en dos. -->
   <p class="puente">Los pasos, con su historial y tus medias, están en
-    <button class="enlace" data-ir="pasos">Pasos</button>.</p>
+    <button class="enlace" data-ir="pasos">Pasos</button> ·
+    la lista de la compra, en <button class="enlace" data-ir="compra">La compra</button>.</p>
 
+</main>
+
+<!-- ============ LA COMPRA ============
+     Pantalla propia. Lo dijo el: una cosa es lo que comes (registro) y otra lo
+     que hay que comprar (recados); mezcladas en Comida no le convencia ninguna
+     de las dos. Mismo patron que Pasos o La semana: atajo en la portada. -->
+<main class="env panel-sec" id="p-compra" hidden>
+  <div class="dia-cab" style="padding-top:6px">
+    <div><h1>La compra</h1><div class="dia-sub" id="compraSub">—</div></div>
+  </div>
+  <div class="tarj" id="compraCaja">
+    <div id="compraLista"></div>
+    <div class="fila" style="margin-top:10px;gap:8px">
+      <input id="compraNuevo" type="text" placeholder="Añadir: pollo, arroz…"
+             autocomplete="off" style="flex:1;min-width:0">
+      <button class="bt p" id="compraAdd">Añadir</button>
+    </div>
+    <div class="acciones" style="margin-top:10px">
+      <button class="bt" id="compraPlan">Poner la compra del plan</button>
+      <button class="bt" id="compraLimpiar" hidden>Quitar lo comprado</button>
+    </div>
+  </div>
+  <p class="puente">Lo que has comido y el balance del día están en
+    <button class="enlace" data-ir="comida">Comida</button>.</p>
 </main>
 
 <!-- ============ CUERPO ============ -->
@@ -1773,7 +1781,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-08 · 31";
+const VERSION = "2026-08-08 · 32";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -5523,8 +5531,12 @@ function pintarCompra(){
   caja.innerHTML = "";
   const l = S.compra || [];
   const hechos = l.filter(x => x.ok).length;
-  $("#compraTit").textContent = l.length
-    ? "La compra · " + hechos + " de " + l.length : "La compra";
+  $("#compraSub").textContent = l.length
+    ? (l.length - hechos) + " por coger · " + hechos + " en el carro"
+    : "Nada apuntado todavía";
+  const at = $("#atajoCompra");
+  if(at) at.textContent = (l.length - hechos) > 0
+    ? "La compra (" + (l.length - hechos) + ")" : "La compra";
   $("#compraLimpiar").hidden = hechos === 0;
   $("#compraPlan").hidden = l.length > 0;
   if(!l.length){
@@ -5662,7 +5674,6 @@ function medidor(et, val, obj, ud){
 
 function pintarComida(){
   if(typeof pintarSueles === "function") pintarSueles();
-  if(typeof pintarCompra === "function") pintarCompra();
   const esHoy = comDia === hoyISO();
   const t = totalDe(comDia), gasto = gastoDe(comDia);
   $("#comFecha").textContent = esHoy ? "Hoy" : fechaCorta(comDia);
@@ -6186,8 +6197,8 @@ $("#vAnimo").addEventListener("click", e => {
 });
 
 /* ============ PESTAÑAS Y SELECTORES ============ */
-const PESTANAS = ["inicio","hoy","comida","cuerpo","pasos","diario","semana","guia","ajustes"];
-const TITULOS = {hoy:"Entrenamiento", comida:"Comida", cuerpo:"Cuerpo",
+const PESTANAS = ["inicio","hoy","comida","compra","cuerpo","pasos","diario","semana","guia","ajustes"];
+const TITULOS = {hoy:"Entrenamiento", comida:"Comida", compra:"La compra", cuerpo:"Cuerpo",
                  diario:"Diario", semana:"La semana", guia:"Guía",
                  pasos:"Pasos", ajustes:"Ajustes y datos"};
 
@@ -6218,7 +6229,7 @@ function irA(t){
   ajustarCabecera();
   document.querySelectorAll('#menu button[data-t]').forEach(b =>
     b.setAttribute("aria-selected", String(b.dataset.t === t)));
-  if(t === "inicio") pintarInicio();
+  if(t === "inicio"){ pintarInicio(); if(typeof pintarCompra === "function") pintarCompra(); }
   /* Entrar en Comida vuelve SIEMPRE a hoy. comDia es una variable de modulo:
      una vez que mirabas un dia pasado te quedabas en el aunque salieras a
      Inicio, entrenaras y volvieras horas despues —incluso pasada la
@@ -6226,6 +6237,7 @@ function irA(t){
      asi que "+ Anyadir otra cosa" de la portada, que esta bajo el titulo
      "Comida de hoy", te metia la comida en el dia viejo. */
   if(t === "comida"){ comDia = hoyISO(); pintarComida(); }
+  if(t === "compra") pintarCompra();
   if(t === "diario") pintarDiario();
   if(t === "semana") pintarSemana();
   if(t === "cuerpo"){ pintarPerfil(); pintarCuerpo(); }
