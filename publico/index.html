@@ -623,7 +623,17 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
 .vidaF{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--linea-2)}
 .vidaF:last-child{border-bottom:none}
 .vidaF .ic{font-size:.98rem;width:20px;text-align:center;flex:0 0 20px;filter:grayscale(.35)}
-.vidaF .nom{flex:1;font-size:.84rem;font-weight:500}
+.vidaF .nom{flex:1;font-size:.84rem;font-weight:500;min-width:0}
+.vidaF .nom small{display:block;font-size:.76rem;font-weight:400;color:var(--acero);
+  margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* La fila de comida es un boton que lleva a Comida. El balance a la derecha en
+   su color: verde el deficit —es lo que se busca en un corte—, ambar el
+   superavit. El numero es la respuesta a "¿como voy?", que es a lo que entra. */
+.vidaLink{background:transparent;border:none;width:100%;text-align:left;color:inherit}
+.vidaLink:active{opacity:.7}
+.vBal{font-family:var(--mono);font-weight:700;font-size:.92rem;white-space:nowrap}
+.vBal.def{color:var(--hecho)} .vBal.sup{color:var(--alerta)} .vBal.neutro{color:var(--acero)}
+.vidaF .chev{color:var(--acero);opacity:.5;font-size:.95rem;flex:0 0 auto}
 .vidaF input{width:74px;text-align:center;font-family:var(--mono);font-weight:600;font-size:.88rem;
              padding:5px 4px}
 .vidaF .sufijo{font-family:var(--mono);font-size:.72rem;color:var(--acero);font-weight:600;
@@ -936,20 +946,19 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
   <!-- Anoche: se pregunta una vez y se resuelve -->
   <div class="bloque anoche" id="pAnoche"></div>
 
-  <!-- Comida y balance juntos: el balance HABLA de la comida. Tenerlos en dos
-       tarjetas separadas obligaba a cruzar números con la vista. -->
+  <!-- Una sola tarjeta con el dia entero: comida, pasos, agua y animo. Antes
+       eran dos bloques y el de comida era una copia de la pantalla de Comida,
+       con sus barras y sus platos. La portada resume; el detalle esta a un
+       toque en el menu. -->
   <div class="bloque">
-    <div class="bloqueCab"><h2>Comida de hoy</h2><span class="dato" id="pComDato"></span></div>
-    <div id="pComBarras"></div>
-    <div id="pBalance" hidden></div>
-    <div class="platosMini" id="pComPlatos"></div>
-    <button class="accionGrande suave" data-ir="comida">+ Añadir otra cosa</button>
-  </div>
-
-  <!-- Hoy llevas: solo lo que se acumula durante el día -->
-  <div class="bloque">
-    <div class="bloqueCab"><h2>Hoy llevas</h2></div>
+    <div class="bloqueCab"><h2>Hoy</h2></div>
     <div class="vida">
+      <button class="vidaF vidaLink" data-ir="comida">
+        <span class="ic">🍽️</span><span class="nom">Comida
+          <small id="vComTxt">nada apuntado</small></span>
+        <span class="vBal" id="vComBal"></span>
+        <span class="chev">›</span>
+      </button>
       <div class="vidaF">
         <span class="ic">👟</span><span class="nom">Pasos</span>
         <input id="vPasos" type="number" inputmode="numeric" step="500" min="0" placeholder="8500">
@@ -1824,7 +1833,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-08 · 35";
+const VERSION = "2026-08-08 · 36";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -6286,19 +6295,24 @@ function pintarInicio(){
     btn.textContent = "▶ Empezar la sesión";
   }
 
-  /* --- Comida --- */
+  /* --- Comida: una fila en la tarjeta del dia. El numero de la derecha es el
+         balance, que es a lo que entra a mirar; el detalle y los platos estan
+         en Comida, a un toque. --- */
   const t = totalDe(f);
-  $("#pComDato").textContent = Math.round(t.kcal) + " / " + OBJ.kcal + " kcal";
-  /* Una linea de texto, no las dos barras: eran una copia de la pantalla de
-     Comida, que esta a un toque en el menu. La portada resume. */
-  $("#pComBarras").innerHTML = '<p style="margin:0 0 10px;font-size:.84rem;color:var(--tinta-2)">' +
-    Math.round(t.prot) + ' de ' + OBJ.prot + ' g de proteína</p>';
-  const puestos = comidasDe(f).map(c => c.plato).filter(Boolean);
-  $("#pComPlatos").innerHTML = PLATOS.map(p => {
-    const ok = puestos.indexOf(p.id) >= 0;
-    return '<button class="pmini' + (ok ? " ok" : "") + '" data-plato2="' + p.id + '">' +
-      (ok ? "✓ " : "") + p.n + '<b>' + p.kcal + '</b></button>';
-  }).join("");
+  const gastoHoy = gastoDe(f);
+  $("#vComTxt").textContent = t.kcal > 0
+    ? Math.round(t.kcal) + " kcal · " + Math.round(t.prot) + " g de proteína"
+    : "nada apuntado todavía";
+  const vb = $("#vComBal");
+  if(gastoHoy && t.kcal > 0){
+    const bal = Math.round(t.kcal - gastoHoy);
+    vb.textContent = (bal > 0 ? "+" : "") + bal.toLocaleString("es-ES");
+    vb.className = "vBal " + (bal < 0 ? "def" : "sup");
+    vb.title = bal < 0 ? "Déficit de hoy" : "Superávit de hoy";
+  }else{
+    vb.textContent = Math.round(t.kcal) + " / " + OBJ.kcal;
+    vb.className = "vBal neutro";
+  }
 
   /* --- El día --- */
   $("#vPasos").value = S.pasos[f] || "";
@@ -6315,39 +6329,12 @@ function pintarInicio(){
     '<button class="cara' + (an === c.v ? " sel" : "") + '" data-animo="' + c.v +
     '" title="' + c.t + '" aria-label="' + c.t + '">' + c.e + '</button>').join("");
 
-  /* --- Balance --- */
-  const gasto = gastoDe(f);
-  const caja = $("#pBalance");
-  if(gasto && t.kcal > 0){
-    const bal = Math.round(t.kcal - gasto);
-    caja.hidden = false;
-    // Va dentro de la tarjeta de comida, así que no repite cabecera: se lee
-    // como la conclusión de los números de arriba, que es lo que es.
-    caja.innerHTML = '<div class="balanceDia">' +
-      '<div><b>' + gasto + '</b><span>Gastado</span></div>' +
-      '<div><b>' + Math.round(t.kcal) + '</b><span>Comido</span></div>' +
-      '<div class="' + (bal < 0 ? "def" : "sup") + '"><b>' + (bal > 0 ? "+" : "") + bal +
-      '</b><span>' + (bal < 0 ? "Déficit" : "Superávit") + '</span></div></div>';
-  }else{
-    caja.hidden = true;
-  }
 }
 
 /* --- Acciones de la portada --- */
 $("#pEntBtn").addEventListener("click", () => {
   if(!S.t0 && !S.hist.some(h => h.f === hoyISO())) empezar();
   irA("hoy");
-});
-$("#pComPlatos").addEventListener("click", e => {
-  const b = e.target.closest("[data-plato2]");
-  if(!b) return;
-  const p = PLATOS.find(x => x.id === b.dataset.plato2);
-  const ya = comidasDe(hoyISO()).findIndex(c => c.plato === p.id);
-  if(ya >= 0){ quitarComida(hoyISO(), ya); }
-  // Pasa por anotar() como todo lo demas: metia el apunte a pelo, sin
-  // identificador ni hora, y luego no habia forma de apuntar su baja.
-  else anotar({n:p.n + " — " + p.d, kcal:p.kcal, prot:p.prot, plato:p.id}, hoyISO());
-  guardar(); pintarInicio(); pintarComida();
 });
 $("#vAgua").addEventListener("click", e => {
   const b = e.target.closest("[data-vaso]");
