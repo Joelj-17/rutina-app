@@ -122,6 +122,24 @@ textarea{width:100%;resize:vertical;min-height:64px;line-height:1.45}
 .empezar:active{transform:translateY(1px)}
 
 .lista{display:flex;flex-direction:column;gap:8px;padding-bottom:34px}
+/* ---- La lista de la compra ---- */
+.compraItem{display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+  padding:12px 4px;background:transparent;border:none;border-bottom:1px solid var(--linea-2);
+  font-size:.95rem;color:var(--tinta)}
+.compraItem:last-of-type{border-bottom:none}
+.cMarca{width:24px;height:24px;flex:0 0 24px;border-radius:7px;border:2px solid var(--linea);
+  display:grid;place-items:center;font-size:.85rem;font-weight:700;color:#fff}
+.compraItem.ok .cMarca{background:var(--hecho);border-color:var(--hecho)}
+.compraItem.ok .cTxt{color:var(--acero);text-decoration:line-through;
+  text-decoration-color:var(--acero)}
+.cTxt{flex:1;min-width:0;line-height:1.3}
+.cQuitar{flex:0 0 auto;color:var(--acero);font-size:.85rem;padding:0 4px;position:relative}
+.cQuitar::after{content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:44px;height:44px}
+#compraNuevo{padding:10px 12px;border-radius:9px;border:1px solid var(--linea);
+  background:var(--fondo);color:var(--tinta);font-family:var(--ui);font-size:.9rem}
+#compraNuevo::placeholder{color:var(--acero)}
+
 /* ---- Comida: navegar por dias ---- */
 .navDia{display:flex;gap:8px;align-items:center;margin-bottom:10px}
 .navDia .bt{padding:9px 12px}
@@ -1022,6 +1040,23 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
   <h2 class="sec">Últimos días</h2>
   <div class="hist" id="comHist"></div>
 
+  <!-- La lista de la compra. Vive aqui porque se escribe pensando en comida,
+       y sincronizada como todo lo demas: se apunta en el sofa y se marca en
+       el super con el movil en la mano. -->
+  <h2 class="sec" id="compraTit">La compra</h2>
+  <div class="tarj" id="compraCaja">
+    <div id="compraLista"></div>
+    <div class="fila" style="margin-top:10px;gap:8px">
+      <input id="compraNuevo" type="text" placeholder="Añadir: pollo, arroz…"
+             autocomplete="off" style="flex:1;min-width:0">
+      <button class="bt p" id="compraAdd">Añadir</button>
+    </div>
+    <div class="acciones" style="margin-top:10px">
+      <button class="bt" id="compraPlan">Poner la compra del plan</button>
+      <button class="bt" id="compraLimpiar" hidden>Quitar lo comprado</button>
+    </div>
+  </div>
+
   <!-- Los pasos no son comida, pero es lo que ajusta el gasto del dia,
        asi que se quedan aqui abajo en vez de partir la pantalla en dos. -->
   <p class="puente">Los pasos, con su historial y tus medias, están en
@@ -1723,7 +1758,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-08 · 29";
+const VERSION = "2026-08-08 · 30";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -1731,7 +1766,8 @@ let S = {
   sesionF:null, sesionDia:null, sesionFase:null, sesionId:null,  // la sesion abierta
   foco:null,                                     // que ejercicio estas viendo
   hechos:{}, pesos:{}, marcas:{}, hist:[],
-  comidas:{}, pasos:{}, agua:{}, sueno:{}, siesta:{}, animo:{}, syncId:null, syncUlt:null,
+  comidas:{}, pasos:{}, agua:{}, sueno:{}, siesta:{}, animo:{}, compra:[],
+  syncId:null, syncUlt:null,
   cofre:null, pinFallos:0, cambiadoEn:null,
   /* ts: cuando se toco cada cosa, por ruta ('pasos.2026-08-06').
      bajas: que se borro y cuando. Sin esto, el otro dispositivo te
@@ -1848,6 +1884,7 @@ function cargar(){
     S.hist   = Array.isArray(g.hist)   ? g.hist   : [];
     S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
     S.comidas = (g.comidas && typeof g.comidas === "object") ? g.comidas : {};
+    S.compra  = Array.isArray(g.compra) ? g.compra : [];
     S.pasos   = (g.pasos   && typeof g.pasos   === "object") ? g.pasos   : {};
     S.agua    = (g.agua    && typeof g.agua    === "object") ? g.agua    : {};
     S.sueno   = (g.sueno   && typeof g.sueno   === "object") ? g.sueno   : {};
@@ -1937,7 +1974,7 @@ function paquete(){
     material:S.material,
     pesos:S.pesos, hist:S.hist.slice(0,TOPE_HIST),
     perfil:S.perfil, cuerpo:S.cuerpo.slice(0,TOPE_CUERPO),
-    comidas:S.comidas, pasos:S.pasos, agua:S.agua, sueno:S.sueno, siesta:S.siesta,
+    comidas:S.comidas, compra:S.compra, pasos:S.pasos, agua:S.agua, sueno:S.sueno, siesta:S.siesta,
     animo:S.animo,
     ts:S.ts || {}, bajas:S.bajas || {},
     syncId:S.syncId, syncUlt:S.syncUlt, cofre:S.cofre, pinFallos:S.pinFallos,
@@ -3983,6 +4020,11 @@ function fundir(mio, otro){
     if(l.length) r.comidas[f] = l;
   });
 
+  /* La lista de la compra: elementos con id y hora, igual que las comidas.
+     Marcar una casilla cambia el elemento y le renueva la hora, asi que gana
+     la marca mas reciente; borrar deja lapida y no resucita. */
+  r.compra = fundirLista(a.compra, b.compra, bajas);
+
   // Sesiones: una por identificador. Si el mismo entrenamiento está en los
   // dos, nos quedamos con el que trae el desglose por ejercicio.
   const hs = {};
@@ -4649,6 +4691,7 @@ function aplicarDatos(g, ts){
   S.pesos  = r.pesos  || {};
   S.hist   = Array.isArray(r.hist)   ? r.hist   : [];
   S.cuerpo = Array.isArray(r.cuerpo) ? r.cuerpo : [];
+  S.compra = Array.isArray(r.compra) ? r.compra : [];
   ["comidas","pasos","agua","sueno","siesta","animo"].forEach(k => {
     S[k] = (r[k] && typeof r[k] === "object") ? r[k] : {};
   });
@@ -4920,6 +4963,7 @@ function cargarDatos(texto, origen){
   S.hist   = Array.isArray(g.hist)   ? g.hist   : [];
   S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
   S.comidas = (g.comidas && typeof g.comidas === "object") ? g.comidas : {};
+  S.compra  = Array.isArray(g.compra) ? g.compra : [];
   S.pasos   = (g.pasos   && typeof g.pasos   === "object") ? g.pasos   : {};
   S.agua    = (g.agua    && typeof g.agua    === "object") ? g.agua    : {};
   S.sueno   = (g.sueno   && typeof g.sueno   === "object") ? g.sueno   : {};
@@ -4972,6 +5016,7 @@ $("#listaCopias").addEventListener("click", e => {
   S.pesos  = g.pesos  || {};
   S.hist   = Array.isArray(g.hist)   ? g.hist   : [];
   S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
+  S.compra = Array.isArray(g.compra) ? g.compra : [];
   ["comidas","pasos","agua","sueno","siesta","animo"].forEach(k => {
     S[k] = (g[k] && typeof g[k] === "object") ? g[k] : {};
   });
@@ -5039,7 +5084,7 @@ $("#btnBorrar").addEventListener("click", () => {
      tampoco volvía a guardar, el siguiente guardado los reescribía todos en
      el almacén. "Borrar todo" tiene que borrar todo. */
   try{ localStorage.removeItem(LS); }catch(err){}
-  S.pesos = {}; S.hist = []; S.cuerpo = [];
+  S.pesos = {}; S.hist = []; S.cuerpo = []; S.compra = [];
   S.comidas = {}; S.pasos = {}; S.agua = {}; S.sueno = {}; S.siesta = {}; S.animo = {};
   S.ts = {}; S.bajas = {};
   S.perfil = {altura:"",nacim:"",sexo:"",nivel:"",objetivo:""};
@@ -5444,6 +5489,106 @@ const OBJ = PLATOS.reduce((a,p) => ({kcal:a.kcal+p.kcal, prot:a.prot+p.prot}), {
 
 let comDia = hoyISO();
 
+/* ============ LA COMPRA ============
+   Una lista para llevar en la mano en el super. Cada elemento {id, n, ok, ts}:
+   la hora se renueva al marcar o desmarcar, asi que entre dos dispositivos
+   gana el toque mas reciente, y borrar deja lapida como una comida. */
+
+/* La compra semanal de su plan de agosto (Consum), cerrada por el. */
+const COMPRA_PLAN = [
+  "2 bandejas grandes de pollo", "2 bandejas de carne picada mixta",
+  "3-4 botes de legumbre", "Macarrones", "Arroz", "Tomate frito",
+  "Pack de yogures griegos", "Leche", "Plátanos / manzanas / uvas",
+  "Queso básico"
+];
+
+function pintarCompra(){
+  const caja = $("#compraLista");
+  if(!caja) return;
+  caja.innerHTML = "";
+  const l = S.compra || [];
+  const hechos = l.filter(x => x.ok).length;
+  $("#compraTit").textContent = l.length
+    ? "La compra · " + hechos + " de " + l.length : "La compra";
+  $("#compraLimpiar").hidden = hechos === 0;
+  $("#compraPlan").hidden = l.length > 0;
+  if(!l.length){
+    const v = document.createElement("div");
+    v.className = "vacio";
+    v.textContent = "Apunta aquí lo que te falta, o pon la compra del plan de un toque.";
+    caja.appendChild(v);
+    return;
+  }
+  /* Lo pendiente arriba, lo comprado abajo: en el super solo importa lo que
+     queda. El orden dentro de cada grupo es el de la lista. */
+  l.slice().sort((x, y) => (x.ok ? 1 : 0) - (y.ok ? 1 : 0)).forEach(it => {
+    const f = document.createElement("button");
+    f.className = "compraItem" + (it.ok ? " ok" : "");
+    const marca = document.createElement("span");
+    marca.className = "cMarca";
+    marca.textContent = it.ok ? "✓" : "";
+    f.appendChild(marca);
+    const txt = document.createElement("span");
+    txt.className = "cTxt";
+    txt.textContent = it.n;                     // texto suyo: textContent siempre
+    f.appendChild(txt);
+    const quitar = document.createElement("span");
+    quitar.className = "cQuitar";
+    quitar.textContent = "✕";
+    quitar.setAttribute("role", "button");
+    quitar.setAttribute("aria-label", "Quitar " + it.n);
+    f.appendChild(quitar);
+    f.addEventListener("click", e => {
+      if(e.target === quitar){
+        S.compra = S.compra.filter(x => x.id !== it.id);
+        S.bajas[it.id] = new Date().toISOString();
+        guardar(); pintarCompra();
+        return;
+      }
+      it.ok = !it.ok;
+      it.ts = new Date().toISOString();         // el toque mas reciente gana
+      guardar(); pintarCompra();
+    });
+    caja.appendChild(f);
+  });
+}
+
+function anyadirCompra(nombre){
+  const n = (nombre || "").trim();
+  if(!n) return false;
+  S.compra.push({id:idNuevo(), n:n, ok:false, ts:new Date().toISOString()});
+  guardar(); pintarCompra();
+  return true;
+}
+
+$("#compraAdd").addEventListener("click", () => {
+  if(anyadirCompra($("#compraNuevo").value)){
+    $("#compraNuevo").value = "";
+    $("#compraNuevo").focus();
+  }else{
+    aviso("Escribe qué hay que comprar.", true);
+  }
+});
+$("#compraNuevo").addEventListener("keydown", e => {
+  if(e.key === "Enter"){ e.preventDefault(); $("#compraAdd").click(); }
+});
+$("#compraPlan").addEventListener("click", () => {
+  /* Solo los que no esten ya, comparando sin mayusculas: pulsarlo dos veces
+     no debe duplicar la lista. */
+  const ya = {};
+  (S.compra || []).forEach(x => ya[x.n.toLowerCase()] = 1);
+  COMPRA_PLAN.forEach(n => { if(!ya[n.toLowerCase()]) anyadirCompra(n); });
+  aviso("Puesta la compra del plan.");
+});
+$("#compraLimpiar").addEventListener("click", () => {
+  /* Quitar lo comprado deja la lista lista para la semana que viene. Deja
+     lapida por elemento, como cualquier borrado. */
+  const ahora = new Date().toISOString();
+  (S.compra || []).filter(x => x.ok).forEach(x => { S.bajas[x.id] = ahora; });
+  S.compra = S.compra.filter(x => !x.ok);
+  guardar(); pintarCompra();
+});
+
 function comidasDe(f){ return S.comidas[f] || []; }
 /* Una comida importada, vieja o metida a mano puede venir sin algún campo.
    Eso no puede convertirse en NaN por toda la pantalla ni tumbar nada. */
@@ -5502,6 +5647,7 @@ function medidor(et, val, obj, ud){
 
 function pintarComida(){
   if(typeof pintarSueles === "function") pintarSueles();
+  if(typeof pintarCompra === "function") pintarCompra();
   const esHoy = comDia === hoyISO();
   const t = totalDe(comDia), gasto = gastoDe(comDia);
   $("#comFecha").textContent = esHoy ? "Hoy" : fechaCorta(comDia);
