@@ -1152,6 +1152,7 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
 <!-- ============ CUERPO ============ -->
 <main class="env panel-sec" id="p-cuerpo" hidden>
   <div id="heroCuerpo"></div>
+  <div id="caminoAgosto"></div>
   <div id="progresoCuerpo"></div>
   <div id="graficasCuerpo"></div>
   <div id="indicadorCuerpo"></div>
@@ -1188,6 +1189,7 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
 
   <h2 class="sec">Tu perfil</h2>
   <div class="tarj" id="fichaPerfil"></div>
+  <div class="tarj" id="cardMetab" hidden></div>
   <div class="tarj" id="formPerfil" hidden>
     <p style="font-size:.86rem;color:var(--acero);margin:0 0 12px">Datos que no cambian o cambian poco. Sirven para interpretar el resto.</p>
     <div class="rejilla">
@@ -1871,7 +1873,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-08 · 37";
+const VERSION = "2026-08-08 · 38";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -3627,6 +3629,104 @@ function mostrarEnGrafica(campo, id){
   caja.scrollIntoView({block:"center"});
 }
 
+/* Los hitos de peso de su plan de agosto (traspaso de la sesion de metabolismo
+   del 8 de agosto de 2026): media semanal contra el hito, que es SU regla del
+   domingo. La proyeccion salio de un deficit estimado de ~1.250-1.350 al dia. */
+const HITOS_AGOSTO = {hasta:"2026-09-02", hitos:[
+  {f:"2026-08-16", peso:92},
+  {f:"2026-08-23", peso:90.5},
+  {f:"2026-08-30", peso:89.5}
+]};
+
+/* La media de los pesos EN AYUNAS de los ultimos 7 dias. Solo los de
+   despertar: comparar medias de momentos distintos no compara nada. */
+function mediaSemanalAyunas(){
+  const corte = new Date(); corte.setDate(corte.getDate() - 7);
+  const desde = hoyISO(corte);
+  const l = S.cuerpo.filter(x => x.peso != null && x.momento === "despertar" && x.f > desde);
+  if(!l.length) return null;
+  const porDia = {};
+  l.forEach(x => { if(!porDia[x.f]) porDia[x.f] = x.peso; });
+  const vals = Object.keys(porDia).map(k => porDia[k]);
+  return {media: vals.reduce((a2, v) => a2 + v, 0) / vals.length, dias: vals.length};
+}
+
+function pintarCaminoAgosto(){
+  const caja = $("#caminoAgosto");
+  if(!caja) return;
+  const hoy = hoyISO();
+  if(hoy > HITOS_AGOSTO.hasta || hoy < "2026-08-10"){ caja.innerHTML = ""; return; }
+  const sig = HITOS_AGOSTO.hitos.find(h => h.f >= hoy) || HITOS_AGOSTO.hitos[2];
+  const m = mediaSemanalAyunas();
+  caja.innerHTML = "";
+  const t = document.createElement("div");
+  t.className = "progT";
+  const cab = document.createElement("div");
+  cab.className = "cabP";
+  const b1 = document.createElement("b");
+  b1.textContent = "El camino de agosto";
+  cab.appendChild(b1);
+  if(m){
+    const sp = document.createElement("span");
+    const dif = m.media - sig.peso;
+    sp.style.fontFamily = "var(--mono)"; sp.style.fontWeight = "700";
+    sp.style.color = dif <= 0.3 ? "var(--hecho)" : dif <= 0.8 ? "var(--descanso)" : "var(--alerta)";
+    sp.textContent = (dif > 0 ? "+" : "") + dif.toFixed(1) + " kg";
+    cab.appendChild(sp);
+  }
+  t.appendChild(cab);
+  const p1 = document.createElement("p");
+  p1.style.cssText = "margin:6px 0 0;font-size:.86rem";
+  if(m){
+    p1.textContent = "Tu media en ayunas de la semana: " + m.media.toFixed(1) + " kg (" +
+      m.dias + (m.dias === 1 ? " día" : " días") + "). Hito del " +
+      fechaCorta(sig.f) + ": " + sig.peso.toFixed(1) + " kg.";
+  }else{
+    p1.textContent = "Pésate en ayunas y aquí saldrá tu media semanal contra el hito del " +
+      fechaCorta(sig.f) + " (" + sig.peso.toFixed(1) + " kg).";
+  }
+  t.appendChild(p1);
+  const p2 = document.createElement("p");
+  p2.style.cssText = "margin:8px 0 0;font-size:.78rem;color:var(--acero)";
+  p2.textContent = "Hitos: 92 el 16 · 90,5 el 23 · 89-90 el 30. La media semanal manda, " +
+    "no la pesada de un día: al volver a comer normal, +1 kg de agua y glucógeno " +
+    "es lo esperable, no grasa.";
+  t.appendChild(p2);
+  caja.appendChild(t);
+}
+
+function pintarMetabolismo(){
+  const caja = $("#cardMetab");
+  if(!caja) return;
+  const alt = num(S.perfil.altura), pes = ultimoPeso(), ed = edad();
+  if(!alt || pes == null || ed == null){ caja.hidden = true; return; }
+  caja.hidden = false;
+  const mb = Math.round(10*pes + 6.25*alt - 5*ed + (S.perfil.sexo === "m" ? -161 : 5));
+  const gastoHoy = gastoDe(hoyISO());
+  caja.innerHTML = "";
+  const cab = document.createElement("div");
+  cab.className = "bloqueCab";
+  const h = document.createElement("h2"); h.textContent = "Tu metabolismo";
+  cab.appendChild(h);
+  caja.appendChild(cab);
+  const fila = document.createElement("div");
+  fila.className = "balanceDia";
+  fila.style.cssText = "border:none;padding:0;margin:0";
+  const c1 = document.createElement("div");
+  c1.innerHTML = "<b>" + mb.toLocaleString("es-ES") + "</b><span>Basal (Mifflin)</span>";
+  const c2 = document.createElement("div");
+  c2.innerHTML = gastoHoy ? "<b>" + gastoHoy.toLocaleString("es-ES") + "</b><span>Gasto de hoy</span>" : "";
+  fila.appendChild(c1); if(gastoHoy) fila.appendChild(c2);
+  caja.appendChild(fila);
+  const p = document.createElement("p");
+  p.style.cssText = "margin:10px 0 0;font-size:.78rem;color:var(--acero)";
+  p.textContent = "El basal es la fórmula estándar con tu peso en ayunas de hoy; con tu " +
+    "musculatura de nadador, el real anda un 5-8% por encima (~" +
+    Math.round(mb * 1.065).toLocaleString("es-ES") + "). El gasto de hoy se calcula con tus " +
+    "pasos, tu entrenamiento y tus cuestas reales, no con una tabla.";
+  caja.appendChild(p);
+}
+
 function pintarCuerpo(){
   const pes = serie("peso"), cin = serie("cintura");
   const alt = num(S.perfil.altura);
@@ -3693,6 +3793,8 @@ function pintarCuerpo(){
       'altura. Es mejor referencia que el peso: mide dónde está la grasa, no cuánto pesas.</p></div>';
   }
   $("#progresoCuerpo").innerHTML = prog;
+  pintarCaminoAgosto();
+  pintarMetabolismo();
 
   /* --- Evolución: una gráfica por medida, cada una con su escala --- */
   $("#graficasCuerpo").innerHTML = '<div class="gemelas">' +
