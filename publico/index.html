@@ -1023,6 +1023,10 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
   <button class="verGuia" data-ir="guia">📖 Cómo se hace cada ejercicio</button>
   <div class="selectores" id="ajustes" hidden>
     <select id="selDia" aria-label="Día de la rutina"></select>
+    <select id="selModelo" aria-label="Modelo de rutina">
+      <option value="clasica">Rutina clásica (A/B/floja)</option>
+      <option value="corte">Corte agosto (fuerte/suave)</option>
+    </select>
     <select id="selFase" aria-label="Fase del plan">
       <option value="0">Fase 1 · semanas 1-2</option>
       <option value="1">Fase 2 · semanas 3-5</option>
@@ -1264,7 +1268,11 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
     <div class="rejilla">
       <div class="campo"><label for="camMin">Minutos</label>
         <input id="camMin" type="number" inputmode="numeric" min="1" step="5" placeholder="60"></div>
-      <div class="campo"><label for="camDesnivel">Subida (m, opcional)</label>
+      <div class="campo"><label for="camKm">Km (de Wikiloc)</label>
+        <input id="camKm" type="number" inputmode="decimal" min="0" step="0.1" placeholder="5,2"></div>
+      <div class="campo"><label for="camPasos">Pasos de la ruta</label>
+        <input id="camPasos" type="number" inputmode="numeric" min="0" step="100" placeholder="7000"></div>
+      <div class="campo"><label for="camDesnivel">Subida (m)</label>
         <input id="camDesnivel" type="number" inputmode="numeric" min="0" step="10" placeholder="0"></div>
       <div class="campo" style="grid-column:1/-1"><label for="camRuta">Dónde (opcional)</label>
         <input id="camRuta" list="listaRutas" placeholder="Guinardó, Aigües…" autocomplete="off">
@@ -1585,6 +1593,24 @@ const EJ = {
     pos:"Una mancuerna en cada mano, brazos colgando a los lados.",
     tip:"Anda a paso normal. <b>Hombros atrás y abajo, abdomen apretado, no te inclines a ningún lado.</b> Da la vuelta cuando te quedes sin sitio. Es el patrón de <b>transporte</b>: core, agarre, hombro estabilizador y postura de una vez.",
     err:"Encoger los hombros hacia las orejas o andar torcido. Si te vences hacia un lado, pesa demasiado."},
+  bulgara:{n:"Sentadilla búlgara", carga:"por mano", r:60, zona:"pierna",
+    f:[[2,"8 por pierna","8-10"],[3,"8-10 por pierna","10-12"],[3,"10 por pierna","12-14"]],
+    v:"sentadilla bulgara mancuernas tecnica",
+    pos:"De espaldas a una silla, empeine del pie atrasado apoyado en ella. El pie de delante, un paso largo por delante.",
+    tip:"Baja <b>vertical</b>, como en un ascensor: la rodilla de delante no viaja hacia la punta del pie. El peso va en el talón delantero. Es el sustituto de la sentadilla a dos piernas cuando los 14 kg se quedan cortos — tu caso.",
+    err:"Dar el paso corto y convertirla en una zancada hacia delante: la rodilla sufre y el glúteo no trabaja."},
+  pm1:{n:"Peso muerto a una pierna", carga:"una mancuerna", r:60, zona:"pierna",
+    f:[[2,"10 por pierna","8"],[2,"10 por pierna","10"],[3,"10 por pierna","12"]],
+    v:"peso muerto rumano una pierna mancuerna",
+    pos:"De pie sobre una pierna, mancuerna en la mano contraria. La otra pierna estirada atrás como contrapeso.",
+    tip:"Bisagra de cadera: el tronco baja y la pierna trasera sube <b>a la vez</b>, como un balancín. Espalda plana siempre. Lo notas detrás del muslo de la pierna de apoyo.",
+    err:"Redondear la espalda o girar la cadera. Si pierdes el equilibrio, apoya la punta del pie trasero en el suelo entre repes: sigue valiendo."},
+  gluteo:{n:"Puente de glúteo", r:45, zona:"pierna",
+    f:[[2,"15","sin peso"],[2,"15","sin peso"],[3,"15","sin peso"]],
+    v:"puente de gluteo suelo tecnica",
+    pos:"Tumbado boca arriba, rodillas dobladas, pies apoyados cerca del culo, brazos a los lados.",
+    tip:"Sube la cadera <b>apretando el glúteo</b>, no arqueando la lumbar, hasta que hombro-cadera-rodilla hagan línea recta. Un segundo arriba y bajas controlado.",
+    err:"Empujar con la lumbar en vez de con el glúteo. Si al acabar te duele la espalda baja y no el culo, era eso."},
   estir:{n:"Estiramientos", bloque:true, dur:"3 min",
     d:"Pectoral en marco de puerta 30 s/lado · dorsal 30 s/lado",
     v:"estiramiento pectoral marco puerta y dorsal",
@@ -1792,6 +1818,23 @@ const APOYO = {
                  '<line x1="'+(x+4)+'" y1="92" x2="'+(x+96)+'" y2="92" stroke="currentColor" stroke-width="1.5" opacity=".28"/>'
 };
 
+/* Poses de los tres ejercicios del corte. La bulgara con el pie atrasado en la
+   silla; el peso muerto a una pierna como un balancin; el puente tumbado. */
+Object.assign(POSES, {
+  bulg_a:{cab:[36,18],cue:[36,28],cad:[36,55],rod:[36,74],pie:[36,90],
+          rod2:[52,68],pie2:[64,58],pun2:[70,60],cod:[43,42],man:[43,58]},
+  bulg_b:{cab:[34,30],cue:[34,40],cad:[32,64],rod:[46,78],pie:[36,90],
+          rod2:[50,74],pie2:[64,58],pun2:[70,60],cod:[41,54],man:[41,70]},
+  pm1_a:{cab:[46,14],cue:[46,24],cad:[46,52],rod:[46,72],pie:[46,90],
+         cod:[53,38],man:[53,56]},
+  pm1_b:{cab:[70,36],cue:[62,42],cad:[38,54],rod:[40,72],pie:[42,90],
+         rod2:[24,50],pie2:[10,46],pun2:[4,48],cod:[58,56],man:[58,72]},
+  glut_a:{cab:[16,78],cue:[26,78],cad:[50,78],rod:[62,64],pie:[66,82],pun:[72,82],
+          cod:[34,84],man:[42,84]},
+  glut_b:{cab:[16,78],cue:[26,74],cad:[50,58],rod:[62,60],pie:[66,82],pun:[72,82],
+          cod:[34,84],man:[42,84]}
+});
+
 const ESQUEMAS = {
   cal      :{p:["cal","cal_hombro","cal_sent","zanc_b","cal_jack"],
              lista:true, apoyo:"suelo", arco:true,
@@ -1803,6 +1846,9 @@ const ESQUEMAS = {
   goblet   :{p:["goblet_a","goblet_m","goblet_b"], apoyo:"suelo"},
   rumano   :{p:["rumano_a","rumano_m","rumano_b"], apoyo:"suelo"},
   zancadas :{p:["zanc_a","zanc_m","zanc_b"], apoyo:"suelo"},
+  bulgara  :{a:"bulg_a", b:"bulg_b", apoyo:"silla"},
+  pm1      :{a:"pm1_a", b:"pm1_b", apoyo:"suelo"},
+  gluteo   :{a:"glut_a", b:"glut_b", apoyo:"suelo2"},
   hombro   :{a:"press_a", b:"press_b", apoyo:"suelo"},
   laterales:{a:"lat_a", b:"lat_b", apoyo:"suelo"},
   pecho    :{a:"suelo_a", b:"suelo_b", apoyo:"suelo2"},
@@ -1875,9 +1921,9 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-08 · 39";
+const VERSION = "2026-08-09 · 40";
 let S = {
-  fase:0, dia:new Date().getDay(),
+  fase:0, dia:new Date().getDay(), modelo:"clasica", ajustes:{},
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
   t0:null, pausadoEn:null, acumPausa:0, latido:null,
   sesionF:null, sesionDia:null, sesionFase:null, sesionId:null,  // la sesion abierta
@@ -1915,14 +1961,19 @@ const ZONAS = {
   planchaL:["Hombro","Lumbar","Cadera","Muñeca"],
   bicho:   ["Lumbar","Cuello","Cadera"],
   talones: ["Tobillo","Gemelo","Rodilla"],
+  bulgara: ["Rodilla","Cadera","Lumbar","Tobillo"],
+  pm1:     ["Isquios","Lumbar","Cadera","Tobillo"],
+  gluteo:  ["Lumbar","Cadera","Rodilla"],
   paseo:   ["Trapecio","Muñeca","Antebrazo","Lumbar"]
 };
 const zonasDe = id => ZONAS[id] || ["Hombro","Codo","Lumbar","Rodilla"];
 
+/* Las palabras del encargo: facil / bien / duro. Los valores internos no
+   cambian (sobra/justo/limite): el historial viejo sigue leyendose. */
 const VALORES = [
-  {v:"sobra",  t:"Me sobraba",  ayuda:"Podías con 3 o más repes de más"},
-  {v:"justo",  t:"Justo",       ayuda:"Acabaste con 2-3 en la recámara"},
-  {v:"limite", t:"Casi al límite", ayuda:"Las últimas costaron de verdad"}
+  {v:"sobra",  t:"Fácil", ayuda:"Podías con 3 o más repes de más"},
+  {v:"justo",  t:"Bien",  ayuda:"Acabaste con 2-3 en la recámara"},
+  {v:"limite", t:"Duro",  ayuda:"Las últimas costaron de verdad"}
 ];
 /* Avisos opcionales. Solo los marcas si han pasado. */
 const EXTRAS = [
@@ -2002,8 +2053,8 @@ function cargar(){
     S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
     S.comidas = (g.comidas && typeof g.comidas === "object") ? g.comidas : {};
     S.compra  = Array.isArray(g.compra) ? g.compra : [];
-  S.caminatas = Array.isArray(g.caminatas) ? g.caminatas : [];
     S.caminatas = Array.isArray(g.caminatas) ? g.caminatas : [];
+    S.ajustes = (g.ajustes && typeof g.ajustes === "object") ? g.ajustes : {};
     S.pasos   = (g.pasos   && typeof g.pasos   === "object") ? g.pasos   : {};
     S.agua    = (g.agua    && typeof g.agua    === "object") ? g.agua    : {};
     S.sueno   = (g.sueno   && typeof g.sueno   === "object") ? g.sueno   : {};
@@ -2023,6 +2074,7 @@ function cargar(){
     S.perfil = Object.assign(S.perfil, g.perfil || {});
     S.faseManual = (typeof g.faseManual === "number") ? g.faseManual : null;
     S.diaManual  = (typeof g.diaManual  === "number") ? g.diaManual  : null;
+    S.modelo = g.modelo === "corte" ? "corte" : "clasica";
     S.inicio = g.inicio || null;
     S.material = Object.assign({barra:false}, g.material || {});
     // Sin fecha de inicio guardada, la deduce de la sesión más antigua.
@@ -2089,7 +2141,8 @@ const TOPE_HIST = 2000, TOPE_CUERPO = 3000;
 function paquete(){
   return {
     v:2, exportado:new Date().toISOString(),
-    fase:S.fase, faseManual:S.faseManual, diaManual:S.diaManual, inicio:S.inicio,
+    fase:S.fase, faseManual:S.faseManual, diaManual:S.diaManual, modelo:S.modelo,
+    ajustes:S.ajustes, inicio:S.inicio,
     material:S.material,
     pesos:S.pesos, hist:S.hist.slice(0,TOPE_HIST),
     perfil:S.perfil, cuerpo:S.cuerpo.slice(0,TOPE_CUERPO),
@@ -2155,13 +2208,62 @@ if(navigator.storage && navigator.storage.persist){
 /* ============ UTILIDADES ============ */
 const $ = s => document.querySelector(s);
 const listaDia = k => SES[k].filter(id => !EJ[id].material || S.material[EJ[id].material]);
-const listaEj = () => listaDia(DIAS[S.dia].k);
-const esDomingo = () => DIAS[S.dia].k === "D";
+
+/* ============ EL MODELO "CORTE AGOSTO" ============
+   Segundo modelo de rutina, para el corte 93,7→89-90. La clasica queda intacta
+   y seleccionable. Sin dominadas por ahora: no tiene donde montar la barra.
+   L/X/V sesion FUERTE (~40-45 min, pecho con mancuernas; curl y triceps solo
+   L y V), el resto SUAVE (~20-25 min, flexiones a medio gas, nunca al fallo). */
+const CORTE = {
+  F:["cal","remo","hombro","pecho","bulgara","pm1","curl","triceps","plancha","paseo","estir"],
+  S:["cal","plancha","bicho","planchaL","flex","gluteo","pajaro","talones","paseo","estir"]
+};
+/* Dosis del corte por ejercicio: [series, reps]. reps null = la de la tabla. */
+const CORTE_DOSIS = {
+  F:{remo:[3,"8-10 por brazo"], hombro:[3,"8"], pecho:[3,"10"],
+     bulgara:[3,"8-10 por pierna"], pm1:[2,"10 por pierna"],
+     curl:[2,"12"], triceps:[2,"12"], plancha:[2,null], paseo:[2,null]},
+  S:{plancha:[3,null], bicho:[2,"10 por lado"], planchaL:[2,null],
+     flex:[2,"10-12, a medio gas"], gluteo:[2,"15"], pajaro:[2,"12-15"],
+     talones:[2,"20"], paseo:[2,null]}
+};
+const esCorte = () => S.modelo === "corte";
+const tipoCorte = () => ([1,3,5].indexOf(S.dia) >= 0 ? "F" : "S");
+
+function listaEj(){
+  if(!esCorte()) return listaDia(DIAS[S.dia].k);
+  let l = CORTE[tipoCorte()].slice();
+  // Curl y triceps solo lunes y viernes; el miercoles la fuerte va sin brazo.
+  if(tipoCorte() === "F" && S.dia !== 1 && S.dia !== 5)
+    l = l.filter(id => id !== "curl" && id !== "triceps");
+  return l.filter(id => !EJ[id].material || S.material[EJ[id].material]);
+}
+const esDomingo = () => !esCorte() && DIAS[S.dia].k === "D";
+
 function plan(id){
   const e = EJ[id];
   if(e.bloque) return null;
   const p = e.f[S.fase];
-  return {series: esDomingo() ? 1 : p[0], reps:p[1], peso:p[2]};
+  let series = esDomingo() ? 1 : p[0], reps = p[1], peso = p[2];
+  if(esCorte()){
+    const d = CORTE_DOSIS[tipoCorte()][id];
+    if(d){ series = d[0]; if(d[1]) reps = d[1]; }
+  }
+  /* El overlay de ajustes pisa lo anterior: es lo que el ha decidido desde la
+     app, y manda sobre el catalogo y sobre el modelo. */
+  const aj = (S.ajustes || {})[id];
+  if(aj){
+    if(aj.peso != null && aj.peso !== "") peso = String(aj.peso);
+    if(aj.series) series = Number(aj.series) || series;
+    if(aj.reps) reps = aj.reps;
+  }
+  return {series:series, reps:reps, peso:peso};
+}
+
+/* La etiqueta del dia depende del modelo. */
+function etiquetaDia(){
+  if(!esCorte()) return DIAS[S.dia].et;
+  return tipoCorte() === "F" ? "Fuerte" : "Suave · nunca al fallo";
 }
 
 /* Deshace la ambigüedad de "12 por brazo": una serie son los dos lados. */
@@ -2420,6 +2522,26 @@ $("#btnPausa").addEventListener("click", () => {
 });
 
 /* Cómo terminaste este ejercicio la última vez que lo hiciste. */
+/* Las dos ultimas valoraciones de esfuerzo de un ejercicio, la mas reciente
+   primero. Para la regla de las dos: dos "Fácil" seguidas → proponer subir. */
+function ultimasDosMarcas(id){
+  const r = [];
+  for(const h of S.hist){
+    if(h.marcas && h.marcas[id] && h.marcas[id].esf){
+      r.push({esf:h.marcas[id].esf, sesion:h.id});
+      if(r.length === 2) break;
+    }
+  }
+  return r;
+}
+
+function pesoNumerico(id){
+  const p = plan(id);
+  if(!p || !p.peso) return null;
+  const m = /^(\d+(?:[.,]\d+)?)/.exec(String(p.peso));
+  return m ? Number(m[1].replace(",", ".")) : null;
+}
+
 function ultimaMarca(id){
   for(const h of S.hist){
     // Las vacias no cuentan: si no, un dia en que solo miraste el ejercicio
@@ -2508,11 +2630,12 @@ function repesObjetivo(id){
 function pintarHoy(){
   const d = DIAS[S.dia], ids = listaEj();
   $("#diaNom").textContent = d.n;
-  $("#diaChip").textContent = d.et;
+  $("#diaChip").textContent = etiquetaDia();
   const totalSeries = ids.reduce((a,i) => { const p = plan(i); return a + (p ? p.series : 0); }, 0);
   $("#diaSub").textContent = ids.length+" ejercicios · "+totalSeries+" series";
   $("#selDia").value = String(S.dia);
   $("#selFase").value = String(S.fase);
+  $("#selModelo").value = S.modelo || "clasica";
   /* La salida de emergencia. Si hay una sesion abierta que NO es de hoy, tiene
      que haber una forma de dejarla desde esta misma pantalla: si no, la unica
      salida son los Ajustes, que ademas la borran sin avisar. */
@@ -2535,6 +2658,16 @@ function pintarHoy(){
   const sig = siguienteId(), cont = $("#lista");
   cont.innerHTML = "";
   const focoId = ejercicioEnFoco();
+
+  /* La regla de la sesion suave, visible SIEMPRE que estes en una: es la que
+     evita que el corte se coma el musculo entrenando vacio de calorias. */
+  if(esCorte() && tipoCorte() === "S"){
+    const n = document.createElement("div");
+    n.className = "nota ambar";
+    n.innerHTML = "<p><strong>Sesión suave: nunca al fallo.</strong> Deja siempre " +
+      "3-4 repeticiones en la recámara. Hoy se trata de mover el cuerpo, no de romperlo.</p>";
+    cont.appendChild(n);
+  }
 
   /* Tira de progreso: donde estas, cuanto llevas, y un atajo a cualquiera. */
   if(focoId){
@@ -2814,6 +2947,42 @@ function pintarHoy(){
         f2.appendChild(sug);
         cuerpo.appendChild(f2);
 
+        /* La regla de las dos: dos "Fácil" seguidas en este ejercicio →
+           proponer subir el peso, y RECORDARLO. Si la ignora, no se repite
+           hasta que haya una racha nueva. */
+        const dos = ultimasDosMarcas(id);
+        const pesoN = pesoNumerico(id);
+        const ajAct = (S.ajustes || {})[id] || {};
+        if(dos.length === 2 && dos[0].esf === "sobra" && dos[1].esf === "sobra" &&
+           pesoN != null && ajAct.propVista !== dos[0].sesion){
+          const objetivo = Math.round((pesoN + 1) * 2) / 2;
+          const prop = document.createElement("div");
+          prop.className = "nota ambar";
+          prop.style.marginBottom = "12px";
+          const pt = document.createElement("p");
+          pt.innerHTML = "<strong>Dos sesiones seguidas fáciles.</strong> Toca subir: " +
+            "¿pasamos el objetivo a <b>" + objetivo.toString().replace(".", ",") + " kg</b>?";
+          prop.appendChild(pt);
+          const fila2 = document.createElement("div");
+          fila2.className = "acciones";
+          const si = document.createElement("button");
+          si.className = "bt p"; si.textContent = "Subir a " + objetivo.toString().replace(".", ",");
+          si.addEventListener("click", () => {
+            S.ajustes[id] = Object.assign({}, ajAct, {peso:objetivo, propVista:dos[0].sesion});
+            guardar(); pintarHoy();
+            aviso("Objetivo de " + EJ[id].n + ": " + objetivo + " kg.");
+          });
+          const no = document.createElement("button");
+          no.className = "bt"; no.textContent = "Dejar como está";
+          no.addEventListener("click", () => {
+            S.ajustes[id] = Object.assign({}, ajAct, {propVista:dos[0].sesion});
+            guardar(); pintarHoy();
+          });
+          fila2.appendChild(si); fila2.appendChild(no);
+          prop.appendChild(fila2);
+          cuerpo.appendChild(prop);
+        }
+
         // Qué te pasó la última vez con este ejercicio.
         const ult = ultimaMarca(id);
         if(ult){
@@ -2844,6 +3013,64 @@ function pintarHoy(){
       }
       const acc = document.createElement("div"); acc.className = "acciones";
       acc.innerHTML = '<a class="bt v" target="_blank" rel="noopener" href="' + vid(e.v) + '">▶ Ver cómo se hace</a>';
+      /* Ajustar: el overlay editable desde la propia tarjeta, que es donde te
+         das cuenta de que el peso se queda corto. Sin tocar codigo. */
+      if(!e.bloque){
+        const btA = document.createElement("button");
+        const hayAj = !!(S.ajustes || {})[id] &&
+          ((S.ajustes[id].peso != null && S.ajustes[id].peso !== "") ||
+           S.ajustes[id].series || S.ajustes[id].reps);
+        btA.className = "bt"; btA.textContent = hayAj ? "Ajustado ✎" : "Ajustar";
+        btA.addEventListener("click", () => {
+          const caja2 = card.querySelector(".ajusteCaja");
+          if(caja2){ caja2.hidden = !caja2.hidden; return; }
+          const f3 = document.createElement("div");
+          f3.className = "ajusteCaja tarj";
+          f3.style.marginTop = "10px";
+          const pAct = plan(id);
+          f3.innerHTML =
+            '<div class="rejilla">' +
+            '<div class="campo"><label>Peso (kg)</label>' +
+            '<input class="ajPeso" type="text" inputmode="decimal" value="' +
+              esc(String((S.ajustes[id] && S.ajustes[id].peso) || "")) + '" placeholder="' +
+              esc(String(pAct.peso)) + '"></div>' +
+            '<div class="campo"><label>Series</label>' +
+            '<input class="ajSeries" type="number" min="1" max="6" value="' +
+              esc(String((S.ajustes[id] && S.ajustes[id].series) || "")) + '" placeholder="' +
+              pAct.series + '"></div>' +
+            '<div class="campo"><label>Repeticiones</label>' +
+            '<input class="ajReps" type="text" value="' +
+              esc(String((S.ajustes[id] && S.ajustes[id].reps) || "")) + '" placeholder="' +
+              esc(String(pAct.reps)) + '"></div></div>';
+          const acc2 = document.createElement("div");
+          acc2.className = "acciones"; acc2.style.marginTop = "10px";
+          const g2 = document.createElement("button");
+          g2.className = "bt p"; g2.textContent = "Guardar ajuste";
+          g2.addEventListener("click", () => {
+            const v = {peso:f3.querySelector(".ajPeso").value.trim(),
+                       series:Number(f3.querySelector(".ajSeries").value) || "",
+                       reps:f3.querySelector(".ajReps").value.trim()};
+            if(!v.peso && !v.series && !v.reps){
+              delete S.ajustes[id];
+            }else{
+              S.ajustes[id] = Object.assign({}, S.ajustes[id] || {}, v);
+            }
+            guardar(); pintarHoy();
+            aviso("Ajuste guardado. Manda sobre la tabla.");
+          });
+          const q2 = document.createElement("button");
+          q2.className = "bt"; q2.textContent = "Quitar ajuste";
+          q2.addEventListener("click", () => {
+            delete S.ajustes[id];
+            guardar(); pintarHoy();
+          });
+          acc2.appendChild(g2);
+          if(hayAj) acc2.appendChild(q2);
+          f3.appendChild(acc2);
+          cuerpo.appendChild(f3);
+        });
+        acc.appendChild(btA);
+      }
       const bt = document.createElement("button");
       bt.className = "bt"; bt.textContent = "Técnica"; bt.setAttribute("aria-expanded","false");
       const tip = document.createElement("div");
@@ -4028,8 +4255,8 @@ function syncAviso(t, tipo){ mostrarAviso(t, tipo); }
    decidir. Sellar a mano en cada sitio donde se toca un dato es garantia de
    olvidarse de alguno, asi que se hace aqui: se compara con lo ultimo
    guardado y lo que haya cambiado se sella solo. */
-const RUTAS_MAPA = ["pasos","agua","sueno","siesta","animo","pesos"];
-const RUTAS_SUELTAS = ["fase","faseManual","diaManual","inicio"];
+const RUTAS_MAPA = ["pasos","agua","sueno","siesta","animo","pesos","ajustes"];
+const RUTAS_SUELTAS = ["fase","faseManual","diaManual","modelo","inicio"];
 let fotoPrevia = null;
 
 function fotoDeSellado(){
@@ -4282,6 +4509,7 @@ function fundir(mio, otro){
     r[k] = fundirMapa(a[k], b[k], a.ts, b.ts, k, ts);
   });
   r.pesos = fundirMapa(a.pesos, b.pesos, a.ts, b.ts, "pesos", ts);
+  r.ajustes = fundirMapa(a.ajustes, b.ajustes, a.ts, b.ts, "ajustes", ts);
 
   // Perfil: campo a campo, cada uno con su hora.
   r.perfil = {};
@@ -4315,7 +4543,7 @@ function fundir(mio, otro){
      volver a pulsarlo daba el mismo resultado para siempre. Aquí se decide por
      hora y punto; sellarCambios sella la ruta también al pasar a null. */
   const VALOR_NULO_VALE = {faseManual:1, diaManual:1};
-  ["fase","faseManual","diaManual","inicio","material"].forEach(c => {
+  ["fase","faseManual","diaManual","modelo","inicio","material"].forEach(c => {
     const ha = (a.ts || {})[c], hb = (b.ts || {})[c];
     if(VALOR_NULO_VALE[c]){
       const va = a[c] === undefined ? null : a[c];
@@ -4914,6 +5142,8 @@ function aplicarDatos(g, ts){
   S.cuerpo = Array.isArray(r.cuerpo) ? r.cuerpo : [];
   S.compra = Array.isArray(r.compra) ? r.compra : [];
   S.caminatas = Array.isArray(r.caminatas) ? r.caminatas : [];
+  S.ajustes = (r.ajustes && typeof r.ajustes === "object") ? r.ajustes : {};
+  S.modelo = r.modelo === "corte" ? "corte" : "clasica";
   ["comidas","pasos","agua","sueno","siesta","animo"].forEach(k => {
     S[k] = (r[k] && typeof r[k] === "object") ? r[k] : {};
   });
@@ -5186,6 +5416,11 @@ function cargarDatos(texto, origen){
   S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
   S.comidas = (g.comidas && typeof g.comidas === "object") ? g.comidas : {};
   S.compra  = Array.isArray(g.compra) ? g.compra : [];
+  /* Las caminatas faltaban aqui: el parche que las anyadio se metio dos veces
+     en cargar() y ninguna en esta funcion, asi que importar un archivo las
+     perdia. Cazado al releer la fontaneria. */
+  S.caminatas = Array.isArray(g.caminatas) ? g.caminatas : [];
+  S.ajustes = (g.ajustes && typeof g.ajustes === "object") ? g.ajustes : {};
   S.pasos   = (g.pasos   && typeof g.pasos   === "object") ? g.pasos   : {};
   S.agua    = (g.agua    && typeof g.agua    === "object") ? g.agua    : {};
   S.sueno   = (g.sueno   && typeof g.sueno   === "object") ? g.sueno   : {};
@@ -5202,6 +5437,7 @@ function cargarDatos(texto, origen){
      —significa "automatico"—, por eso se copia tal cual y no con un if(g.x). */
   S.faseManual = (typeof g.faseManual === "number") ? g.faseManual : null;
   S.diaManual  = (typeof g.diaManual  === "number") ? g.diaManual  : null;
+  S.modelo = g.modelo === "corte" ? "corte" : "clasica";
   aplicarAuto();
   /* Las horas y las bajas vienen del archivo: importar significa "esto pasa a
      ser mis datos". Si se quedaran las de antes, apuntarían a cosas que ya no
@@ -5240,6 +5476,8 @@ $("#listaCopias").addEventListener("click", e => {
   S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
   S.compra = Array.isArray(g.compra) ? g.compra : [];
   S.caminatas = Array.isArray(g.caminatas) ? g.caminatas : [];
+  S.ajustes = (g.ajustes && typeof g.ajustes === "object") ? g.ajustes : {};
+  S.modelo = g.modelo === "corte" ? "corte" : "clasica";
   ["comidas","pasos","agua","sueno","siesta","animo"].forEach(k => {
     S[k] = (g[k] && typeof g[k] === "object") ? g[k] : {};
   });
@@ -5253,6 +5491,7 @@ $("#listaCopias").addEventListener("click", e => {
      —significa "automatico"—, por eso se copia tal cual y no con un if(g.x). */
   S.faseManual = (typeof g.faseManual === "number") ? g.faseManual : null;
   S.diaManual  = (typeof g.diaManual  === "number") ? g.diaManual  : null;
+  S.modelo = g.modelo === "corte" ? "corte" : "clasica";
   aplicarAuto();
   // Las horas y las bajas de la copia, igual que al importar: si se quedaran
   // las de ahora, una baja posterior borraría lo que acabas de restaurar.
@@ -5308,10 +5547,11 @@ $("#btnBorrar").addEventListener("click", () => {
      el almacén. "Borrar todo" tiene que borrar todo. */
   try{ localStorage.removeItem(LS); }catch(err){}
   S.pesos = {}; S.hist = []; S.cuerpo = []; S.compra = []; S.caminatas = [];
+  S.ajustes = {}; S.modelo = "clasica";
   S.comidas = {}; S.pasos = {}; S.agua = {}; S.sueno = {}; S.siesta = {}; S.animo = {};
   S.ts = {}; S.bajas = {};
   S.perfil = {altura:"",nacim:"",sexo:"",nivel:"",objetivo:""};
-  S.inicio = null; S.faseManual = null; S.diaManual = null;
+  S.inicio = null; S.faseManual = null; S.diaManual = null; S.modelo = "clasica";
   S.t0 = null; S.hechos = {}; S.marcas = {}; S.acumPausa = 0; S.pausadoEn = null;
   S.sesionF = null; S.sesionDia = null; S.sesionFase = null; S.sesionId = null; S.foco = null;
   S.ultimoHecho = null; S.latido = null;
@@ -5370,6 +5610,7 @@ function diasConDatos(){
   const set = {};
   S.hist.forEach(h => set[h.f] = 1);
   S.cuerpo.forEach(c => set[c.f] = 1);
+  (S.caminatas || []).forEach(c => set[c.f] = 1);
   [S.comidas, S.pasos, S.agua, S.sueno, S.animo].forEach(o =>
     Object.keys(o).forEach(f => { if(o === S.comidas ? comidasDe(f).length : o[f]) set[f] = 1; }));
   return Object.keys(set).sort().reverse();
@@ -5429,6 +5670,16 @@ function pintarDiario(){
 
     let det = "";
     if(ses) det += '<h5>Entrenamiento · ' + esc(ses.d) + '</h5>' + detalleSesion(ses);
+    const cams = (S.caminatas || []).filter(c => c.f === f);
+    if(cams.length){
+      det += '<h5>Caminata</h5>' + cams.map(c =>
+        '<div class="comidaL"><span style="color:var(--tinta);font-family:var(--ui)">🥾 ' +
+        (Number(c.min) || 0) + " min" +
+        ((Number(c.km) || 0) ? " · " + String(c.km).replace(".", ",") + " km" : "") +
+        ((Number(c.pasos) || 0) ? " · " + c.pasos.toLocaleString("es-ES") + " pasos" : "") +
+        ((Number(c.desnivel) || 0) ? " · +" + c.desnivel + " m" : "") +
+        (c.ruta ? " · " + esc(c.ruta) : "") + '</span></div>').join("");
+    }
     if(comidasDe(f).length){
       det += '<h5>Comida</h5>' + comidasDe(f).map(c =>
         '<div class="comidaL"><span style="color:var(--tinta);font-family:var(--ui)">' + esc(c.n) +
@@ -5463,9 +5714,20 @@ function pintarSemana(){
   const hoy = new Date().getDay(), orden = [1,2,3,4,5,6,0];
   $("#semanaLista").innerHTML = orden.map(i => {
     const d = DIAS[i];
-    const mins = d.k === "D" ? "25 min" : (S.fase === 0 ? "50 min" : S.fase === 1 ? "60 min" : "70 min");
+    let et2, nEj, mins;
+    if(esCorte()){
+      const tipo = [1,3,5].indexOf(i) >= 0 ? "F" : "S";
+      let l = CORTE[tipo].slice();
+      if(tipo === "F" && i !== 1 && i !== 5) l = l.filter(x => x !== "curl" && x !== "triceps");
+      et2 = tipo === "F" ? "Fuerte" : "Suave";
+      nEj = l.length;
+      mins = tipo === "F" ? "40-45 min" : "20-25 min";
+    }else{
+      et2 = d.et; nEj = listaDia(d.k).length;
+      mins = d.k === "D" ? "25 min" : (S.fase === 0 ? "50 min" : S.fase === 1 ? "60 min" : "70 min");
+    }
     return '<div class="dfila' + (i === hoy ? " hoy" : "") + '"><b>' + d.n + (i === hoy ? " · hoy" : "") +
-      '</b><span class="et">' + d.et + '</span><span class="mn">' + listaDia(d.k).length + " ej · " + mins + '</span></div>';
+      '</b><span class="et">' + et2 + '</span><span class="mn">' + nEj + " ej · " + mins + '</span></div>';
   }).join("");
 
 
@@ -5612,6 +5874,8 @@ function pintarCaminatas(){
     const det = document.createElement("span"); det.className = "hf";
     det.textContent = [
       c.ruta || "",
+      (Number(c.km) || 0) ? String(c.km).replace(".", ",") + " km" : "",
+      (Number(c.pasos) || 0) ? c.pasos.toLocaleString("es-ES") + " pasos" : "",
       (Number(c.desnivel) || 0) ? "+" + c.desnivel + " m" + (extra ? " (≈" + extra + " kcal)" : "") : "",
       c.sens ? ({bien:"bien",normal:"normal",duro:"duro"})[c.sens] || "" : ""
     ].filter(Boolean).join(" · ");
@@ -5649,11 +5913,16 @@ function guardarCaminata(){
   const min = num($("#camMin").value);
   if(!min || min <= 0){ aviso("Pon cuántos minutos has andado.", true); return; }
   const desn = num($("#camDesnivel").value);
+  const km = num($("#camKm").value);
+  const pasosR = num($("#camPasos").value);
   S.caminatas.push({id:idNuevo(), f:hoyISO(), min:Math.round(min),
+    km:km != null && km > 0 ? Math.round(km*10)/10 : 0,
+    pasos:pasosR != null && pasosR > 0 ? Math.round(pasosR) : 0,
     ruta:$("#camRuta").value.trim(), desnivel:desn != null && desn > 0 ? Math.round(desn) : 0,
     sens:camSens, ts:new Date().toISOString()});
   guardar();
   $("#camMin").value = ""; $("#camRuta").value = ""; $("#camDesnivel").value = "";
+  $("#camKm").value = ""; $("#camPasos").value = "";
   camSens = null; pintarSensCam(); pintarCaminatas(); pintarPasos(); pintarInicio();
   aviso("Caminata guardada.");
 }
@@ -5842,21 +6111,32 @@ let comDia = hoyISO();
    Son estimaciones honestas, no medidas: si un dia pesa y apunta a mano,
    manda lo suyo. Indice por getDay(): 0=domingo. */
 const MENU_AGOSTO = {desde:"2026-08-10", hasta:"2026-08-31", dias:[
-  /* D */ {comida:{n:"Garbanzos 250 g + arroz 50 g", kcal:565, prot:19},
-           cena:{n:"Pollo 250 g a la plancha + yogur", kcal:510, prot:60}},
-  /* L */ {comida:{n:"Macarrones 70 g + picada 150 g + tomate + queso", kcal:810, prot:41},
-           cena:{n:"Pollo 250 g a la plancha + yogur", kcal:510, prot:60}},
-  /* M */ {comida:{n:"Arroz 70 g + pollo 250 g + tomate", kcal:655, prot:62},
-           cena:{n:"Lentejas 250 g + queso 30 g + yogur", kcal:580, prot:29}},
-  /* X */ {comida:{n:"Garbanzos 250 g + picada 150 g + tomate", kcal:780, prot:43},
-           cena:{n:"Pollo 200 g + arroz de sobras + yogur", kcal:625, prot:53}},
-  /* J */ {comida:{n:"Lentejas 250 g + arroz 50 g", kcal:505, prot:21},
-           cena:{n:"Pasta 60 g + picada 125 g (boloñesa)", kcal:635, prot:30}},
-  /* V */ {comida:{n:"Arroz 70 g + pollo 250 g", kcal:625, prot:61},
-           cena:{n:"Alubias 250 g + picada 125 g + yogur", kcal:745, prot:42}},
+  /* Macros desde sus raciones: pollo 250 g crudo ~290/56 · boloñesa 150 g
+     (picada+sofrito+tomate) ~410/25, la de 125 ~340/21 · arroz 70 g seco
+     ~245/5 · patata 300 g cocida ~260/6 (comodin = arroz 70) · 2 latas de
+     atun ~130/30 (= media racion de pollo) · judia verde libre ~70/4 ·
+     tomate alinyado ~70/1 · yogur ~130/5 · queso 20 g ~80/5 · aceite 10 g
+     ~90. El medio pollo asado del jueves ~750/75. */
+  /* D */ {comida:{n:"Hervido frío: patata 300 g + judía verde + 2 latas de atún", kcal:505, prot:40},
+           cena:{n:"Pollo 250 g + tomate aliñado", kcal:450, prot:57}},
+  /* L */ {comida:{n:"Macarrones 70 g + boloñesa 150 g + queso 20 g", kcal:740, prot:39},
+           cena:{n:"Pollo 250 g + judía verde", kcal:450, prot:60}},
+  /* M */ {comida:{n:"Arroz 70 g + pollo 250 g + tomate frito 40 g", kcal:655, prot:62},
+           cena:{n:"Lentejas 250 g + 1 lata de atún", kcal:350, prot:32}},
+  /* X */ {comida:{n:"Garbanzos 250 g + boloñesa 150 g", kcal:710, prot:40},
+           cena:{n:"Pollo 200 g + puré de patata", kcal:610, prot:51}},
+  /* J */ {comida:{n:"½ pollo asado + tomate aliñado", kcal:820, prot:76},
+           cena:{n:"Patatas a la boloñesa con queso", kcal:680, prot:32}},
+  /* V */ {comida:{n:"Arroz 70 g + pollo 250 g + judía verde", kcal:695, prot:65},
+           cena:{n:"Alubias 250 g + boloñesa 125 g", kcal:565, prot:36}},
   /* S */ {comida:{n:"Libre con cabeza", libre:true},
            cena:{n:"Yogur + fruta", kcal:210, prot:5}}
 ]};
+
+/* El cierre de todas las noches, fijo: leche 250 ml + yogur, antes de dormir.
+   El yogur que la tabla ponia en la cena es ESTE — compra 8 a la semana, uno
+   al dia—, asi que las cenas van sin el y el cierre lo lleva con la leche. */
+const CIERRE_PLAN = {n:"Cierre: leche 250 ml + yogur", kcal:250, prot:13};
 
 /* Los numeros del menu son GRAMOS, como en su tabla: carne en crudo, arroz y
    pasta en seco, legumbre escurrida de bote. */
@@ -5878,7 +6158,8 @@ function pintarMenuDia(){
   h.textContent = comDia === hoyISO() ? "El menú de hoy" : "El menú de ese día";
   cab.appendChild(h);
   caja.appendChild(cab);
-  [["comida", "Comida · ~14 h", m.comida], ["cena", "Cena · ~21:30", m.cena]].forEach(par => {
+  [["comida", "Comida · ~14 h", m.comida], ["cena", "Cena · ~21:30", m.cena],
+   ["cierre", "Antes de dormir", CIERRE_PLAN]].forEach(par => {
     const [id, et, plato] = par;
     const fila = document.createElement("div");
     fila.className = "menuFila";
@@ -5938,6 +6219,11 @@ function pintarMenuSemana(){
     fila.appendChild(tx);
     caja.appendChild(fila);
   });
+  const pie = document.createElement("p");
+  pie.style.cssText = "margin:10px 0 0;font-size:.78rem;color:var(--acero)";
+  pie.textContent = "Todas las noches, antes de dormir: leche 250 ml + yogur (≈ 250 kcal). " +
+    "Comodines: 2 latas de atún = ½ ración de pollo · patata 300 g = arroz/pasta 70 g en seco.";
+  caja.appendChild(pie);
 }
 
 /* Los ultimos siete dias en una tira: cuanto comiste cada dia, y un toque para
@@ -5986,10 +6272,12 @@ function pintarTiraDias(){
 
 /* La compra semanal de su plan de agosto (Consum), cerrada por el. */
 const COMPRA_PLAN = [
-  "2 bandejas grandes de pollo", "2 bandejas de carne picada mixta",
-  "3-4 botes de legumbre", "Macarrones", "Arroz", "Tomate frito",
-  "Pack de yogures griegos", "Leche", "Plátanos / manzanas / uvas",
-  "Queso básico"
+  "2 bandejas grandes de pechuga (~1,5 kg)", "1 bandeja de picada mixta (~600 g)",
+  "1 bote de lentejas", "1 bote de garbanzos", "1 bote de alubias",
+  "Macarrones", "Arroz 1 kg", "Tomate frito", "Yogur griego (8)", "Leche 2 L",
+  "Plátanos + manzanas/uvas", "Queso rallado", "Judía verde congelada (1 bolsa)",
+  "Tomates (~6) y zanahorias", "1 cebolla + 1 pimiento", "Atún en lata (6-8)",
+  "Patatas 2 kg"
 ];
 
 function pintarCompra(){
@@ -6127,7 +6415,15 @@ function gastoDe(f){
   const alt = num(S.perfil.altura), pes = pesoEn(f), ed = edadEn(f);
   if(!alt || pes == null || ed == null) return null;
   const tmb = 10*pes + 6.25*alt - 5*ed + (S.perfil.sexo === "m" ? -161 : 5);
-  const pasos = (S.pasos[f] || 0) * pes * 0.0004;
+  /* El llano del dia: EL MAYOR de (pasos del dia, lo andado en las rutas),
+     nunca la suma — los pasos de la caminata ya estan dentro del contador del
+     movil, sumarlos seria contar la misma caminata dos veces. Lo andado en
+     ruta se mide por sus pasos si los apunto (de Wikiloc), o por km a razon
+     de ~1.330 pasos/km si solo puso km. */
+  const rutasF = (S.caminatas || []).filter(c => c.f === f);
+  const andadoRutas = rutasF.reduce((acc, c) =>
+    acc + (Number(c.pasos) || Math.round((Number(c.km) || 0) * 1330)), 0);
+  const pasos = Math.max(S.pasos[f] || 0, andadoRutas) * pes * 0.0004;
   const entreno = S.hist.some(h => h.f === f) ? 280 : 0;
   /* La cuesta. Los pasos cuentan el terreno llano; subir es aparte y en sus
      rutas de Collserola no es poco. 0,006 kcal por kilo y metro de subida:
@@ -6135,8 +6431,7 @@ function gastoDe(f){
      metro), pero la vuelta cuesta abajo devuelve parte, y en un corte es mejor
      quedarse corto que inventarse gasto. Los pasos de la caminata YA estan en
      el contador de pasos: aqui SOLO se suma el desnivel, o contariamos doble. */
-  const cuesta = (S.caminatas || []).filter(c => c.f === f)
-    .reduce((acc, c) => acc + (Number(c.desnivel) || 0), 0) * pes * 0.006;
+  const cuesta = rutasF.reduce((acc, c) => acc + (Number(c.desnivel) || 0), 0) * pes * 0.006;
   return Math.round(tmb * 1.25 + pasos + entreno + cuesta);
 }
 function medidor(et, val, obj, ud){
@@ -6520,7 +6815,7 @@ function pintarMapa(){
                 (h.rpe ? " · esfuerzo " + h.rpe + "/10" : "");
     entValor = "✓ hecha"; entOk = true;
   }else{
-    entEstado = d.et + " · " + ids.length + " ejercicios";
+    entEstado = etiquetaDia() + " · " + ids.length + " ejercicios";
     entValor = (S.fase === 0 ? "50" : S.fase === 1 ? "60" : "70") + " min";
   }
 
@@ -6763,6 +7058,28 @@ $("#selDia").addEventListener("change", e => {
 $("#selFase").addEventListener("change", e => {
   S.faseManual = Number(e.target.value);
   aplicarAuto(); guardar(); pintarHoy(); pintarSemana();
+});
+$("#selModelo").addEventListener("change", e => {
+  /* Cambiar de modelo con una sesion a medias la descartaria a silencio:
+     la lista de ejercicios cambia entera. Se avisa. */
+  const nuevo = e.target.value === "corte" ? "corte" : "clasica";
+  if(nuevo === S.modelo) return;
+  if(S.t0){
+    const SL = String.fromCharCode(10);
+    if(!confirm("Tienes una sesión a medias." + SL + SL +
+                "Cambiar de rutina la descarta y no se guarda. ¿Seguro?")){
+      e.target.value = S.modelo; return;
+    }
+    S.t0 = null; S.hechos = {}; S.marcas = {}; S.acumPausa = 0; S.pausadoEn = null;
+    S.latido = null; S.sesionF = null; S.sesionDia = null; S.sesionFase = null;
+    S.sesionId = null; S.foco = null;
+    barraOff();
+  }
+  S.modelo = nuevo;
+  S.foco = null;
+  guardar(); pintarHoy(); pintarSemana(); pintarInicio();
+  aviso(nuevo === "corte" ? "Rutina de corte: fuerte L-X-V, suave el resto."
+                          : "Rutina clásica.");
 });
 $("#btnAjustes").addEventListener("click", () => {
   const a = $("#ajustes"), abierto = !a.hidden;
