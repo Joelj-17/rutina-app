@@ -1189,6 +1189,31 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
     Apúntalos al final del día, cuando ya no vayas a andar más. Míralos en la app
     de tu móvil y tecléalos: una web no puede leerlos sola.</p>
 
+  <!-- La caminata del dia: que toca segun el plan, y apuntarla al volver.
+       Los pasos ya cuentan las kcal del llano; aqui solo se anyade la cuesta. -->
+  <h2 class="sec">La caminata</h2>
+  <div class="avisoDia" id="camPlan" hidden></div>
+  <div class="tarj">
+    <div class="rejilla">
+      <div class="campo"><label for="camMin">Minutos</label>
+        <input id="camMin" type="number" inputmode="numeric" min="1" step="5" placeholder="60"></div>
+      <div class="campo"><label for="camDesnivel">Subida (m, opcional)</label>
+        <input id="camDesnivel" type="number" inputmode="numeric" min="0" step="10" placeholder="0"></div>
+      <div class="campo" style="grid-column:1/-1"><label for="camRuta">Dónde (opcional)</label>
+        <input id="camRuta" list="listaRutas" placeholder="Guinardó, Aigües…" autocomplete="off">
+        <datalist id="listaRutas"></datalist></div>
+    </div>
+    <div class="preg" style="margin-top:10px">¿Cómo ha ido?</div>
+    <div class="opts" id="camSens"></div>
+    <div class="acciones" style="margin-top:12px">
+      <button class="bt p" id="camGuardar">Guardar la caminata</button>
+    </div>
+    <p style="font-size:.78rem;color:var(--acero);margin:10px 0 0">
+      Las kcal de andar ya te las cuentan los pasos. La subida se suma aparte,
+      que la cuesta no sale gratis.</p>
+  </div>
+  <div class="hist" id="camLista" style="margin-top:10px"></div>
+
   <h2 class="sec">Apuntar otro día</h2>
   <div class="tarj">
     <p style="font-size:.85rem;color:var(--acero);margin:0 0 12px">
@@ -1781,7 +1806,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-08 · 32";
+const VERSION = "2026-08-08 · 33";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -1789,7 +1814,7 @@ let S = {
   sesionF:null, sesionDia:null, sesionFase:null, sesionId:null,  // la sesion abierta
   foco:null,                                     // que ejercicio estas viendo
   hechos:{}, pesos:{}, marcas:{}, hist:[],
-  comidas:{}, pasos:{}, agua:{}, sueno:{}, siesta:{}, animo:{}, compra:[],
+  comidas:{}, pasos:{}, agua:{}, sueno:{}, siesta:{}, animo:{}, compra:[], caminatas:[],
   syncId:null, syncUlt:null,
   cofre:null, pinFallos:0, cambiadoEn:null,
   /* ts: cuando se toco cada cosa, por ruta ('pasos.2026-08-06').
@@ -1908,6 +1933,8 @@ function cargar(){
     S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
     S.comidas = (g.comidas && typeof g.comidas === "object") ? g.comidas : {};
     S.compra  = Array.isArray(g.compra) ? g.compra : [];
+  S.caminatas = Array.isArray(g.caminatas) ? g.caminatas : [];
+    S.caminatas = Array.isArray(g.caminatas) ? g.caminatas : [];
     S.pasos   = (g.pasos   && typeof g.pasos   === "object") ? g.pasos   : {};
     S.agua    = (g.agua    && typeof g.agua    === "object") ? g.agua    : {};
     S.sueno   = (g.sueno   && typeof g.sueno   === "object") ? g.sueno   : {};
@@ -1997,7 +2024,8 @@ function paquete(){
     material:S.material,
     pesos:S.pesos, hist:S.hist.slice(0,TOPE_HIST),
     perfil:S.perfil, cuerpo:S.cuerpo.slice(0,TOPE_CUERPO),
-    comidas:S.comidas, compra:S.compra, pasos:S.pasos, agua:S.agua, sueno:S.sueno, siesta:S.siesta,
+    comidas:S.comidas, compra:S.compra, caminatas:S.caminatas,
+    pasos:S.pasos, agua:S.agua, sueno:S.sueno, siesta:S.siesta,
     animo:S.animo,
     ts:S.ts || {}, bajas:S.bajas || {},
     syncId:S.syncId, syncUlt:S.syncUlt, cofre:S.cofre, pinFallos:S.pinFallos,
@@ -4047,6 +4075,7 @@ function fundir(mio, otro){
      Marcar una casilla cambia el elemento y le renueva la hora, asi que gana
      la marca mas reciente; borrar deja lapida y no resucita. */
   r.compra = fundirLista(a.compra, b.compra, bajas);
+  r.caminatas = fundirLista(a.caminatas, b.caminatas, bajas);
 
   // Sesiones: una por identificador. Si el mismo entrenamiento está en los
   // dos, nos quedamos con el que trae el desglose por ejercicio.
@@ -4715,6 +4744,7 @@ function aplicarDatos(g, ts){
   S.hist   = Array.isArray(r.hist)   ? r.hist   : [];
   S.cuerpo = Array.isArray(r.cuerpo) ? r.cuerpo : [];
   S.compra = Array.isArray(r.compra) ? r.compra : [];
+  S.caminatas = Array.isArray(r.caminatas) ? r.caminatas : [];
   ["comidas","pasos","agua","sueno","siesta","animo"].forEach(k => {
     S[k] = (r[k] && typeof r[k] === "object") ? r[k] : {};
   });
@@ -5040,6 +5070,7 @@ $("#listaCopias").addEventListener("click", e => {
   S.hist   = Array.isArray(g.hist)   ? g.hist   : [];
   S.cuerpo = Array.isArray(g.cuerpo) ? g.cuerpo : [];
   S.compra = Array.isArray(g.compra) ? g.compra : [];
+  S.caminatas = Array.isArray(g.caminatas) ? g.caminatas : [];
   ["comidas","pasos","agua","sueno","siesta","animo"].forEach(k => {
     S[k] = (g[k] && typeof g[k] === "object") ? g[k] : {};
   });
@@ -5107,7 +5138,7 @@ $("#btnBorrar").addEventListener("click", () => {
      tampoco volvía a guardar, el siguiente guardado los reescribía todos en
      el almacén. "Borrar todo" tiene que borrar todo. */
   try{ localStorage.removeItem(LS); }catch(err){}
-  S.pesos = {}; S.hist = []; S.cuerpo = []; S.compra = [];
+  S.pesos = {}; S.hist = []; S.cuerpo = []; S.compra = []; S.caminatas = [];
   S.comidas = {}; S.pasos = {}; S.agua = {}; S.sueno = {}; S.siesta = {}; S.animo = {};
   S.ts = {}; S.bajas = {};
   S.perfil = {altura:"",nacim:"",sexo:"",nivel:"",objetivo:""};
@@ -5336,6 +5367,127 @@ function mejorDiaPasos(){
 
 const milesTxt = n => n >= 1000 ? (n/1000).toFixed(n >= 10000 ? 0 : 1).replace(".", ",") + "k"
                                 : String(n);
+
+/* ============ CAMINATAS ============
+   El primer nodo de actividad nuevo (PLAN.md: correr/andar). Cada caminata:
+   {id, f, min, ruta, desnivel, sens, ts}. Las kcal del llano ya las cuentan
+   los pasos; el desnivel se suma en gastoDe. */
+
+/* Su plan de caminatas de agosto de 2026, escrito aqui como la rutina de
+   pesas: hecho a su medida hasta que exista el editor de planes. */
+const CAMINATAS_PLAN = [
+  {desde:"2026-08-10", hasta:"2026-08-16",
+   txt:"Rodaje: Parc del Guinardó zona alta o bucle Aigües–Can Baró, 45-60 min."},
+  {desde:"2026-08-17", hasta:"2026-08-23",
+   txt:"Tres Turons por el Carmel o Heures/Laberint, 1 h-1 h 30. Un día, Besòs llano 2 h."},
+  {desde:"2026-08-24", hasta:"2026-08-31",
+   txt:"Mirador de Sant Genís 2 h entre semana; Sant Cebrià de Collserola (3,5-4 h, ~12 km, +350 m) dos veces. O en moto a las 19: Sant Jeroni de la Murtra, Can Coll, Sant Medir, la Conreria."}
+];
+const RUTAS_SUGERIDAS = ["Guinardó zona alta","Bucle Aigües–Can Baró","Tres Turons pel Carmel",
+  "Heures / Laberint","Besòs llano","Mirador de Sant Genís","Sant Cebrià de Collserola",
+  "Sant Jeroni de la Murtra","Can Coll","Sant Medir","La Conreria"];
+
+function caminataQueToca(f){
+  const t = CAMINATAS_PLAN.find(x => f >= x.desde && f <= x.hasta);
+  return t ? t.txt : null;
+}
+
+const SENS_CAM = [{v:"bien",t:"Bien"},{v:"normal",t:"Normal"},{v:"duro",t:"Duro"}];
+
+(function(){
+  const dl = document.getElementById("listaRutas");
+  if(dl) RUTAS_SUGERIDAS.forEach(r2 => {
+    const o = document.createElement("option"); o.value = r2; dl.appendChild(o);
+  });
+  const bg = document.getElementById("camGuardar");
+  if(bg) bg.addEventListener("click", guardarCaminata);
+})();
+
+function pintarCaminatas(){
+  const hoy = hoyISO();
+  const plan = $("#camPlan");
+  if(plan){
+    const t = caminataQueToca(hoy);
+    plan.hidden = !t;
+    if(t){
+      plan.innerHTML = "";
+      const b = document.createElement("b"); b.textContent = "Hoy toca: ";
+      const x = document.createElement("span"); x.textContent = t;
+      const reglas = document.createElement("p");
+      reglas.textContent = "Desde las 19 h · agua siempre · a las 20:30 media vuelta estés donde estés.";
+      plan.appendChild(b); plan.appendChild(x); plan.appendChild(reglas);
+    }
+  }
+  const lista = $("#camLista");
+  if(!lista) return;
+  lista.innerHTML = "";
+  const l = (S.caminatas || []).slice()
+    .sort((a2, b2) => ((b2.f || "") + (b2.ts || "")).localeCompare((a2.f || "") + (a2.ts || "")))
+    .slice(0, 30);
+  if(!l.length){
+    lista.innerHTML = '<div class="vacio">Todavía ninguna. La primera, hoy a las 19.</div>';
+    return;
+  }
+  const pes = ultimoPeso();
+  l.forEach(c => {
+    const fila = document.createElement("div");
+    fila.className = "hfila";
+    const extra = (Number(c.desnivel) || 0) && pes != null
+      ? Math.round(Number(c.desnivel) * pes * 0.006) : 0;
+    const l1 = document.createElement("div");
+    l1.className = "lin1";
+    const hf = document.createElement("span"); hf.className = "hf";
+    hf.textContent = fechaCorta(c.f);
+    const bb = document.createElement("b");
+    bb.textContent = (Number(c.min) || 0) + " min";
+    const det = document.createElement("span"); det.className = "hf";
+    det.textContent = [
+      c.ruta || "",
+      (Number(c.desnivel) || 0) ? "+" + c.desnivel + " m" + (extra ? " (≈" + extra + " kcal)" : "") : "",
+      c.sens ? ({bien:"bien",normal:"normal",duro:"duro"})[c.sens] || "" : ""
+    ].filter(Boolean).join(" · ");
+    const q = document.createElement("button");
+    q.className = "quitarMed"; q.textContent = "✕";
+    q.setAttribute("aria-label", "Quitar la caminata del " + fechaCorta(c.f));
+    q.addEventListener("click", () => {
+      if(!confirm("¿Quitar la caminata del " + fechaCorta(c.f) + "?")) return;
+      S.caminatas = S.caminatas.filter(x => x.id !== c.id);
+      S.bajas[c.id] = new Date().toISOString();
+      guardar(); pintarCaminatas(); pintarPasos();
+    });
+    l1.appendChild(hf); l1.appendChild(bb); l1.appendChild(det); l1.appendChild(q);
+    fila.appendChild(l1);
+    lista.appendChild(fila);
+  });
+}
+
+let camSens = null;
+function pintarSensCam(){
+  const caja = $("#camSens");
+  if(!caja) return;
+  caja.innerHTML = "";
+  SENS_CAM.forEach(x => {
+    const b = document.createElement("button");
+    b.className = "opt";
+    b.textContent = x.t;
+    b.setAttribute("aria-pressed", String(camSens === x.v));
+    b.addEventListener("click", () => { camSens = (camSens === x.v) ? null : x.v; pintarSensCam(); });
+    caja.appendChild(b);
+  });
+}
+
+function guardarCaminata(){
+  const min = num($("#camMin").value);
+  if(!min || min <= 0){ aviso("Pon cuántos minutos has andado.", true); return; }
+  const desn = num($("#camDesnivel").value);
+  S.caminatas.push({id:idNuevo(), f:hoyISO(), min:Math.round(min),
+    ruta:$("#camRuta").value.trim(), desnivel:desn != null && desn > 0 ? Math.round(desn) : 0,
+    sens:camSens, ts:new Date().toISOString()});
+  guardar();
+  $("#camMin").value = ""; $("#camRuta").value = ""; $("#camDesnivel").value = "";
+  camSens = null; pintarSensCam(); pintarCaminatas(); pintarPasos(); pintarInicio();
+  aviso("Caminata guardada.");
+}
 
 function pintarPasos(){
   const hoy = hoyISO(), hoyV = S.pasos[hoy] || 0;
@@ -5662,7 +5814,15 @@ function gastoDe(f){
   const tmb = 10*pes + 6.25*alt - 5*ed + (S.perfil.sexo === "m" ? -161 : 5);
   const pasos = (S.pasos[f] || 0) * pes * 0.0004;
   const entreno = S.hist.some(h => h.f === f) ? 280 : 0;
-  return Math.round(tmb * 1.25 + pasos + entreno);
+  /* La cuesta. Los pasos cuentan el terreno llano; subir es aparte y en sus
+     rutas de Collserola no es poco. 0,006 kcal por kilo y metro de subida:
+     la fisiologia da ~0,009 para la subida sola (ACSM: 1,8 ml de O2 por kg y
+     metro), pero la vuelta cuesta abajo devuelve parte, y en un corte es mejor
+     quedarse corto que inventarse gasto. Los pasos de la caminata YA estan en
+     el contador de pasos: aqui SOLO se suma el desnivel, o contariamos doble. */
+  const cuesta = (S.caminatas || []).filter(c => c.f === f)
+    .reduce((acc, c) => acc + (Number(c.desnivel) || 0), 0) * pes * 0.006;
+  return Math.round(tmb * 1.25 + pasos + entreno + cuesta);
 }
 function medidor(et, val, obj, ud){
   const pct = Math.min(100, obj ? val/obj*100 : 0);
@@ -6238,6 +6398,7 @@ function irA(t){
      "Comida de hoy", te metia la comida en el dia viejo. */
   if(t === "comida"){ comDia = hoyISO(); pintarComida(); }
   if(t === "compra") pintarCompra();
+  if(t === "pasos"){ pintarCaminatas(); pintarSensCam(); }
   if(t === "diario") pintarDiario();
   if(t === "semana") pintarSemana();
   if(t === "cuerpo"){ pintarPerfil(); pintarCuerpo(); }
