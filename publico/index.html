@@ -165,6 +165,8 @@ textarea{width:100%;resize:vertical;min-height:64px;line-height:1.45}
   color:var(--acero);font-weight:700}
 .diaChip b{display:block;font-family:var(--mono);font-size:.8rem;font-weight:700;margin-top:2px}
 .diaChip.vacio b{color:var(--acero);font-weight:400}
+.diaChip b.def{color:var(--hecho)} .diaChip b.sup{color:var(--alerta)}
+.fdKcal.def{color:var(--hecho)} .fdKcal.sup{color:var(--alerta)}
 .diaChip.aqui{border-color:var(--agua);border-width:2px;padding:6px 1px}
 
 /* ---- El menu del dia ---- */
@@ -1873,7 +1875,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-08 · 38";
+const VERSION = "2026-08-08 · 39";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -5840,22 +5842,24 @@ let comDia = hoyISO();
    Son estimaciones honestas, no medidas: si un dia pesa y apunta a mano,
    manda lo suyo. Indice por getDay(): 0=domingo. */
 const MENU_AGOSTO = {desde:"2026-08-10", hasta:"2026-08-31", dias:[
-  /* D */ {comida:{n:"Garbanzos 250 + arroz 50", kcal:565, prot:19},
-           cena:{n:"Pollo 250 a la plancha + yogur", kcal:510, prot:60}},
-  /* L */ {comida:{n:"Macarrones 70 + picada 150 + tomate + queso", kcal:810, prot:41},
-           cena:{n:"Pollo 250 a la plancha + yogur", kcal:510, prot:60}},
-  /* M */ {comida:{n:"Arroz 70 + pollo 250 + tomate", kcal:655, prot:62},
-           cena:{n:"Lentejas 250 + queso 30 + yogur", kcal:580, prot:29}},
-  /* X */ {comida:{n:"Garbanzos 250 + picada 150 + tomate", kcal:780, prot:43},
-           cena:{n:"Pollo 200 + arroz de sobras + yogur", kcal:625, prot:53}},
-  /* J */ {comida:{n:"Lentejas 250 + arroz 50", kcal:505, prot:21},
-           cena:{n:"Pasta 60 + picada 125 (boloñesa)", kcal:635, prot:30}},
-  /* V */ {comida:{n:"Arroz 70 + pollo 250", kcal:625, prot:61},
-           cena:{n:"Alubias 250 + picada 125 + yogur", kcal:745, prot:42}},
+  /* D */ {comida:{n:"Garbanzos 250 g + arroz 50 g", kcal:565, prot:19},
+           cena:{n:"Pollo 250 g a la plancha + yogur", kcal:510, prot:60}},
+  /* L */ {comida:{n:"Macarrones 70 g + picada 150 g + tomate + queso", kcal:810, prot:41},
+           cena:{n:"Pollo 250 g a la plancha + yogur", kcal:510, prot:60}},
+  /* M */ {comida:{n:"Arroz 70 g + pollo 250 g + tomate", kcal:655, prot:62},
+           cena:{n:"Lentejas 250 g + queso 30 g + yogur", kcal:580, prot:29}},
+  /* X */ {comida:{n:"Garbanzos 250 g + picada 150 g + tomate", kcal:780, prot:43},
+           cena:{n:"Pollo 200 g + arroz de sobras + yogur", kcal:625, prot:53}},
+  /* J */ {comida:{n:"Lentejas 250 g + arroz 50 g", kcal:505, prot:21},
+           cena:{n:"Pasta 60 g + picada 125 g (boloñesa)", kcal:635, prot:30}},
+  /* V */ {comida:{n:"Arroz 70 g + pollo 250 g", kcal:625, prot:61},
+           cena:{n:"Alubias 250 g + picada 125 g + yogur", kcal:745, prot:42}},
   /* S */ {comida:{n:"Libre con cabeza", libre:true},
            cena:{n:"Yogur + fruta", kcal:210, prot:5}}
 ]};
 
+/* Los numeros del menu son GRAMOS, como en su tabla: carne en crudo, arroz y
+   pasta en seco, legumbre escurrida de bote. */
 function menuDe(f){
   if(f < MENU_AGOSTO.desde || f > MENU_AGOSTO.hasta) return null;
   return MENU_AGOSTO.dias[new Date(f + "T12:00:00").getDay()];
@@ -5947,14 +5951,29 @@ function pintarTiraDias(){
     const d = new Date(); d.setDate(d.getDate() - i);
     const f = hoyISO(d);
     const t = totalDe(f);
+    /* El numero del chip es el BALANCE del dia, no lo comido: lo pidio asi.
+       Verde el deficit —es lo que se busca—, ambar la ganancia. */
+    const g = t.kcal > 0 ? gastoDe(f) : null;
+    const bal = (g && t.kcal > 0) ? Math.round(t.kcal - g) : null;
     const b = document.createElement("button");
     b.className = "diaChip" + (f === comDia ? " aqui" : "") + (t.kcal > 0 ? "" : " vacio");
     const l1 = document.createElement("small");
     l1.textContent = i === 0 ? "Hoy" : letras[d.getDay()] + " " + d.getDate();
     const l2 = document.createElement("b");
-    l2.textContent = t.kcal > 0 ? (t.kcal >= 1000 ? (t.kcal/1000).toFixed(1).replace(".", ",") + "k" : Math.round(t.kcal)) : "—";
+    const compacto = v => {
+      const signo = v > 0 ? "+" : "−";
+      const abs = Math.abs(v);
+      return signo + (abs >= 1000 ? (abs/1000).toFixed(1).replace(".", ",") + "k" : abs);
+    };
+    if(bal !== null){
+      l2.textContent = compacto(bal);
+      l2.className = bal < 0 ? "def" : "sup";
+    }else{
+      l2.textContent = t.kcal > 0 ? Math.round(t.kcal) : "—";
+    }
     b.appendChild(l1); b.appendChild(l2);
-    b.setAttribute("aria-label", fechaCorta(f) + ": " + Math.round(t.kcal) + " kcal");
+    b.setAttribute("aria-label", fechaCorta(f) + (bal !== null
+      ? ": balance de " + bal + " kcal" : ": " + Math.round(t.kcal) + " kcal"));
     b.addEventListener("click", () => irADiaComida(f));
     caja.appendChild(b);
   }
@@ -6211,12 +6230,16 @@ function pintarComida(){
     const tt = totalDe(f), g = gastoDe(f), l = comidasDe(f);
     const b2 = document.createElement("button");
     b2.className = "filaDia" + (f === comDia ? " aqui" : "");
-    const bal = g ? (tt.kcal - g > 0 ? "+" : "") + Math.round(tt.kcal - g) : null;
+    const balN = g ? Math.round(tt.kcal - g) : null;
     b2.innerHTML =
       '<div class="fdCab"><b>' + esc(fechaCorta(f)) + '</b>' +
-      '<span class="fdKcal">' + Math.round(tt.kcal) + ' kcal</span></div>' +
-      '<div class="fdSub">' + Math.round(tt.prot) + ' g de proteína' +
-      (bal !== null ? ' · balance ' + bal : "") + ' · ' + l.length +
+      (balN !== null
+        ? '<span class="fdKcal ' + (balN < 0 ? "def" : "sup") + '">' +
+          (balN > 0 ? "+" : "−") + Math.abs(balN).toLocaleString("es-ES") + '</span>'
+        : '<span class="fdKcal">' + Math.round(tt.kcal) + ' kcal</span>') +
+      '</div>' +
+      '<div class="fdSub">' + Math.round(tt.kcal) + ' kcal · ' +
+      Math.round(tt.prot) + ' g de proteína · ' + l.length +
       (l.length === 1 ? " apunte" : " apuntes") + '</div>' +
       '<div class="fdQue">' + esc(l.map(c => c.n).join(" · ")) + '</div>';
     b2.addEventListener("click", () => { irADiaComida(f); });
