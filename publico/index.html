@@ -122,6 +122,16 @@ textarea{width:100%;resize:vertical;min-height:64px;line-height:1.45}
 .empezar:active{transform:translateY(1px)}
 
 .lista{display:flex;flex-direction:column;gap:8px;padding-bottom:34px}
+/* ---- Secciones plegadas y boton de desplegar ---- */
+.plegable{margin:18px 0 0}
+.plegable>summary{font-size:.8rem;text-transform:uppercase;letter-spacing:.1em;
+  font-weight:700;color:var(--acero);cursor:pointer;padding:8px 0;list-style:none;
+  display:flex;align-items:center;gap:8px}
+.plegable>summary::-webkit-details-marker{display:none}
+.plegable>summary::after{content:"▾";font-size:.75rem;transition:transform .15s ease}
+.plegable[open]>summary::after{transform:rotate(180deg)}
+.bt.desplegar{width:100%;justify-content:center;margin-top:10px;color:var(--acero)}
+
 /* ---- La lista de la compra ---- */
 .compraItem{display:flex;align-items:center;gap:11px;width:100%;text-align:left;
   padding:12px 4px;background:transparent;border:none;border-bottom:1px solid var(--linea-2);
@@ -993,24 +1003,22 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
 
   <div class="tarj" id="comResumen"></div>
 
-  <!-- Primero lo que has comido: es la pregunta que te trae a esta
-       pantalla. Antes estaba al final, detras de cuatro apartados. -->
-  <h2 class="sec" id="comTitLista">Lo que llevas hoy</h2>
-  <div class="hist" id="comLista"></div>
-
-  <!-- Todas las formas de apuntar, bajo un solo titulo. Eran tres
-       apartados distintos para lo mismo: meter comida. -->
-  <h2 class="sec">Apuntar algo</h2>
+  <!-- El orden es el del uso real, que el dijo tal cual: mirar como voy y
+       apuntar cada vez que como. Resumen arriba, apuntar justo debajo, y lo
+       que se consulta de vez en cuando —compra, dias anteriores— plegado.
+       Antes apuntar estaba detras de la lista, y el buscador con sus seis
+       campos siempre abierto hacia la pantalla un pergamino. -->
+  <h2 class="sec">Apuntar</h2>
   <p class="subet">Del plan · un toque</p>
   <div class="platos" id="comPlan"></div>
 
-  <!-- Lo que repites sale de tu propio historial: teclear cada día el mismo
-       café es la fricción que hace que uno deje de apuntar. -->
   <p class="subet" id="tituloSueles" hidden>Lo de siempre</p>
   <div class="sueles" id="sueles"></div>
 
-  <p class="subet">Cualquier otra cosa</p>
-  <div class="tarj">
+  <!-- El buscador, plegado: es la forma menos usada de apuntar y la mas
+       aparatosa. Abierto solo cuando hace falta. -->
+  <button class="bt desplegar" id="alAbrir" aria-expanded="false">🔍 Otra cosa…</button>
+  <div class="tarj" id="alCaja" hidden>
     <div class="rejilla">
       <div class="campo" style="grid-column:1/-1"><label for="alBusca">Alimento</label>
         <input id="alBusca" list="listaAlimentos" placeholder="Escribe: pollo, arroz, manzana…" autocomplete="off">
@@ -1037,25 +1045,32 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
     </div>
   </div>
 
-  <h2 class="sec">Últimos días</h2>
-  <div class="hist" id="comHist"></div>
+  <h2 class="sec" id="comTitLista">Lo que llevas hoy</h2>
+  <div class="hist" id="comLista"></div>
 
-  <!-- La lista de la compra. Vive aqui porque se escribe pensando en comida,
-       y sincronizada como todo lo demas: se apunta en el sofa y se marca en
-       el super con el movil en la mano. -->
-  <h2 class="sec" id="compraTit">La compra</h2>
-  <div class="tarj" id="compraCaja">
-    <div id="compraLista"></div>
-    <div class="fila" style="margin-top:10px;gap:8px">
-      <input id="compraNuevo" type="text" placeholder="Añadir: pollo, arroz…"
-             autocomplete="off" style="flex:1;min-width:0">
-      <button class="bt p" id="compraAdd">Añadir</button>
+  <!-- Lo que se consulta de vez en cuando va plegado. El estado de abierto o
+       cerrado sobrevive a los repintados porque el details no se reescribe:
+       solo se reescribe lo de dentro. -->
+  <details class="plegable" id="plegCompra">
+    <summary id="compraTit">La compra</summary>
+    <div class="tarj" id="compraCaja">
+      <div id="compraLista"></div>
+      <div class="fila" style="margin-top:10px;gap:8px">
+        <input id="compraNuevo" type="text" placeholder="Añadir: pollo, arroz…"
+               autocomplete="off" style="flex:1;min-width:0">
+        <button class="bt p" id="compraAdd">Añadir</button>
+      </div>
+      <div class="acciones" style="margin-top:10px">
+        <button class="bt" id="compraPlan">Poner la compra del plan</button>
+        <button class="bt" id="compraLimpiar" hidden>Quitar lo comprado</button>
+      </div>
     </div>
-    <div class="acciones" style="margin-top:10px">
-      <button class="bt" id="compraPlan">Poner la compra del plan</button>
-      <button class="bt" id="compraLimpiar" hidden>Quitar lo comprado</button>
-    </div>
-  </div>
+  </details>
+
+  <details class="plegable">
+    <summary>Últimos días</summary>
+    <div class="hist" id="comHist"></div>
+  </details>
 
   <!-- Los pasos no son comida, pero es lo que ajusta el gasto del dia,
        asi que se quedan aqui abajo en vez de partir la pantalla en dos. -->
@@ -1758,7 +1773,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-08 · 30";
+const VERSION = "2026-08-08 · 31";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -5859,6 +5874,12 @@ $("#alAdd").addEventListener("click", () => {
   if(!r){ aviso("Elige un alimento de la lista y pon la cantidad.", true); return; }
   anotar(r);
   $("#alBusca").value = ""; $("#alCant").value = ""; previa();
+});
+$("#alAbrir").addEventListener("click", () => {
+  const caja = $("#alCaja");
+  caja.hidden = !caja.hidden;
+  $("#alAbrir").setAttribute("aria-expanded", String(!caja.hidden));
+  if(!caja.hidden) $("#alBusca").focus();
 });
 $("#alManual").addEventListener("click", () => {
   const c = $("#alManualCaja");
