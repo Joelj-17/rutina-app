@@ -1023,10 +1023,6 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
   <button class="verGuia" data-ir="guia">📖 Cómo se hace cada ejercicio</button>
   <div class="selectores" id="ajustes" hidden>
     <select id="selDia" aria-label="Día de la rutina"></select>
-    <select id="selModelo" aria-label="Modelo de rutina">
-      <option value="clasica">Rutina clásica (A/B/floja)</option>
-      <option value="corte">Corte agosto (fuerte/suave)</option>
-    </select>
     <select id="selFase" aria-label="Fase del plan">
       <option value="0">Fase 1 · semanas 1-2</option>
       <option value="1">Fase 2 · semanas 3-5</option>
@@ -1542,13 +1538,13 @@ const EJ = {
     v:"elevaciones laterales con mancuernas técnica",
     tip:"Sube <b>guiando con el codo</b>, no con la mano, hasta la altura del hombro. Y ahí paras.",
     err:"Subir por encima del hombro (entra el trapecio) y usar impulso de cadera. 4 kg bien hechos valen más que 10 a lo bruto."},
-  pecho:{n:"Press de pecho en el suelo", carga:"por mano", r:60, et:"Sesión A", zona:"pecho",
+  pecho:{n:"Press de pecho en el suelo", carga:"por mano", r:60, et:"Fuerte", zona:"pecho",
     f:[[2,"10","8"],[2,"12","10"],[2,"12","10-12"]],
     v:"floor press con mancuernas técnica",
     pos:"Tumbado boca arriba en el suelo, rodillas dobladas, pies apoyados.",
     tip:"Baja hasta que el <b>tríceps toque el suelo</b>, pausa breve, empuja. Codos a unos 45° del cuerpo.",
     err:"Abrir los codos del todo en cruz — carga el hombro sin necesidad."},
-  flex:{n:"Flexiones", r:60, et:"Sesión B", zona:"pecho",
+  flex:{n:"Flexiones", r:60, et:"Suave", zona:"pecho",
     f:[[2,"8-10","—"],[2,"10-12","—"],[2,"12-15","—"]],
     v:"flexiones técnica correcta",
     tip:"Cuerpo en línea recta de la cabeza a los talones, codos a 45°. Baja hasta que el pecho quede a un puño del suelo.",
@@ -1617,15 +1613,14 @@ const EJ = {
     tip:"Con 14 años de natación encima esto no es opcional: es lo que compensa los años de brazada.",
     err:"Saltárselo por prisa. Son 3 minutos."}
 };
-const SES = {
-  A:["cal","dominada","remo","pajaro","goblet","rumano","zancadas","hombro","laterales","pecho","curl","triceps","plancha","bicho","planchaL","paseo","talones","estir"],
-  B:["cal","dominada","remo","pajaro","goblet","rumano","zancadas","hombro","laterales","flex","curl","triceps","plancha","bicho","planchaL","paseo","talones","estir"],
-  D:["cal","dominada","remo","pajaro","hombro","laterales","pecho","curl","triceps","plancha","bicho","planchaL","paseo","talones","estir"]
-};
+/* La rutina. UNA sola, la suya: L/X/V la sesion fuerte y el resto la suave,
+   puesta automaticamente segun el dia. La antigua A/B/floja se retiro el 9 de
+   agosto de 2026 a peticion suya; sus sesiones guardadas y sus pesos
+   (clave ejercicio|fase) quedan intactos en el historial. */
 const DIAS = [
-  {k:"D",n:"Domingo",et:"Día flojo"},{k:"A",n:"Lunes",et:"Sesión A"},{k:"B",n:"Martes",et:"Sesión B"},
-  {k:"A",n:"Miércoles",et:"Sesión A"},{k:"B",n:"Jueves",et:"Sesión B"},{k:"A",n:"Viernes",et:"Sesión A"},
-  {k:"B",n:"Sábado",et:"Sesión B"}
+  {n:"Domingo",et:"Suave"},{n:"Lunes",et:"Fuerte"},{n:"Martes",et:"Suave"},
+  {n:"Miércoles",et:"Fuerte"},{n:"Jueves",et:"Suave"},{n:"Viernes",et:"Fuerte"},
+  {n:"Sábado",et:"Suave"}
 ];
 const ESFUERZO = [
   {v:2,t:"Muy suave"},{v:4,t:"Suave"},{v:6,t:"Justo"},{v:8,t:"Duro"},{v:10,t:"Al límite"}
@@ -1921,9 +1916,9 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-09 · 41";
+const VERSION = "2026-08-09 · 42";
 let S = {
-  fase:0, dia:new Date().getDay(), modelo:"clasica", ajustes:{},
+  fase:0, dia:new Date().getDay(), ajustes:{},
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
   t0:null, pausadoEn:null, acumPausa:0, latido:null,
   sesionF:null, sesionDia:null, sesionFase:null, sesionId:null,  // la sesion abierta
@@ -2074,7 +2069,6 @@ function cargar(){
     S.perfil = Object.assign(S.perfil, g.perfil || {});
     S.faseManual = (typeof g.faseManual === "number") ? g.faseManual : null;
     S.diaManual  = (typeof g.diaManual  === "number") ? g.diaManual  : null;
-    S.modelo = g.modelo === "corte" ? "corte" : "clasica";
     S.inicio = g.inicio || null;
     S.material = Object.assign({barra:false}, g.material || {});
     // Sin fecha de inicio guardada, la deduce de la sesión más antigua.
@@ -2141,7 +2135,7 @@ const TOPE_HIST = 2000, TOPE_CUERPO = 3000;
 function paquete(){
   return {
     v:2, exportado:new Date().toISOString(),
-    fase:S.fase, faseManual:S.faseManual, diaManual:S.diaManual, modelo:S.modelo,
+    fase:S.fase, faseManual:S.faseManual, diaManual:S.diaManual,
     ajustes:S.ajustes, inicio:S.inicio,
     material:S.material,
     pesos:S.pesos, hist:S.hist.slice(0,TOPE_HIST),
@@ -2207,13 +2201,12 @@ if(navigator.storage && navigator.storage.persist){
 
 /* ============ UTILIDADES ============ */
 const $ = s => document.querySelector(s);
-const listaDia = k => SES[k].filter(id => !EJ[id].material || S.material[EJ[id].material]);
 
-/* ============ EL MODELO "CORTE AGOSTO" ============
-   Segundo modelo de rutina, para el corte 93,7→89-90. La clasica queda intacta
-   y seleccionable. Sin dominadas por ahora: no tiene donde montar la barra.
-   L/X/V sesion FUERTE (~40-45 min, pecho con mancuernas; curl y triceps solo
-   L y V), el resto SUAVE (~20-25 min, flexiones a medio gas, nunca al fallo). */
+/* ============ LAS SESIONES ============
+   Fuerte (~40-45 min) lunes, miercoles y viernes; suave (~20-25, nunca al
+   fallo) el resto. Sin dominadas por ahora: no tiene donde montar la barra.
+   Pecho con mancuernas en la fuerte; flexiones a medio gas en la suave.
+   Curl y triceps solo lunes y viernes. */
 const CORTE = {
   F:["cal","remo","hombro","pecho","bulgara","pm1","curl","triceps","plancha","paseo","estir"],
   S:["cal","plancha","bicho","planchaL","flex","gluteo","pajaro","talones","paseo","estir"]
@@ -2227,26 +2220,23 @@ const CORTE_DOSIS = {
      flex:[2,"10-12, a medio gas"], gluteo:[2,"15"], pajaro:[2,"12-15"],
      talones:[2,"20"], paseo:[2,null]}
 };
-const esCorte = () => S.modelo === "corte";
-const tipoCorte = () => ([1,3,5].indexOf(S.dia) >= 0 ? "F" : "S");
+const tipoDia = () => ([1,3,5].indexOf(S.dia) >= 0 ? "F" : "S");
 
 function listaEj(){
-  if(!esCorte()) return listaDia(DIAS[S.dia].k);
-  let l = CORTE[tipoCorte()].slice();
+  let l = CORTE[tipoDia()].slice();
   // Curl y triceps solo lunes y viernes; el miercoles la fuerte va sin brazo.
-  if(tipoCorte() === "F" && S.dia !== 1 && S.dia !== 5)
+  if(tipoDia() === "F" && S.dia !== 1 && S.dia !== 5)
     l = l.filter(id => id !== "curl" && id !== "triceps");
   return l.filter(id => !EJ[id].material || S.material[EJ[id].material]);
 }
-const esDomingo = () => !esCorte() && DIAS[S.dia].k === "D";
 
 function plan(id){
   const e = EJ[id];
   if(e.bloque) return null;
   const p = e.f[S.fase];
-  let series = esDomingo() ? 1 : p[0], reps = p[1], peso = p[2];
-  if(esCorte()){
-    const d = CORTE_DOSIS[tipoCorte()][id];
+  let series = p[0], reps = p[1], peso = p[2];
+  {
+    const d = CORTE_DOSIS[tipoDia()][id];
     if(d){ series = d[0]; if(d[1]) reps = d[1]; }
   }
   /* El overlay de ajustes pisa lo anterior: es lo que el ha decidido desde la
@@ -2262,8 +2252,7 @@ function plan(id){
 
 /* La etiqueta del dia depende del modelo. */
 function etiquetaDia(){
-  if(!esCorte()) return DIAS[S.dia].et;
-  return tipoCorte() === "F" ? "Fuerte" : "Suave · nunca al fallo";
+  return tipoDia() === "F" ? "Fuerte" : "Suave · nunca al fallo";
 }
 
 /* Deshace la ambigüedad de "12 por brazo": una serie son los dos lados. */
@@ -2635,7 +2624,6 @@ function pintarHoy(){
   $("#diaSub").textContent = ids.length+" ejercicios · "+totalSeries+" series";
   $("#selDia").value = String(S.dia);
   $("#selFase").value = String(S.fase);
-  $("#selModelo").value = S.modelo || "clasica";
   /* La salida de emergencia. Si hay una sesion abierta que NO es de hoy, tiene
      que haber una forma de dejarla desde esta misma pantalla: si no, la unica
      salida son los Ajustes, que ademas la borran sin avisar. */
@@ -2661,7 +2649,7 @@ function pintarHoy(){
 
   /* La regla de la sesion suave, visible SIEMPRE que estes en una: es la que
      evita que el corte se coma el musculo entrenando vacio de calorias. */
-  if(esCorte() && tipoCorte() === "S"){
+  if(tipoDia() === "S"){
     const n = document.createElement("div");
     n.className = "nota ambar";
     n.innerHTML = "<p><strong>Sesión suave: nunca al fallo.</strong> Deja siempre " +
@@ -4256,7 +4244,7 @@ function syncAviso(t, tipo){ mostrarAviso(t, tipo); }
    olvidarse de alguno, asi que se hace aqui: se compara con lo ultimo
    guardado y lo que haya cambiado se sella solo. */
 const RUTAS_MAPA = ["pasos","agua","sueno","siesta","animo","pesos","ajustes"];
-const RUTAS_SUELTAS = ["fase","faseManual","diaManual","modelo","inicio"];
+const RUTAS_SUELTAS = ["fase","faseManual","diaManual","inicio"];
 let fotoPrevia = null;
 
 function fotoDeSellado(){
@@ -4543,7 +4531,7 @@ function fundir(mio, otro){
      volver a pulsarlo daba el mismo resultado para siempre. Aquí se decide por
      hora y punto; sellarCambios sella la ruta también al pasar a null. */
   const VALOR_NULO_VALE = {faseManual:1, diaManual:1};
-  ["fase","faseManual","diaManual","modelo","inicio","material"].forEach(c => {
+  ["fase","faseManual","diaManual","inicio","material"].forEach(c => {
     const ha = (a.ts || {})[c], hb = (b.ts || {})[c];
     if(VALOR_NULO_VALE[c]){
       const va = a[c] === undefined ? null : a[c];
@@ -5143,7 +5131,6 @@ function aplicarDatos(g, ts){
   S.compra = Array.isArray(r.compra) ? r.compra : [];
   S.caminatas = Array.isArray(r.caminatas) ? r.caminatas : [];
   S.ajustes = (r.ajustes && typeof r.ajustes === "object") ? r.ajustes : {};
-  S.modelo = r.modelo === "corte" ? "corte" : "clasica";
   ["comidas","pasos","agua","sueno","siesta","animo"].forEach(k => {
     S[k] = (r[k] && typeof r[k] === "object") ? r[k] : {};
   });
@@ -5437,7 +5424,6 @@ function cargarDatos(texto, origen){
      —significa "automatico"—, por eso se copia tal cual y no con un if(g.x). */
   S.faseManual = (typeof g.faseManual === "number") ? g.faseManual : null;
   S.diaManual  = (typeof g.diaManual  === "number") ? g.diaManual  : null;
-  S.modelo = g.modelo === "corte" ? "corte" : "clasica";
   aplicarAuto();
   /* Las horas y las bajas vienen del archivo: importar significa "esto pasa a
      ser mis datos". Si se quedaran las de antes, apuntarían a cosas que ya no
@@ -5477,7 +5463,6 @@ $("#listaCopias").addEventListener("click", e => {
   S.compra = Array.isArray(g.compra) ? g.compra : [];
   S.caminatas = Array.isArray(g.caminatas) ? g.caminatas : [];
   S.ajustes = (g.ajustes && typeof g.ajustes === "object") ? g.ajustes : {};
-  S.modelo = g.modelo === "corte" ? "corte" : "clasica";
   ["comidas","pasos","agua","sueno","siesta","animo"].forEach(k => {
     S[k] = (g[k] && typeof g[k] === "object") ? g[k] : {};
   });
@@ -5491,7 +5476,6 @@ $("#listaCopias").addEventListener("click", e => {
      —significa "automatico"—, por eso se copia tal cual y no con un if(g.x). */
   S.faseManual = (typeof g.faseManual === "number") ? g.faseManual : null;
   S.diaManual  = (typeof g.diaManual  === "number") ? g.diaManual  : null;
-  S.modelo = g.modelo === "corte" ? "corte" : "clasica";
   aplicarAuto();
   // Las horas y las bajas de la copia, igual que al importar: si se quedaran
   // las de ahora, una baja posterior borraría lo que acabas de restaurar.
@@ -5547,11 +5531,11 @@ $("#btnBorrar").addEventListener("click", () => {
      el almacén. "Borrar todo" tiene que borrar todo. */
   try{ localStorage.removeItem(LS); }catch(err){}
   S.pesos = {}; S.hist = []; S.cuerpo = []; S.compra = []; S.caminatas = [];
-  S.ajustes = {}; S.modelo = "clasica";
+  S.ajustes = {};
   S.comidas = {}; S.pasos = {}; S.agua = {}; S.sueno = {}; S.siesta = {}; S.animo = {};
   S.ts = {}; S.bajas = {};
   S.perfil = {altura:"",nacim:"",sexo:"",nivel:"",objetivo:""};
-  S.inicio = null; S.faseManual = null; S.diaManual = null; S.modelo = "clasica";
+  S.inicio = null; S.faseManual = null; S.diaManual = null;
   S.t0 = null; S.hechos = {}; S.marcas = {}; S.acumPausa = 0; S.pausadoEn = null;
   S.sesionF = null; S.sesionDia = null; S.sesionFase = null; S.sesionId = null; S.foco = null;
   S.ultimoHecho = null; S.latido = null;
@@ -5714,18 +5698,12 @@ function pintarSemana(){
   const hoy = new Date().getDay(), orden = [1,2,3,4,5,6,0];
   $("#semanaLista").innerHTML = orden.map(i => {
     const d = DIAS[i];
-    let et2, nEj, mins;
-    if(esCorte()){
-      const tipo = [1,3,5].indexOf(i) >= 0 ? "F" : "S";
-      let l = CORTE[tipo].slice();
-      if(tipo === "F" && i !== 1 && i !== 5) l = l.filter(x => x !== "curl" && x !== "triceps");
-      et2 = tipo === "F" ? "Fuerte" : "Suave";
-      nEj = l.length;
-      mins = tipo === "F" ? "40-45 min" : "20-25 min";
-    }else{
-      et2 = d.et; nEj = listaDia(d.k).length;
-      mins = d.k === "D" ? "25 min" : (S.fase === 0 ? "50 min" : S.fase === 1 ? "60 min" : "70 min");
-    }
+    const tipo = [1,3,5].indexOf(i) >= 0 ? "F" : "S";
+    let l = CORTE[tipo].slice();
+    if(tipo === "F" && i !== 1 && i !== 5) l = l.filter(x => x !== "curl" && x !== "triceps");
+    const et2 = tipo === "F" ? "Fuerte" : "Suave";
+    const nEj = l.length;
+    const mins = tipo === "F" ? "40-45 min" : "20-25 min";
     return '<div class="dfila' + (i === hoy ? " hoy" : "") + '"><b>' + d.n + (i === hoy ? " · hoy" : "") +
       '</b><span class="et">' + et2 + '</span><span class="mn">' + nEj + " ej · " + mins + '</span></div>';
   }).join("");
@@ -7059,28 +7037,7 @@ $("#selFase").addEventListener("change", e => {
   S.faseManual = Number(e.target.value);
   aplicarAuto(); guardar(); pintarHoy(); pintarSemana();
 });
-$("#selModelo").addEventListener("change", e => {
-  /* Cambiar de modelo con una sesion a medias la descartaria a silencio:
-     la lista de ejercicios cambia entera. Se avisa. */
-  const nuevo = e.target.value === "corte" ? "corte" : "clasica";
-  if(nuevo === S.modelo) return;
-  if(S.t0){
-    const SL = String.fromCharCode(10);
-    if(!confirm("Tienes una sesión a medias." + SL + SL +
-                "Cambiar de rutina la descarta y no se guarda. ¿Seguro?")){
-      e.target.value = S.modelo; return;
-    }
-    S.t0 = null; S.hechos = {}; S.marcas = {}; S.acumPausa = 0; S.pausadoEn = null;
-    S.latido = null; S.sesionF = null; S.sesionDia = null; S.sesionFase = null;
-    S.sesionId = null; S.foco = null;
-    barraOff();
-  }
-  S.modelo = nuevo;
-  S.foco = null;
-  guardar(); pintarHoy(); pintarSemana(); pintarInicio();
-  aviso(nuevo === "corte" ? "Rutina de corte: fuerte L-X-V, suave el resto."
-                          : "Rutina clásica.");
-});
+
 $("#btnAjustes").addEventListener("click", () => {
   const a = $("#ajustes"), abierto = !a.hidden;
   a.hidden = abierto;
