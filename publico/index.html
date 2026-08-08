@@ -1916,7 +1916,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-09 · 43";
+const VERSION = "2026-08-09 · 44";
 let S = {
   fase:0, dia:new Date().getDay(), ajustes:{},
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -6097,7 +6097,7 @@ const MENU_AGOSTO = {desde:"2026-08-10", hasta:"2026-08-31", dias:[
      ~245/5 · patata 300 g cocida ~260/6 (comodin = arroz 70) · 2 latas de
      atun ~130/30 (= media racion de pollo) · judia verde libre ~70/4 ·
      tomate alinyado ~70/1 · yogur ~130/5 · queso 20 g ~80/5 · aceite 10 g
-     ~90. El medio pollo asado del jueves ~750/75. */
+     ~90. */
   /* D */ {comida:{n:"Hervido frío: patata 300 g + judía verde + 2 latas de atún", kcal:505, prot:40},
            cena:{n:"Pollo 250 g + tomate aliñado", kcal:450, prot:57}},
   /* L */ {comida:{n:"Macarrones 70 g + boloñesa 150 g + queso 20 g", kcal:740, prot:39},
@@ -6106,7 +6106,7 @@ const MENU_AGOSTO = {desde:"2026-08-10", hasta:"2026-08-31", dias:[
            cena:{n:"Lentejas 250 g + 1 lata de atún", kcal:350, prot:32}},
   /* X */ {comida:{n:"Garbanzos 250 g + boloñesa 150 g", kcal:710, prot:40},
            cena:{n:"Pollo 200 g + puré de patata", kcal:610, prot:51}},
-  /* J */ {comida:{n:"½ pollo asado + tomate aliñado", kcal:820, prot:76},
+  /* J */ {comida:{n:"Pollo 250 g a la plancha + tomate aliñado", kcal:450, prot:57},
            cena:{n:"Patatas a la boloñesa con queso", kcal:680, prot:32}},
   /* V */ {comida:{n:"Arroz 70 g + pollo 250 g + judía verde", kcal:695, prot:65},
            cena:{n:"Alubias 250 g + boloñesa 125 g", kcal:565, prot:36}},
@@ -6255,7 +6255,8 @@ function pintarTiraDias(){
 
 /* La compra semanal de su plan de agosto (Consum), cerrada por el. */
 const COMPRA_PLAN = [
-  "2 bandejas grandes de pechuga (~1,5 kg)", "1 bandeja de picada mixta (~600 g)",
+  "Pechuga: 1 bandeja el sábado + 2 antes del miércoles (~1,2 kg)",
+  "1 bandeja de picada mixta (~600 g)",
   "1 bote de lentejas", "1 bote de garbanzos", "1 bote de alubias",
   "Macarrones", "Arroz 1 kg", "Tomate frito", "Yogur griego (8)", "Leche 2 L",
   "Plátanos + manzanas/uvas", "Queso rallado", "Judía verde congelada (1 bolsa)",
