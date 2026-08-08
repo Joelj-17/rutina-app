@@ -675,8 +675,10 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
 /* ---- Anoche: pregunta corta que se resuelve y se calla ---- */
 .anoche .preg2{font-size:.95rem;font-weight:600;margin:0 0 11px}
 .horas{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
-.hbot{padding:11px 2px;border-radius:9px;border:1px solid var(--linea);background:transparent;
-      font-family:var(--mono);font-size:.92rem;font-weight:700;color:var(--tinta-2)}
+/* Chips discretos: es una pregunta de la manyana, no una alarma. Antes eran
+   diez botones altos en un bloque destacado nada mas abrir la app. */
+.hbot{padding:8px 2px;border-radius:8px;border:1px solid var(--linea);background:transparent;
+      font-family:var(--mono);font-size:.85rem;font-weight:600;color:var(--acero)}
 .hbot:active,.hbot.sel{background:var(--agua);border-color:var(--agua);color:#fff}
 .hbot.otro{font-family:var(--ui);font-size:.78rem;font-weight:600;color:var(--acero)}
 .resuelto{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
@@ -696,14 +698,19 @@ footer{color:var(--acero);font-size:.78rem;padding:22px 0 40px;border-top:1px so
    Lo primero que se ve no debe ser el entrenamiento, sino las secciones y en
    qué estado están. Todas en contorno: ninguna grita más que las otras. */
 .mapa{display:flex;flex-direction:column;gap:7px;margin-bottom:18px}
-.destino{display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+/* Mas bajo y mas callado. La portada tenia 16 botones y 15 emojis compitiendo
+   en la primera pantalla —el lo llamo "chocante" y es la palabra exacta—. La
+   regla que funciona aqui es la suya: UN elemento fuerte por pantalla (el boton
+   de la accion del dia) y el resto en contorno y gris. El mapa informa, no
+   grita: filas mas estrechas y numeros sin negrita gigante. */
+.destino{display:flex;align-items:center;gap:11px;width:100%;text-align:left;
          background:var(--panel);border:1px solid var(--linea);border-radius:11px;
-         padding:12px 14px}
+         padding:8px 13px}
 .destino:active{border-color:var(--acero)}
 .destino .dic{font-size:1.05rem;width:22px;flex:0 0 22px;text-align:center;
               filter:grayscale(1);opacity:.55}
 .destino .dtx{flex:1;min-width:0;display:block}
-.destino .dn{display:block;font-size:.94rem;font-weight:600;line-height:1.2}
+.destino .dn{display:block;font-size:.9rem;font-weight:600;line-height:1.2}
 .destino .de{display:block;font-size:.78rem;color:var(--acero);margin-top:2px;
              overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .destino .dv{font-family:var(--mono);font-size:.78rem;font-weight:600;color:var(--acero);
@@ -1817,7 +1824,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-08 · 34";
+const VERSION = "2026-08-08 · 35";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -6136,9 +6143,9 @@ function pintarAnoche(){
   const h = S.sueno[f], si = S.siesta[f];
 
   if(h == null){
-    caja.className = "bloque anoche destaca";
-    caja.innerHTML = '<div class="bloqueCab"><h2>Anoche</h2></div>' +
-      '<p class="preg2">¿Cuántas horas has dormido?</p>' +
+    caja.className = "bloque anoche";
+    caja.innerHTML = '<div class="bloqueCab"><h2>Anoche</h2>' +
+      '<span class="dato" style="font-weight:400;color:var(--acero)">¿cuántas horas?</span></div>' +
       '<div class="horas">' +
       HORAS_SUENO.map(x => '<button class="hbot" data-h="' + x + '">' +
         x.toString().replace(".", ",") + '</button>').join("") + '</div>' +
@@ -6282,8 +6289,10 @@ function pintarInicio(){
   /* --- Comida --- */
   const t = totalDe(f);
   $("#pComDato").textContent = Math.round(t.kcal) + " / " + OBJ.kcal + " kcal";
-  $("#pComBarras").innerHTML =
-    medidor("Calorías", t.kcal, OBJ.kcal, "kcal") + medidor("Proteína", t.prot, OBJ.prot, "g");
+  /* Una linea de texto, no las dos barras: eran una copia de la pantalla de
+     Comida, que esta a un toque en el menu. La portada resume. */
+  $("#pComBarras").innerHTML = '<p style="margin:0 0 10px;font-size:.84rem;color:var(--tinta-2)">' +
+    Math.round(t.prot) + ' de ' + OBJ.prot + ' g de proteína</p>';
   const puestos = comidasDe(f).map(c => c.plato).filter(Boolean);
   $("#pComPlatos").innerHTML = PLATOS.map(p => {
     const ok = puestos.indexOf(p.id) >= 0;
