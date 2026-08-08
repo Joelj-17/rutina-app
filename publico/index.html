@@ -122,6 +122,13 @@ textarea{width:100%;resize:vertical;min-height:64px;line-height:1.45}
 .empezar:active{transform:translateY(1px)}
 
 .lista{display:flex;flex-direction:column;gap:8px;padding-bottom:34px}
+/* ---- Volver desde una pantalla que no esta en el menu ---- */
+.volverBtn{display:inline-flex;align-items:center;gap:6px;background:transparent;
+  border:none;color:var(--agua);font-size:.9rem;font-weight:700;padding:10px 0 2px;
+  position:relative}
+.volverBtn::after{content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:100%;height:44px;min-width:80px}
+
 /* ---- Secciones plegadas y boton de desplegar ---- */
 .plegable{margin:18px 0 0}
 .plegable>summary{font-size:.8rem;text-transform:uppercase;letter-spacing:.1em;
@@ -1068,6 +1075,7 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
      que hay que comprar (recados); mezcladas en Comida no le convencia ninguna
      de las dos. Mismo patron que Pasos o La semana: atajo en la portada. -->
 <main class="env panel-sec" id="p-compra" hidden>
+  <button class="volverBtn" data-volver>← Inicio</button>
   <div class="dia-cab" style="padding-top:6px">
     <div><h1>La compra</h1><div class="dia-sub" id="compraSub">—</div></div>
   </div>
@@ -1176,6 +1184,7 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
      Seccion propia. Meterlos dentro de COMIDA seria repetir el error del
      cajon de sastre: los pasos no son comida, aunque cuenten para el gasto. -->
 <main class="env panel-sec" id="p-pasos" hidden>
+  <button class="volverBtn" data-volver>← Inicio</button>
   <div class="dia-cab" style="padding-top:6px">
     <div><h1>Pasos</h1><div class="dia-sub" id="pasosSub">—</div></div>
   </div>
@@ -1321,6 +1330,7 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
 
 <!-- ============ SEMANA ============ -->
 <main class="env panel-sec" id="p-semana" hidden>
+  <button class="volverBtn" data-volver>← Inicio</button>
   <h2 class="sec">Tu semana</h2>
   <div class="semana" id="semanaLista"></div>
   <div class="nota ambar">
@@ -1334,6 +1344,7 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
 
 <!-- ============ GUÍA ============ -->
 <main class="env panel-sec" id="p-guia" hidden>
+  <button class="volverBtn" data-volver>← Inicio</button>
   <div class="nota">
     <p><strong>Las tres reglas que mandan sobre todo lo demás:</strong></p>
     <ol>
@@ -1806,7 +1817,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-08 · 33";
+const VERSION = "2026-08-08 · 34";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -6369,7 +6380,18 @@ function ajustarCabecera(){
   $("#reloj").hidden = !(S.t0 || pestanaActual === "hoy");
 }
 
+/* Las pantallas que NO estan en el menu de abajo. Una vez dentro no habia
+   vuelta clara: o encontrabas un enlace perdido en el texto, o el menu. El
+   boton de volver te devuelve a la pantalla desde la que entraste. */
+const SECUNDARIAS = {compra:1, pasos:1, semana:1, guia:1};
+let pestanaVolver = "inicio";
+document.addEventListener("click", e => {
+  const bv = e.target.closest("[data-volver]");
+  if(bv) irA(pestanaVolver || "inicio");
+});
+
 function irA(t){
+  if(SECUNDARIAS[t] && !SECUNDARIAS[pestanaActual]) pestanaVolver = pestanaActual || "inicio";
   pestanaActual = t;
   PESTANAS.forEach(x => { $("#p-"+x).hidden = (x !== t); });
   /* La etiqueta de sección solo se pone si la pantalla no dice ya cómo se
@@ -6404,6 +6426,12 @@ function irA(t){
   if(t === "cuerpo"){ pintarPerfil(); pintarCuerpo(); }
   if(t === "pasos") pintarPasos();
   if(t === "ajustes"){ pintarSync(); pintarCopias(); }
+
+  // El texto del boton de volver dice A DONDE vuelve, no un "atras" mudo.
+  document.querySelectorAll("[data-volver]").forEach(bv => {
+    bv.textContent = "← " + (pestanaVolver === "inicio" ? "Inicio"
+      : (TITULOS[pestanaVolver] || "Inicio"));
+  });
 
   /* Con la sesión en marcha, entrar en Entrenamiento y aparecer arriba del
      todo obliga a buscar por dónde ibas entre diecisiete ejercicios. Se va
