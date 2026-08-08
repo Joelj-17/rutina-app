@@ -185,7 +185,13 @@ como cero en vez de propagar el fallo.
    Queda para más adelante: las secciones de correr y otros deportes no
    existen todavía.
 
-1b. **Ajustes por ejercicio y progresión de carga** (pedido el 8 de agosto de
+1b. ~~**Ajustes por ejercicio y progresión de carga**~~ ← **HECHO el 9 de
+   agosto de 2026** (versión 40): overlay `S.ajustes` editable desde la
+   tarjeta, regla de las dos sesiones fáciles con propuesta que se recuerda,
+   etiquetas Fácil/Bien/Duro, y además el modelo de rutina «Corte agosto»
+   seleccionable. Detalle en el commit de la v40.
+
+1b-bis (texto original). **Ajustes por ejercicio y progresión de carga** (pedido el 8 de agosto de
    2026). Es el puente hasta el paso 2: se monta **encima** de la rutina fija
    de hoy, sin esperar al modelo de datos.
 
