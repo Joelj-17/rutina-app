@@ -157,6 +157,29 @@ textarea{width:100%;resize:vertical;min-height:64px;line-height:1.45}
   background:var(--fondo);color:var(--tinta);font-family:var(--ui);font-size:.9rem}
 #compraNuevo::placeholder{color:var(--acero)}
 
+/* ---- La tira de los ultimos dias ---- */
+.tiraDias{display:flex;gap:6px;margin-bottom:12px}
+.diaChip{flex:1;min-width:0;background:var(--panel);border:1px solid var(--linea);
+  border-radius:9px;padding:7px 2px;text-align:center;color:var(--tinta)}
+.diaChip small{display:block;font-size:.62rem;text-transform:uppercase;letter-spacing:.04em;
+  color:var(--acero);font-weight:700}
+.diaChip b{display:block;font-family:var(--mono);font-size:.8rem;font-weight:700;margin-top:2px}
+.diaChip.vacio b{color:var(--acero);font-weight:400}
+.diaChip.aqui{border-color:var(--agua);border-width:2px;padding:6px 1px}
+
+/* ---- El menu del dia ---- */
+.menuFila{display:flex;align-items:center;gap:10px;padding:9px 0;
+  border-top:1px solid var(--linea-2)}
+.menuFila:first-of-type{border-top:none}
+.menuTx{flex:1;min-width:0}
+.menuTx small{display:block;font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--acero);font-weight:700}
+.menuTx span{display:block;font-size:.88rem;font-weight:600;line-height:1.3;margin:2px 0}
+.menuTx .menuKcal{text-transform:none;letter-spacing:0;font-family:var(--mono);font-weight:400}
+.menuFila .bt{flex:0 0 auto}
+.menuFila.esHoy .menuTx small{color:var(--agua)}
+.menuFila.esHoy .menuTx span{color:var(--agua)}
+
 /* ---- Comida: navegar por dias ---- */
 .navDia{display:flex;gap:8px;align-items:center;margin-bottom:10px}
 .navDia .bt{padding:9px 12px}
@@ -1026,6 +1049,11 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
   </div>
   <div class="avisoDia" id="comAvisoDia" hidden></div>
 
+  <!-- Los ultimos siete dias, siempre a la vista: dijo que no era intuitivo
+       ver lo que habia comido estos dias, y tenia razon — estaba plegado al
+       fondo. Un toque en un dia y lo ves entero. -->
+  <div class="tiraDias" id="comTiraDias"></div>
+
   <div class="tarj" id="comResumen"></div>
 
   <!-- El orden es el del uso real, que el dijo tal cual: mirar como voy y
@@ -1034,6 +1062,11 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
        Antes apuntar estaba detras de la lista, y el buscador con sus seis
        campos siempre abierto hacia la pantalla un pergamino. -->
   <h2 class="sec">Apuntar</h2>
+
+  <!-- El menu del plan de agosto: que toca comer y cenar HOY (o el dia que
+       estes mirando), con las raciones de su tabla y apuntable de un toque. -->
+  <div class="tarj menuDia" id="menuHoy" hidden></div>
+
   <p class="subet">Del plan · un toque</p>
   <div class="platos" id="comPlan"></div>
 
@@ -1072,6 +1105,11 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
 
   <h2 class="sec" id="comTitLista">Lo que llevas hoy</h2>
   <div class="hist" id="comLista"></div>
+
+  <details class="plegable">
+    <summary>El menú de la semana</summary>
+    <div class="tarj" id="menuSemana"></div>
+  </details>
 
   <details class="plegable">
     <summary>Últimos días</summary>
@@ -1833,7 +1871,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-08 · 36";
+const VERSION = "2026-08-08 · 37";
 let S = {
   fase:0, dia:new Date().getDay(),
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -5691,6 +5729,135 @@ const OBJ = PLATOS.reduce((a,p) => ({kcal:a.kcal+p.kcal, prot:a.prot+p.prot}), {
 
 let comDia = hoyISO();
 
+/* ============ EL MENU DE AGOSTO ============
+   Su tabla semanal del plan (10-31 de agosto), con las kcal y la proteina
+   CALCULADAS desde sus raciones fijas: pollo 250 g crudo ~290 kcal/56 g,
+   picada 150 g ~360/27, arroz 70 g seco ~245/5, macarrones 70 ~250/8,
+   legumbre de bote 250 g escurrida ~225-300/15-17, tomate frito 40 g ~32,
+   aceite 10 g por comida ~90, queso 20-30 g ~80-120, yogur griego ~130/5.
+   Son estimaciones honestas, no medidas: si un dia pesa y apunta a mano,
+   manda lo suyo. Indice por getDay(): 0=domingo. */
+const MENU_AGOSTO = {desde:"2026-08-10", hasta:"2026-08-31", dias:[
+  /* D */ {comida:{n:"Garbanzos 250 + arroz 50", kcal:565, prot:19},
+           cena:{n:"Pollo 250 a la plancha + yogur", kcal:510, prot:60}},
+  /* L */ {comida:{n:"Macarrones 70 + picada 150 + tomate + queso", kcal:810, prot:41},
+           cena:{n:"Pollo 250 a la plancha + yogur", kcal:510, prot:60}},
+  /* M */ {comida:{n:"Arroz 70 + pollo 250 + tomate", kcal:655, prot:62},
+           cena:{n:"Lentejas 250 + queso 30 + yogur", kcal:580, prot:29}},
+  /* X */ {comida:{n:"Garbanzos 250 + picada 150 + tomate", kcal:780, prot:43},
+           cena:{n:"Pollo 200 + arroz de sobras + yogur", kcal:625, prot:53}},
+  /* J */ {comida:{n:"Lentejas 250 + arroz 50", kcal:505, prot:21},
+           cena:{n:"Pasta 60 + picada 125 (boloñesa)", kcal:635, prot:30}},
+  /* V */ {comida:{n:"Arroz 70 + pollo 250", kcal:625, prot:61},
+           cena:{n:"Alubias 250 + picada 125 + yogur", kcal:745, prot:42}},
+  /* S */ {comida:{n:"Libre con cabeza", libre:true},
+           cena:{n:"Yogur + fruta", kcal:210, prot:5}}
+]};
+
+function menuDe(f){
+  if(f < MENU_AGOSTO.desde || f > MENU_AGOSTO.hasta) return null;
+  return MENU_AGOSTO.dias[new Date(f + "T12:00:00").getDay()];
+}
+
+function pintarMenuDia(){
+  const caja = $("#menuHoy");
+  if(!caja) return;
+  const m = menuDe(comDia);
+  caja.hidden = !m;
+  if(!m) return;
+  caja.innerHTML = "";
+  const cab = document.createElement("div");
+  cab.className = "bloqueCab";
+  const h = document.createElement("h2");
+  h.textContent = comDia === hoyISO() ? "El menú de hoy" : "El menú de ese día";
+  cab.appendChild(h);
+  caja.appendChild(cab);
+  [["comida", "Comida · ~14 h", m.comida], ["cena", "Cena · ~21:30", m.cena]].forEach(par => {
+    const [id, et, plato] = par;
+    const fila = document.createElement("div");
+    fila.className = "menuFila";
+    const tx = document.createElement("div");
+    tx.className = "menuTx";
+    const e1 = document.createElement("small"); e1.textContent = et;
+    const e2 = document.createElement("span"); e2.textContent = plato.n;
+    tx.appendChild(e1); tx.appendChild(e2);
+    if(!plato.libre){
+      const e3 = document.createElement("small");
+      e3.className = "menuKcal";
+      e3.textContent = "≈ " + plato.kcal + " kcal · " + plato.prot + " g";
+      tx.appendChild(e3);
+    }
+    fila.appendChild(tx);
+    if(!plato.libre){
+      const marca = "menu-" + id;
+      const ya = comidasDe(comDia).some(c => c.plato === marca);
+      const b = document.createElement("button");
+      b.className = "bt" + (ya ? "" : " p");
+      b.textContent = ya ? "✓ Apuntada" : "Apuntar";
+      b.addEventListener("click", () => {
+        const idx = comidasDe(comDia).findIndex(c => c.plato === marca);
+        if(idx >= 0){ quitarComida(comDia, idx); }
+        else anotar({n:plato.n, kcal:plato.kcal, prot:plato.prot, plato:marca});
+        guardar(); pintarComida(); pintarInicio();
+      });
+      fila.appendChild(b);
+    }
+    caja.appendChild(fila);
+  });
+}
+
+/* La semana entera del menu, para planificar: que descongelo manyana, que
+   toca el jueves. Solo lectura; apuntar se apunta en el dia. */
+function pintarMenuSemana(){
+  const caja = $("#menuSemana");
+  if(!caja) return;
+  const det = caja.closest("details");
+  const hoy = hoyISO();
+  if(hoy > MENU_AGOSTO.hasta){ if(det) det.hidden = true; return; }
+  if(det) det.hidden = false;
+  caja.innerHTML = "";
+  const nombres = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+  const hoyDia = new Date(hoy + "T12:00:00").getDay();
+  [1,2,3,4,5,6,0].forEach(d => {
+    const m = MENU_AGOSTO.dias[d];
+    const fila = document.createElement("div");
+    fila.className = "menuFila" + (d === hoyDia && hoy >= MENU_AGOSTO.desde ? " esHoy" : "");
+    const tx = document.createElement("div");
+    tx.className = "menuTx";
+    const e1 = document.createElement("small");
+    e1.textContent = nombres[d] + (d === hoyDia && hoy >= MENU_AGOSTO.desde ? " · hoy" : "");
+    const e2 = document.createElement("span");
+    e2.textContent = m.comida.n + "  ·  " + m.cena.n;
+    tx.appendChild(e1); tx.appendChild(e2);
+    fila.appendChild(tx);
+    caja.appendChild(fila);
+  });
+}
+
+/* Los ultimos siete dias en una tira: cuanto comiste cada dia, y un toque para
+   verlo entero. Era lo que estaba plegado al fondo y no se encontraba. */
+function pintarTiraDias(){
+  const caja = $("#comTiraDias");
+  if(!caja) return;
+  caja.innerHTML = "";
+  const letras = ["D","L","M","X","J","V","S"];
+  for(let i = 6; i >= 0; i--){
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const f = hoyISO(d);
+    const t = totalDe(f);
+    const b = document.createElement("button");
+    b.className = "diaChip" + (f === comDia ? " aqui" : "") + (t.kcal > 0 ? "" : " vacio");
+    const l1 = document.createElement("small");
+    l1.textContent = i === 0 ? "Hoy" : letras[d.getDay()] + " " + d.getDate();
+    const l2 = document.createElement("b");
+    l2.textContent = t.kcal > 0 ? (t.kcal >= 1000 ? (t.kcal/1000).toFixed(1).replace(".", ",") + "k" : Math.round(t.kcal)) : "—";
+    b.appendChild(l1); b.appendChild(l2);
+    b.setAttribute("aria-label", fechaCorta(f) + ": " + Math.round(t.kcal) + " kcal");
+    b.addEventListener("click", () => irADiaComida(f));
+    caja.appendChild(b);
+  }
+}
+
 /* ============ LA COMPRA ============
    Una lista para llevar en la mano en el super. Cada elemento {id, n, ok, ts}:
    la hora se renueva al marcar o desmarcar, asi que entre dos dispositivos
@@ -5861,6 +6028,9 @@ function medidor(et, val, obj, ud){
 
 function pintarComida(){
   if(typeof pintarSueles === "function") pintarSueles();
+  if(typeof pintarMenuDia === "function") pintarMenuDia();
+  if(typeof pintarMenuSemana === "function") pintarMenuSemana();
+  if(typeof pintarTiraDias === "function") pintarTiraDias();
   const esHoy = comDia === hoyISO();
   const t = totalDe(comDia), gasto = gastoDe(comDia);
   $("#comFecha").textContent = esHoy ? "Hoy" : fechaCorta(comDia);
