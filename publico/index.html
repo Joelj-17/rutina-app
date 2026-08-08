@@ -1916,7 +1916,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-09 · 42";
+const VERSION = "2026-08-09 · 43";
 let S = {
   fase:0, dia:new Date().getDay(), ajustes:{},
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -6041,16 +6041,19 @@ const ALIMENTOS = [
   ["Ternera picada 5%",130,21], ["Ternera picada mixta",250,17],
   ["Ternera, filete",150,21], ["Lomo de cerdo",130,22], ["Cerdo, panceta",500,10],
   ["Atún al natural (escurrido)",110,25], ["Atún en aceite (escurrido)",190,24],
+  ["Pollo asado con piel",215,25], ["Boloñesa casera (la del plan)",275,17],
   ["Merluza",85,18], ["Bacalao",82,18], ["Salmón",200,20], ["Gambas",85,20],
   ["Huevo",72,6.3,"ud"], ["Clara de huevo",52,11],
-  ["Yogur griego 0%",60,10], ["Yogur natural",60,4], ["Queso fresco batido 0%",55,11],
-  ["Leche semidesnatada",46,3.2], ["Queso curado",390,25], ["Queso fresco",180,12],
+  ["Yogur griego 0%",60,10], ["Yogur griego (normal)",130,5], ["Yogur natural",60,4],
+  ["Queso fresco batido 0%",55,11],
+  ["Leche entera",62,3.1], ["Leche semidesnatada",46,3.2],
+  ["Queso curado",390,25], ["Queso rallado",400,26], ["Queso fresco",180,12],
   ["Jamón cocido",110,18], ["Jamón serrano",240,30], ["Fuet / salchichón",420,25],
   ["Chorizo",450,24], ["Pavo en lonchas",95,17],
   ["Arroz (crudo)",360,7], ["Arroz (cocido)",130,2.7],
   ["Pasta (cruda)",360,12], ["Pasta (cocida)",130,5],
   ["Pan blanco",265,8], ["Pan integral",240,9], ["Pan de molde",250,8],
-  ["Patata (cruda)",77,2], ["Patatas fritas de bolsa",540,6],
+  ["Patata (cruda)",77,2], ["Patata cocida",86,1.9], ["Patatas fritas de bolsa",540,6],
   ["Lentejas cocidas (bote)",115,9], ["Garbanzos cocidos (bote)",120,8],
   ["Alubias cocidas (bote)",110,7], ["Avena",380,13],
   ["Aceite de oliva",900,0], ["Mantequilla",750,0.6], ["Mayonesa",680,1],
@@ -6111,10 +6114,12 @@ const MENU_AGOSTO = {desde:"2026-08-10", hasta:"2026-08-31", dias:[
            cena:{n:"2 latas de atún + tomate aliñado", kcal:200, prot:31}}
 ]};
 
-/* El cierre de todas las noches, fijo: leche 250 ml + yogur, antes de dormir.
+/* El cierre de todas las noches, fijo: leche ENTERA 250 ml + yogur griego,
+   antes de dormir. Entera porque es la que toma (confirmado el 9-ago): 250 ml
+   son ~155 kcal, no los ~120 de la semi con la que estaba calculado antes.
    El yogur que la tabla ponia en la cena es ESTE — compra 8 a la semana, uno
    al dia—, asi que las cenas van sin el y el cierre lo lleva con la leche. */
-const CIERRE_PLAN = {n:"Cierre: leche 250 ml + yogur", kcal:250, prot:13};
+const CIERRE_PLAN = {n:"Cierre: leche entera 250 ml + yogur", kcal:285, prot:13};
 
 /* Los numeros del menu son GRAMOS, como en su tabla: carne en crudo, arroz y
    pasta en seco, legumbre escurrida de bote. */
