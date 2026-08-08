@@ -225,6 +225,25 @@ como cero en vez de propagar el fallo.
    necesita su ruta en `S.ts` para que la fusión sepa qué lado es más reciente,
    y hay que decidir si es por fase o común a todas.
 
+1c. **Plantillas de compra configurables** (pedido el 8 de agosto de 2026).
+   La lista de la compra ya existe (sección «La compra» en Comida, desde la
+   versión 30): elementos con casilla para marcar en el súper, añadir y quitar
+   a mano, «Quitar lo comprado» para dejarla lista para la semana siguiente, y
+   sincronizada con `fundirLista` + lápidas como una comida.
+
+   **Lo que está fijo y de momento vale así** (él lo dijo tal cual: *«por
+   ahora la compra será fija»*): el botón «Poner la compra del plan» rellena
+   `COMPRA_PLAN`, su lista cerrada del Consum escrita en el código.
+
+   **Para el producto:** cada usuario debe poder guardarse SUS plantillas
+   («compra semanal», «pescadería», la que sea), con nombre, y rellenar la
+   lista activa desde una de ellas de un toque. Es el mismo movimiento que
+   catálogo→rutinas del paso 2: lo escrito en el código pasa a ser un dato del
+   usuario. Cuando llegue, `COMPRA_PLAN` se convierte en la plantilla inicial
+   de Joel y desaparece del código. Sincronización: las plantillas son estado
+   del usuario → necesitan id + ts y sus rutas en la fusión, igual que la
+   lista activa que ya lo tiene.
+
 2. **Modelo de datos**: separar catálogo de ejercicios, rutinas y sesiones
    (hoy están fundidos en el código)
 3. **Crear y guardar rutinas propias**
