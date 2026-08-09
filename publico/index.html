@@ -1916,7 +1916,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-09 · 45";
+const VERSION = "2026-08-09 · 46";
 let S = {
   fase:0, dia:new Date().getDay(), ajustes:{},
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -6140,13 +6140,17 @@ function pintarMenuDia(){
   const caja = $("#menuHoy");
   if(!caja) return;
   const m = menuDe(comDia);
-  caja.hidden = !m;
-  if(!m) return;
+  /* La tarjeta se ve SIEMPRE: los comodines son sustitutos de uso diario y
+     estaban dentro de la tarjeta del menu, que no aparecia hasta el dia 10.
+     "No veo el batido", dijo — con razon. Sin menu del dia, la tarjeta se
+     queda solo con los comodines. */
+  caja.hidden = false;
   caja.innerHTML = "";
   const cab = document.createElement("div");
   cab.className = "bloqueCab";
   const h = document.createElement("h2");
-  h.textContent = comDia === hoyISO() ? "El menú de hoy" : "El menú de ese día";
+  h.textContent = m ? (comDia === hoyISO() ? "El menú de hoy" : "El menú de ese día")
+                    : "Comodines del plan";
   cab.appendChild(h);
   caja.appendChild(cab);
   const filaMenu = (et, plato, marca) => {
@@ -6180,18 +6184,19 @@ function pintarMenuDia(){
     return fila;
   };
 
-  [["comida", "Comida · ~14 h", m.comida], ["cena", "Cena · ~21:30", m.cena],
-   ["cierre", "Antes de dormir", CIERRE_PLAN]].forEach(par => {
-    caja.appendChild(filaMenu(par[1], par[2], "menu-" + par[0]));
-  });
-
-  /* Los comodines, debajo: los sustitutos oficiales del plan, para el dia en
-     que la comida de la tabla no sale. */
-  const sub = document.createElement("p");
-  sub.className = "subet";
-  sub.style.margin = "12px 0 2px";
-  sub.textContent = "Comodines · sustitutos del plan";
-  caja.appendChild(sub);
+  if(m){
+    [["comida", "Comida · ~14 h", m.comida], ["cena", "Cena · ~21:30", m.cena],
+     ["cierre", "Antes de dormir", CIERRE_PLAN]].forEach(par => {
+      caja.appendChild(filaMenu(par[1], par[2], "menu-" + par[0]));
+    });
+    /* Los comodines, debajo: los sustitutos oficiales del plan, para el dia
+       en que la comida de la tabla no sale. */
+    const sub = document.createElement("p");
+    sub.className = "subet";
+    sub.style.margin = "12px 0 2px";
+    sub.textContent = "Comodines · sustitutos del plan";
+    caja.appendChild(sub);
+  }
   COMODINES_PLAN.forEach(cm => {
     caja.appendChild(filaMenu("Comodín", cm, "menu-cm-" + cm.id));
   });
