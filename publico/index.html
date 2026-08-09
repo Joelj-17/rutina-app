@@ -1916,7 +1916,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-09 · 49";
+const VERSION = "2026-08-09 · 50";
 let S = {
   fase:0, dia:new Date().getDay(), ajustes:{},
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -5812,6 +5812,22 @@ const SENS_CAM = [{v:"bien",t:"Bien"},{v:"normal",t:"Normal"},{v:"duro",t:"Duro"
   if(bg) bg.addEventListener("click", guardarCaminata);
 })();
 
+/* Las kcal de UNA caminata entera, para enseñarlas junto a ella. Llano por
+   km (0,5 kcal por kilo y km — su orientacion, y coincide con la de los
+   pasos) o por pasos si no hay km; subida a 0,008 kcal por kilo y metro
+   (tambien suya; antes 0,006 y se quedaba corto). El peso es el de AYUNAS del
+   dia de la ruta, no el de hoy: lo pidio explicitamente. */
+function kcalCaminata(c){
+  const pes = pesoEn(c.f);
+  if(pes == null) return null;
+  const llano = (Number(c.km) || 0) > 0
+    ? Number(c.km) * pes * 0.5
+    : (Number(c.pasos) || 0) * pes * 0.0004;
+  const cuesta = (Number(c.desnivel) || 0) * pes * 0.008;
+  const total = Math.round(llano + cuesta);
+  return total > 0 ? total : null;
+}
+
 function pintarCaminatas(){
   const hoy = hoyISO();
   const plan = $("#camPlan");
@@ -5837,12 +5853,10 @@ function pintarCaminatas(){
     lista.innerHTML = '<div class="vacio">Todavía ninguna. La primera, hoy a las 19.</div>';
     return;
   }
-  const pes = ultimoPeso();
   l.forEach(c => {
     const fila = document.createElement("div");
     fila.className = "hfila";
-    const extra = (Number(c.desnivel) || 0) && pes != null
-      ? Math.round(Number(c.desnivel) * pes * 0.006) : 0;
+    const total = kcalCaminata(c);
     const l1 = document.createElement("div");
     l1.className = "lin1";
     const hf = document.createElement("span"); hf.className = "hf";
@@ -5854,7 +5868,8 @@ function pintarCaminatas(){
       c.ruta || "",
       (Number(c.km) || 0) ? String(c.km).replace(".", ",") + " km" : "",
       (Number(c.pasos) || 0) ? c.pasos.toLocaleString("es-ES") + " pasos" : "",
-      (Number(c.desnivel) || 0) ? "+" + c.desnivel + " m" + (extra ? " (≈" + extra + " kcal)" : "") : "",
+      (Number(c.desnivel) || 0) ? "+" + c.desnivel + " m" : "",
+      total ? "≈ " + total + " kcal" : "",
       c.sens ? ({bien:"bien",normal:"normal",duro:"duro"})[c.sens] || "" : ""
     ].filter(Boolean).join(" · ");
     const q = document.createElement("button");
@@ -6061,8 +6076,8 @@ const ALIMENTOS = [
   /* La fruta por PIEZA o racion, con sus numeros (los dio el 9-ago): es como
      se apunta de verdad — nadie pesa un platano. Las de por-100 g se quedan
      para cuando si se pese. */
-  ["Plátano (1 pieza)",100,1.2,"ud"], ["Manzana (1 pieza)",80,0.4,"ud"],
-  ["Uvas (ración 150 g)",105,0.9,"ud"],
+  ["Plátano (1 pieza)",100,0,"ud"], ["Manzana (1 pieza)",80,0,"ud"],
+  ["Uvas (ración 150 g)",105,0,"ud"],
   ["Manzana",52,0.3], ["Plátano",90,1.1], ["Naranja",47,0.9], ["Uvas",70,0.6],
   ["Fresas",32,0.7], ["Sandía",30,0.6], ["Melón",34,0.8], ["Kiwi",61,1.1], ["Pera",57,0.4],
   ["Tomate",18,0.9], ["Lechuga",15,1.4], ["Pepino",15,0.7], ["Pimiento",26,1],
@@ -6449,12 +6464,12 @@ function gastoDe(f){
   const pasos = Math.max(S.pasos[f] || 0, andadoRutas) * pes * 0.0004;
   const entreno = S.hist.some(h => h.f === f) ? 280 : 0;
   /* La cuesta. Los pasos cuentan el terreno llano; subir es aparte y en sus
-     rutas de Collserola no es poco. 0,006 kcal por kilo y metro de subida:
-     la fisiologia da ~0,009 para la subida sola (ACSM: 1,8 ml de O2 por kg y
-     metro), pero la vuelta cuesta abajo devuelve parte, y en un corte es mejor
-     quedarse corto que inventarse gasto. Los pasos de la caminata YA estan en
-     el contador de pasos: aqui SOLO se suma el desnivel, o contariamos doble. */
-  const cuesta = rutasF.reduce((acc, c) => acc + (Number(c.desnivel) || 0), 0) * pes * 0.006;
+     rutas de Collserola no es poco. 0,008 kcal por kilo y metro de subida: el
+     numero es SUYO (9-ago, cuadra con su quema medida de ~590 en 7,9 km +300 m)
+     y esta dentro de lo fisiologico (ACSM da ~0,009 para la subida sola). Los
+     pasos de la caminata YA estan en el contador de pasos: aqui SOLO se suma
+     el desnivel, o contariamos doble. */
+  const cuesta = rutasF.reduce((acc, c) => acc + (Number(c.desnivel) || 0), 0) * pes * 0.008;
   return Math.round(tmb * 1.25 + pasos + entreno + cuesta);
 }
 function medidor(et, val, obj, ud){
