@@ -1916,7 +1916,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-09 · 44";
+const VERSION = "2026-08-09 · 45";
 let S = {
   fase:0, dia:new Date().getDay(), ajustes:{},
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -6111,7 +6111,7 @@ const MENU_AGOSTO = {desde:"2026-08-10", hasta:"2026-08-31", dias:[
   /* V */ {comida:{n:"Arroz 70 g + pollo 250 g + judía verde", kcal:695, prot:65},
            cena:{n:"Alubias 250 g + boloñesa 125 g", kcal:565, prot:36}},
   /* S */ {comida:{n:"Pollo 250 g + tomate aliñado", kcal:450, prot:57},
-           cena:{n:"2 latas de atún + tomate aliñado", kcal:200, prot:31}}
+           cena:{n:"2 latas de atún + tomate aliñado", kcal:170, prot:31}}
 ]};
 
 /* El cierre de todas las noches, fijo: leche ENTERA 250 ml + yogur griego,
@@ -6120,6 +6120,14 @@ const MENU_AGOSTO = {desde:"2026-08-10", hasta:"2026-08-31", dias:[
    El yogur que la tabla ponia en la cena es ESTE — compra 8 a la semana, uno
    al dia—, asi que las cenas van sin el y el cierre lo lleva con la leche. */
 const CIERRE_PLAN = {n:"Cierre: leche entera 250 ml + yogur", kcal:285, prot:13};
+
+/* Los comodines del plan: sustitutos oficiales, registrables a un toque como
+   los platos del dia. Las kcal son LAS SUYAS (las dio el 9-ago). */
+const COMODINES_PLAN = [
+  {id:"batido", n:"Batido: plátano + leche 250 + yogur", kcal:420, prot:14},
+  {id:"atun",   n:"2 latas de atún + tomate aliñado",    kcal:170, prot:31},
+  {id:"patata", n:"Patata cocida 300 g",                 kcal:250, prot:6}
+];
 
 /* Los numeros del menu son GRAMOS, como en su tabla: carne en crudo, arroz y
    pasta en seco, legumbre escurrida de bote. */
@@ -6141,9 +6149,7 @@ function pintarMenuDia(){
   h.textContent = comDia === hoyISO() ? "El menú de hoy" : "El menú de ese día";
   cab.appendChild(h);
   caja.appendChild(cab);
-  [["comida", "Comida · ~14 h", m.comida], ["cena", "Cena · ~21:30", m.cena],
-   ["cierre", "Antes de dormir", CIERRE_PLAN]].forEach(par => {
-    const [id, et, plato] = par;
+  const filaMenu = (et, plato, marca) => {
     const fila = document.createElement("div");
     fila.className = "menuFila";
     const tx = document.createElement("div");
@@ -6159,20 +6165,35 @@ function pintarMenuDia(){
     }
     fila.appendChild(tx);
     if(!plato.libre){
-      const marca = "menu-" + id;
-      const ya = comidasDe(comDia).some(c => c.plato === marca);
+      const ya = comidasDe(comDia).some(c2 => c2.plato === marca);
       const b = document.createElement("button");
       b.className = "bt" + (ya ? "" : " p");
       b.textContent = ya ? "✓ Apuntada" : "Apuntar";
       b.addEventListener("click", () => {
-        const idx = comidasDe(comDia).findIndex(c => c.plato === marca);
+        const idx = comidasDe(comDia).findIndex(c2 => c2.plato === marca);
         if(idx >= 0){ quitarComida(comDia, idx); }
         else anotar({n:plato.n, kcal:plato.kcal, prot:plato.prot, plato:marca});
         guardar(); pintarComida(); pintarInicio();
       });
       fila.appendChild(b);
     }
-    caja.appendChild(fila);
+    return fila;
+  };
+
+  [["comida", "Comida · ~14 h", m.comida], ["cena", "Cena · ~21:30", m.cena],
+   ["cierre", "Antes de dormir", CIERRE_PLAN]].forEach(par => {
+    caja.appendChild(filaMenu(par[1], par[2], "menu-" + par[0]));
+  });
+
+  /* Los comodines, debajo: los sustitutos oficiales del plan, para el dia en
+     que la comida de la tabla no sale. */
+  const sub = document.createElement("p");
+  sub.className = "subet";
+  sub.style.margin = "12px 0 2px";
+  sub.textContent = "Comodines · sustitutos del plan";
+  caja.appendChild(sub);
+  COMODINES_PLAN.forEach(cm => {
+    caja.appendChild(filaMenu("Comodín", cm, "menu-cm-" + cm.id));
   });
 }
 
