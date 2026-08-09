@@ -1916,7 +1916,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-09 · 48";
+const VERSION = "2026-08-09 · 49";
 let S = {
   fase:0, dia:new Date().getDay(), ajustes:{},
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -6058,6 +6058,11 @@ const ALIMENTOS = [
   ["Alubias cocidas (bote)",110,7], ["Avena",380,13],
   ["Aceite de oliva",900,0], ["Mantequilla",750,0.6], ["Mayonesa",680,1],
   ["Almendras",580,21], ["Cacahuetes",570,25], ["Aguacate",160,2],
+  /* La fruta por PIEZA o racion, con sus numeros (los dio el 9-ago): es como
+     se apunta de verdad — nadie pesa un platano. Las de por-100 g se quedan
+     para cuando si se pese. */
+  ["Plátano (1 pieza)",100,1.2,"ud"], ["Manzana (1 pieza)",80,0.4,"ud"],
+  ["Uvas (ración 150 g)",105,0.9,"ud"],
   ["Manzana",52,0.3], ["Plátano",90,1.1], ["Naranja",47,0.9], ["Uvas",70,0.6],
   ["Fresas",32,0.7], ["Sandía",30,0.6], ["Melón",34,0.8], ["Kiwi",61,1.1], ["Pera",57,0.4],
   ["Tomate",18,0.9], ["Lechuga",15,1.4], ["Pepino",15,0.7], ["Pimiento",26,1],
