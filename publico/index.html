@@ -1916,7 +1916,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-09 · 47";
+const VERSION = "2026-08-09 · 48";
 let S = {
   fase:0, dia:new Date().getDay(), ajustes:{},
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -6064,7 +6064,10 @@ const ALIMENTOS = [
   ["Cebolla",40,1.1], ["Calabacín",17,1.2], ["Berenjena",25,1], ["Brócoli",34,2.8],
   ["Judías verdes",31,1.8], ["Espinacas",23,2.9], ["Champiñones",22,3], ["Zanahoria",41,0.9],
   ["Tomate frito de bote",90,1.4], ["Tomate triturado",22,1.1], ["Encurtidos",15,0.6],
-  ["Café solo",2,0.1,"ud"], ["Café con leche",90,5,"ud"], ["Azúcar (cucharadita)",20,0,"ud"],
+  ["Café solo",2,0.1,"ud"], /* El cafe con leche es EL SUYO, medido por el: leche entera y tres
+     cucharaditas de azucar, 184 kcal la taza. El generico de 90 mentia a
+     diario. */
+  ["Café con leche (leche entera + 3 azúcares)",184,6,"ud"], ["Azúcar (cucharadita)",20,0,"ud"],
   ["Refresco zero",0,0,"ud"], ["Refresco con azúcar (lata)",140,0,"ud"],
   ["Cerveza (caña)",90,1,"ud"], ["Cerveza (tercio)",130,1.5,"ud"], ["Vino (copa)",120,0,"ud"],
   ["Gin-tonic",190,0,"ud"], ["Gin-tonic con tónica zero",115,0,"ud"],
