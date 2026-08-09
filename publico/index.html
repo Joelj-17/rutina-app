@@ -1916,7 +1916,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-09 · 46";
+const VERSION = "2026-08-09 · 47";
 let S = {
   fase:0, dia:new Date().getDay(), ajustes:{},
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -6079,7 +6079,12 @@ const PLATOS = [
   {id:"mer", n:"Merienda", d:"200 g de yogur griego + fruta",       kcal:190, prot:21},
   {id:"cen", n:"Cena",     d:"200 g de pollo + 250 g de lentejas",  kcal:600, prot:68}
 ];
-const OBJ = PLATOS.reduce((a,p) => ({kcal:a.kcal+p.kcal, prot:a.prot+p.prot}), {kcal:0, prot:0});
+/* Los objetivos del dia son LOS DEL PLAN, no la suma de los platos genericos:
+   esa suma daba 159 g de proteina, un numero que no venia de ningun sitio
+   real. El plan de agosto pide ~100-110 g y el fijo como objetivo 125 (lo dio
+   el, 9-ago). Las kcal se quedan en 1610: caen dentro de su presupuesto real
+   de 1.500-1.650 con el cafe y el margen del gin. */
+const OBJ = {kcal:1610, prot:125};
 
 let comDia = hoyISO();
 
