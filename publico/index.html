@@ -1192,6 +1192,8 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
         <input id="cPeso" type="number" inputmode="decimal" step="0.01" min="30" max="250" placeholder="93,70"></div>
       <div class="campo"><label for="cCintura">Cintura (cm)</label>
         <input id="cCintura" type="number" inputmode="decimal" step="0.5" min="40" max="200" placeholder="104"></div>
+      <div class="campo"><label for="cGrasa">Grasa (%, si la da la báscula)</label>
+        <input id="cGrasa" type="number" inputmode="decimal" step="0.1" min="3" max="60" placeholder="19,5"></div>
     </div>
     <div class="campo" style="margin-top:12px"><label for="cNota">Nota (opcional)</label>
       <textarea id="cNota" placeholder="Cómo te ves, cómo has dormido, cambios en la dieta…"></textarea></div>
@@ -1931,7 +1933,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-09 · 51";
+const VERSION = "2026-08-09 · 52";
 let S = {
   fase:0, dia:new Date().getDay(), ajustes:{},
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -3583,8 +3585,9 @@ $("#listaCuerpo").addEventListener("click", e => {
 $("#cGuardar").addEventListener("click", () => {
   const f = $("#cFecha").value || hoyISO();
   const peso = num($("#cPeso").value), cintura = num($("#cCintura").value);
+  const grasaPct = num($("#cGrasa").value);
   const nota = $("#cNota").value.trim();
-  if(peso == null && cintura == null && !nota){
+  if(peso == null && cintura == null && grasaPct == null && !nota){
     aviso("Escribe al menos un peso o una medida antes de guardar.", true); return;
   }
   /* Se AÑADE, no se sustituye: puede haber varias el mismo día y cada una es
@@ -3592,11 +3595,13 @@ $("#cGuardar").addEventListener("click", () => {
      Antes la fecha era la identidad de la medición y solo cabía una. */
   const reg = {id:idNuevo(), f:f, h:($("#cHora").value || horaAhora()),
                momento:$("#cMomento").value || "",
-               peso:peso, cintura:cintura, nota:nota, ts:new Date().toISOString()};
+               peso:peso, cintura:cintura,
+               grasa:grasaPct != null && grasaPct > 0 ? grasaPct : null,
+               nota:nota, ts:new Date().toISOString()};
   S.cuerpo.push(reg);
   ordenaCuerpo();
   guardar();
-  $("#cPeso").value = ""; $("#cCintura").value = ""; $("#cNota").value = "";
+  $("#cPeso").value = ""; $("#cCintura").value = ""; $("#cGrasa").value = ""; $("#cNota").value = "";
   $("#cHora").value = horaAhora();
   pintarCuerpo(); pintarPerfil(); pintarInicio();
   mostrarEnGrafica(peso != null ? "peso" : cintura != null ? "cintura" : "", reg.id);
@@ -4066,7 +4071,8 @@ function pintarCuerpo(){
         '<div class="hfila"><div class="lin1"><span class="hf">' + esc(fechaCorta(c.f)) +
         (c.h ? " · " + esc(c.h) : "") + '</span>' +
         '<b>' + (c.peso != null ? c.peso.toFixed(2) + " kg" : "—") + '</b>' +
-        '<span class="hf">' + (c.cintura != null ? "cintura " + c.cintura + " cm" : "") + '</span>' +
+        '<span class="hf">' + [c.cintura != null ? "cintura " + c.cintura + " cm" : "",
+          c.grasa != null ? String(c.grasa).replace(".", ",") + " %" : ""].filter(Boolean).join(" · ") + '</span>' +
         '<button class="quitarMed" data-med="' + i + '" aria-label="Quitar esta medición">✕</button>' +
         '</div>' +
         ((c.momento && MOMENTOS[c.momento]) || c.nota
@@ -6477,9 +6483,22 @@ function edadEn(f){
 
    El % lo mete y actualiza el en CUERPO (ahora: 19,5). La zona se recalcula
    sola cada dia con el peso de referencia, asi que baja a medida que baja el. */
+/* El % de grasa vigente en una fecha: el ultimo apuntado en una medicion no
+   posterior a f — la bascula lo da con cada pesada, y su sitio natural es la
+   medicion, no el perfil (lo dijo el: le da pereza ir al perfil). El campo
+   del perfil queda como respaldo manual y para quien no tenga bascula que lo
+   mida. */
+function grasaEn(f){
+  const con = S.cuerpo.filter(x => x.grasa != null && x.grasa > 0 && x.f <= f)
+    .sort((a2, b2) => ((a2.f) + "T" + (a2.h || "00:00")).localeCompare((b2.f) + "T" + (b2.h || "00:00")));
+  if(con.length) return con[con.length - 1].grasa;
+  const pct = num(S.perfil.grasa);
+  return pct && pct > 0 ? pct : null;
+}
+
 function zonaDeficit(f){
   const pes = pesoEn(f);
-  const pct = num(S.perfil.grasa);
+  const pct = grasaEn(f);
   if(pes == null || !pct || pct <= 0) return null;
   const grasa = pes * pct / 100;
   const caudal = Math.round(grasa * 70);
@@ -6547,7 +6566,7 @@ function zonaHtml(f, gasto, comido){
     '<span>' + z.min.toLocaleString("es-ES") + "–" + z.max.toLocaleString("es-ES") + ' kcal</span></div>' +
     '<p>Déficit de hoy: <b>' + (def > 0 ? def.toLocaleString("es-ES") : 0) + '</b> · ' + estado + '</p>' +
     '<p class="zPie">Con ' + z.grasa.toString().replace(".", ",") + " kg de grasa (" +
-    String(S.perfil.grasa).replace(".", ",") + " % de " + pesoEn(f).toFixed(1).replace(".", ",") +
+    String(grasaEn(f)).replace(".", ",") + " % de " + pesoEn(f).toFixed(1).replace(".", ",") +
     ' kg en ayunas). Se recalcula sola al bajar.</p></div>';
 }
 
