@@ -1933,7 +1933,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-09 · 52";
+const VERSION = "2026-08-09 · 53";
 let S = {
   fase:0, dia:new Date().getDay(), ajustes:{},
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -6101,7 +6101,8 @@ const ALIMENTOS = [
      para cuando si se pese. */
   ["Plátano (1 pieza)",100,0,"ud"], ["Manzana (1 pieza)",80,0,"ud"],
   ["Uvas (ración 150 g)",105,0,"ud"],
-  ["Manzana",52,0.3], ["Plátano",90,1.1], ["Naranja",47,0.9], ["Uvas",70,0.6],
+  ["Manzana (por 100 g)",52,0.3], ["Plátano (por 100 g)",90,1.1], ["Naranja",47,0.9],
+  ["Uvas (por 100 g)",70,0.6],
   ["Fresas",32,0.7], ["Sandía",30,0.6], ["Melón",34,0.8], ["Kiwi",61,1.1], ["Pera",57,0.4],
   ["Tomate",18,0.9], ["Lechuga",15,1.4], ["Pepino",15,0.7], ["Pimiento",26,1],
   ["Cebolla",40,1.1], ["Calabacín",17,1.2], ["Berenjena",25,1], ["Brócoli",34,2.8],
@@ -6769,10 +6770,18 @@ $("#comLista").addEventListener("click", e => {
 $("#listaAlimentos").innerHTML = ALIMENTOS
   .map(a => '<option value="' + esc(a[0]) + '">').join("");
 
+/* Sin acentos ni mayusculas: en el movil se teclea "platano", "atun" o
+   "cafe", y el buscador no los encontraba — ni el desplegable del navegador
+   los enseñaba—. "No me deja añadir el platano": era esto. */
+function llano(t){
+  return String(t).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
 function alimentoElegido(){
-  const v = $("#alBusca").value.trim().toLowerCase();
-  return ALIMENTOS.find(a => a[0].toLowerCase() === v) ||
-         ALIMENTOS.find(a => a[0].toLowerCase().indexOf(v) === 0 && v.length > 2) || null;
+  const v = llano($("#alBusca").value.trim());
+  if(!v) return null;
+  return ALIMENTOS.find(a => llano(a[0]) === v) ||
+         ALIMENTOS.find(a => llano(a[0]).indexOf(v) === 0 && v.length > 2) ||
+         ALIMENTOS.find(a => llano(a[0]).indexOf(v) >= 0 && v.length > 3) || null;
 }
 function previa(){
   const a = alimentoElegido(), c = num($("#alCant").value);
