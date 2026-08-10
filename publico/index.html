@@ -157,6 +157,18 @@ textarea{width:100%;resize:vertical;min-height:64px;line-height:1.45}
   background:var(--fondo);color:var(--tinta);font-family:var(--ui);font-size:.9rem}
 #compraNuevo::placeholder{color:var(--acero)}
 
+/* ---- La zona de deficit objetivo ---- */
+.zonaDef{margin-top:12px;padding:11px 13px;border-radius:10px;border:1px solid var(--linea);
+  font-size:.85rem;line-height:1.45}
+.zonaDef .zCab{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.zonaDef .zCab b{font-size:.78rem;text-transform:uppercase;letter-spacing:.07em}
+.zonaDef .zCab span{font-family:var(--mono);font-weight:700}
+.zonaDef p{margin:6px 0 0}
+.zonaDef .zPie{font-size:.74rem;color:var(--acero);margin-top:5px}
+.zonaDef.zOk{border-color:var(--hecho)} .zonaDef.zOk .zCab{color:var(--hecho)}
+.zonaDef.zBajo .zCab{color:var(--acero)}
+.zonaDef.zAlto{border-color:var(--descanso)} .zonaDef.zAlto .zCab{color:var(--descanso)}
+
 /* ---- La tira de los ultimos dias ---- */
 .tiraDias{display:flex;gap:6px;margin-bottom:12px}
 .diaChip{flex:1;min-width:0;background:var(--panel);border:1px solid var(--linea);
@@ -1213,6 +1225,9 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
           <option value="vuelta">Volviendo tras un parón</option>
           <option value="activo">Entreno con regularidad</option>
         </select></div>
+      <div class="campo"><label for="pGrasa">Grasa corporal (%)</label>
+        <input id="pGrasa" type="number" inputmode="decimal" step="0.5" min="3" max="60"
+               placeholder="19,5"></div>
       <div class="campo" style="grid-column:1/-1"><label for="pObjetivo">Objetivo principal</label>
         <select id="pObjetivo">
           <option value="">Sin indicar</option>
@@ -1916,7 +1931,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-09 · 50";
+const VERSION = "2026-08-09 · 51";
 let S = {
   fase:0, dia:new Date().getDay(), ajustes:{},
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -3474,6 +3489,7 @@ function pintarPerfil(){
   $("#pSexo").value     = S.perfil.sexo || "";
   $("#pNivel").value    = S.perfil.nivel || "";
   $("#pObjetivo").value = S.perfil.objetivo || "";
+  $("#pGrasa").value    = S.perfil.grasa || "";
 
   const alt = num(S.perfil.altura), pes = ultimoPeso(), ed = edad();
   const m = [];
@@ -3540,8 +3556,9 @@ $("#pCerrar").addEventListener("click", () => {
 });
 /* Guarda con cada tecla, no solo al salir del campo: en el móvil es muy fácil
    cambiar de pestaña sin que el campo pierda el foco, y así se perdía el dato. */
-["pAltura","pNacim","pSexo","pNivel","pObjetivo"].forEach(id => {
-  const campo = {pAltura:"altura", pNacim:"nacim", pSexo:"sexo", pNivel:"nivel", pObjetivo:"objetivo"}[id];
+["pAltura","pNacim","pSexo","pNivel","pObjetivo","pGrasa"].forEach(id => {
+  const campo = {pAltura:"altura", pNacim:"nacim", pSexo:"sexo", pNivel:"nivel",
+                 pObjetivo:"objetivo", pGrasa:"grasa"}[id];
   const el = document.getElementById(id);
   const grabar = e => { S.perfil[campo] = e.target.value; guardar(); };
   el.addEventListener("input", grabar);
@@ -4253,7 +4270,7 @@ function fotoDeSellado(){
     const m = S[k] || {};
     Object.keys(m).forEach(x => { f[k + "." + x] = JSON.stringify(m[x]); });
   });
-  ["altura","nacim","sexo","nivel","objetivo"].forEach(c => {
+  ["altura","nacim","sexo","nivel","objetivo","grasa"].forEach(c => {
     f["perfil." + c] = JSON.stringify((S.perfil || {})[c] || "");
   });
   RUTAS_SUELTAS.forEach(c => { f[c] = JSON.stringify(S[c]); });
@@ -4501,7 +4518,7 @@ function fundir(mio, otro){
 
   // Perfil: campo a campo, cada uno con su hora.
   r.perfil = {};
-  const campos = ["altura","nacim","sexo","nivel","objetivo"];
+  const campos = ["altura","nacim","sexo","nivel","objetivo","grasa"];
   campos.forEach(c => {
     const ruta = "perfil." + c;
     const ha = (a.ts || {})[ruta], hb = (b.ts || {})[ruta];
@@ -5134,7 +5151,7 @@ function aplicarDatos(g, ts){
   ["comidas","pasos","agua","sueno","siesta","animo"].forEach(k => {
     S[k] = (r[k] && typeof r[k] === "object") ? r[k] : {};
   });
-  S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, r.perfil || {});
+  S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:"",grasa:""}, r.perfil || {});
   if(typeof r.fase === "number") S.fase = r.fase;
   if(r.inicio) S.inicio = r.inicio;
   if(r.material) S.material = r.material;
@@ -5415,7 +5432,7 @@ function cargarDatos(texto, origen){
   // La siesta y el material se exportan pero no se importaban: se perdian.
   S.siesta  = (g.siesta  && typeof g.siesta  === "object") ? g.siesta  : {};
   S.material = Object.assign({barra:false}, g.material || {});
-  S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
+  S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:"",grasa:""}, g.perfil || {});
   if(typeof g.fase === "number") S.fase = g.fase;
   if(g.inicio) S.inicio = g.inicio;
   /* La fase y el dia puestos a mano. Se exportaban pero no se volvian a leer,
@@ -5467,7 +5484,7 @@ $("#listaCopias").addEventListener("click", e => {
     S[k] = (g[k] && typeof g[k] === "object") ? g[k] : {};
   });
   S.material = Object.assign({barra:false}, g.material || {});
-  S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:""}, g.perfil || {});
+  S.perfil = Object.assign({altura:"",nacim:"",sexo:"",nivel:"",objetivo:"",grasa:""}, g.perfil || {});
   if(typeof g.fase === "number") S.fase = g.fase;
   if(g.inicio) S.inicio = g.inicio;
   /* La fase y el dia puestos a mano. Se exportaban pero no se volvian a leer,
@@ -5534,7 +5551,7 @@ $("#btnBorrar").addEventListener("click", () => {
   S.ajustes = {};
   S.comidas = {}; S.pasos = {}; S.agua = {}; S.sueno = {}; S.siesta = {}; S.animo = {};
   S.ts = {}; S.bajas = {};
-  S.perfil = {altura:"",nacim:"",sexo:"",nivel:"",objetivo:""};
+  S.perfil = {altura:"",nacim:"",sexo:"",nivel:"",objetivo:"",grasa:""};
   S.inicio = null; S.faseManual = null; S.diaManual = null;
   S.t0 = null; S.hechos = {}; S.marcas = {}; S.acumPausa = 0; S.pausadoEn = null;
   S.sesionF = null; S.sesionDia = null; S.sesionFase = null; S.sesionId = null; S.foco = null;
@@ -6228,6 +6245,14 @@ function pintarMenuDia(){
   COMODINES_PLAN.forEach(cm => {
     caja.appendChild(filaMenu("Comodín", cm, "menu-cm-" + cm.id));
   });
+  /* Las equivalencias en cocido, para no pelearse con la bascula de cocina:
+     el plan va en crudo/seco pero lo que hay en el taper esta cocido. */
+  const eq = document.createElement("p");
+  eq.className = "zPie";
+  eq.style.cssText = "margin:12px 0 0;font-size:.76rem;color:var(--acero);line-height:1.5";
+  eq.textContent = "En cocido: pollo 250 g ≈ 185 g hecho · arroz 70 g seco ≈ 210 g " +
+    "· pasta 70 g ≈ 175 g · boloñesa grande ≈ 220 g / mediana ≈ 180 g.";
+  caja.appendChild(eq);
 }
 
 /* La semana entera del menu, para planificar: que descongelo manyana, que
@@ -6442,6 +6467,25 @@ function edadEn(f){
   return (a >= 0 && a < 120) ? a : null;
 }
 
+/* ============ LA ZONA DE DEFICIT OBJETIVO ============
+   Su regla (9-ago): la grasa corporal solo puede ceder ~70 kcal por kilo de
+   grasa y dia. Un deficit mayor ya no sale de grasa — sale de musculo y de
+   glucogeno, que es justo lo que el corte no puede permitirse.
+
+     caudal = kg de grasa x 70   (kg de grasa = peso en ayunas x % de grasa)
+     zona objetivo = de caudal a caudal + 250
+
+   El % lo mete y actualiza el en CUERPO (ahora: 19,5). La zona se recalcula
+   sola cada dia con el peso de referencia, asi que baja a medida que baja el. */
+function zonaDeficit(f){
+  const pes = pesoEn(f);
+  const pct = num(S.perfil.grasa);
+  if(pes == null || !pct || pct <= 0) return null;
+  const grasa = pes * pct / 100;
+  const caudal = Math.round(grasa * 70);
+  return {min:caudal, max:caudal + 250, grasa:Math.round(grasa * 10) / 10};
+}
+
 function gastoDe(f){
   /* Con el peso y la edad DE ESE DIA. Antes salian los de hoy, asi que el
      deficit del 3 de marzo cambiaba cada vez que te pesabas: el termino del
@@ -6478,6 +6522,33 @@ function medidor(et, val, obj, ud){
   return '<div class="medidor"><div class="cab"><span>' + et + '</span>' +
     '<span><b>' + Math.round(val) + '</b> / ' + Math.round(obj) + ' ' + ud + '</span></div>' +
     '<div class="riel"><i class="' + cls + '" style="width:' + pct.toFixed(1) + '%"></i></div></div>';
+}
+
+/* El estado del deficit del dia contra la zona objetivo. Los textos son los
+   suyos. Se pinta con esc() ninguno: todo es texto fijo y numeros propios. */
+function zonaHtml(f, gasto, comido){
+  const z = zonaDeficit(f);
+  if(!z || !gasto) return "";
+  const def = Math.round(gasto - comido);
+  let estado, clase;
+  if(def < z.min){
+    estado = "Queda grasa sin quemar hoy: tu cuerpo puede ceder hasta " +
+      z.min.toLocaleString("es-ES") + " kcal de grasa.";
+    clase = "zBajo";
+  }else if(def <= z.max){
+    estado = "Quema máxima de grasa (eficiencia 10/10).";
+    clase = "zOk";
+  }else{
+    estado = "Pasado del caudal: el extra ya no sale de grasa.";
+    clase = "zAlto";
+  }
+  return '<div class="zonaDef ' + clase + '">' +
+    '<div class="zCab"><b>Zona de déficit objetivo</b>' +
+    '<span>' + z.min.toLocaleString("es-ES") + "–" + z.max.toLocaleString("es-ES") + ' kcal</span></div>' +
+    '<p>Déficit de hoy: <b>' + (def > 0 ? def.toLocaleString("es-ES") : 0) + '</b> · ' + estado + '</p>' +
+    '<p class="zPie">Con ' + z.grasa.toString().replace(".", ",") + " kg de grasa (" +
+    String(S.perfil.grasa).replace(".", ",") + " % de " + pesoEn(f).toFixed(1).replace(".", ",") +
+    ' kg en ayunas). Se recalcula sola al bajar.</p></div>';
 }
 
 function pintarComida(){
@@ -6523,6 +6594,7 @@ function pintarComida(){
       '<div><b>' + Math.round(t.kcal) + '</b><span>Comido</span></div>' +
       '<div class="' + (bal < 0 ? "def" : "sup") + '"><b>' + (bal > 0 ? "+" : "") + bal +
       '</b><span>' + (bal < 0 ? "Déficit" : "Superávit") + '</span></div></div>' +
+      zonaHtml(comDia, gasto, t.kcal) +
       '<p style="font-size:.78rem;color:var(--acero);margin:9px 0 0">Estimación: metabolismo basal + ' +
       'vida normal' + ((S.pasos[comDia]||0) ? " + " + S.pasos[comDia] + " pasos" : "") +
       (S.hist.some(h => h.f === comDia) ? " + entrenamiento" : "") + '.</p>';
