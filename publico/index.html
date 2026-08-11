@@ -1933,7 +1933,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-09 · 53";
+const VERSION = "2026-08-10 · 54";
 let S = {
   fase:0, dia:new Date().getDay(), ajustes:{},
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -6082,7 +6082,10 @@ const ALIMENTOS = [
   ["Pollo asado con piel",215,25], ["Boloñesa casera (la del plan)",275,17],
   ["Merluza",85,18], ["Bacalao",82,18], ["Salmón",200,20], ["Gambas",85,20],
   ["Huevo",72,6.3,"ud"], ["Clara de huevo",52,11],
-  ["Yogur griego 0%",60,10], ["Yogur griego (normal)",130,5], ["Yogur natural",60,4],
+  /* SU yogur, medido por el: siempre la unidad de 125 g, 163 kcal y 6,3 g.
+     Va primero para que teclear "yogur" encuentre el suyo y no el 0%. */
+  ["Yogur griego (1 ud · 125 g)",163,6.3,"ud"],
+  ["Yogur griego 0%",60,10], ["Yogur natural",60,4],
   ["Queso fresco batido 0%",55,11],
   ["Leche entera",62,3.1], ["Leche semidesnatada",46,3.2],
   ["Queso curado",390,25], ["Queso rallado",400,26], ["Queso fresco",180,12],
@@ -6148,7 +6151,7 @@ const MENU_AGOSTO = {desde:"2026-08-10", hasta:"2026-08-31", dias:[
      (picada+sofrito+tomate) ~410/25, la de 125 ~340/21 · arroz 70 g seco
      ~245/5 · patata 300 g cocida ~260/6 (comodin = arroz 70) · 2 latas de
      atun ~130/30 (= media racion de pollo) · judia verde libre ~70/4 ·
-     tomate alinyado ~70/1 · yogur ~130/5 · queso 20 g ~80/5 · aceite 10 g
+     tomate alinyado ~70/1 · yogur 163/6,3 (medido) · queso 20 g ~80/5 · aceite 10 g
      ~90. */
   /* D */ {comida:{n:"Hervido frío: patata 300 g + judía verde + 2 latas de atún", kcal:505, prot:40},
            cena:{n:"Pollo 250 g + tomate aliñado", kcal:450, prot:57}},
@@ -6171,7 +6174,11 @@ const MENU_AGOSTO = {desde:"2026-08-10", hasta:"2026-08-31", dias:[
    son ~155 kcal, no los ~120 de la semi con la que estaba calculado antes.
    El yogur que la tabla ponia en la cena es ESTE — compra 8 a la semana, uno
    al dia—, asi que las cenas van sin el y el cierre lo lleva con la leche. */
-const CIERRE_PLAN = {n:"Cierre: leche entera 250 ml + yogur", kcal:285, prot:13};
+/* Con el yogur REAL (163 kcal la unidad de 125 g, medido por el, 10-ago):
+   155 de la leche entera + 163 = 318 ≈ 320. Antes 285 con un yogur estimado
+   de 130. Su comodin del batido (420) ya cuadraba con el yogur real:
+   100 + 155 + 163 = 418. */
+const CIERRE_PLAN = {n:"Cierre: leche entera 250 ml + yogur", kcal:320, prot:14};
 
 /* Los comodines del plan: sustitutos oficiales, registrables a un toque como
    los platos del dia. Las kcal son LAS SUYAS (las dio el 9-ago). */
