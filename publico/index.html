@@ -157,6 +157,15 @@ textarea{width:100%;resize:vertical;min-height:64px;line-height:1.45}
   background:var(--fondo);color:var(--tinta);font-family:var(--ui);font-size:.9rem}
 #compraNuevo::placeholder{color:var(--acero)}
 
+/* ---- El modo del dia ---- */
+.modoDia{margin-top:10px;padding:9px 12px;border-radius:9px;border:1px solid var(--linea);
+  font-size:.83rem}
+.modoDia b{font-family:var(--mono)}
+.modoDia span{display:block;font-size:.72rem;color:var(--acero);margin-top:3px}
+.modoDia.zOk{border-color:var(--hecho)} .modoDia.zOk b{color:var(--hecho)}
+.modoDia.zAlto b{color:var(--descanso)}
+.modoDia.zBajo b{color:var(--acero)}
+
 /* ---- La zona de deficit objetivo ---- */
 .zonaDef{margin-top:12px;padding:11px 13px;border-radius:10px;border:1px solid var(--linea);
   font-size:.85rem;line-height:1.45}
@@ -1936,7 +1945,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-13 · 55";
+const VERSION = "2026-08-13 · 56";
 let S = {
   fase:0, dia:new Date().getDay(), ajustes:{},
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -2227,25 +2236,30 @@ const $ = s => document.querySelector(s);
    fallo) el resto. Sin dominadas por ahora: no tiene donde montar la barra.
    Pecho con mancuernas en la fuerte; flexiones a medio gas en la suave.
    Curl y triceps solo lunes y viernes. */
+/* Revisada el 13-ago: en deficit sobraban ejercicios. La FUERTE baja de 11 a
+   7 (fuera las laterales —las registro como limite/forzado, forma rota— y el
+   rumano —"sobra", redundante con el peso muerto a una pierna—). El brazo,
+   SOLO los viernes: una señal por semana sin comerse la recuperacion. La
+   SUAVE pasa a 3 movimientos, 2 series lejos del fallo, ~20 min: mantener la
+   señal, no rendir. */
 const CORTE = {
-  F:["cal","remo","hombro","pecho","bulgara","pm1","curl","triceps","plancha","paseo","estir"],
-  S:["cal","plancha","bicho","planchaL","flex","gluteo","pajaro","talones","paseo","estir"]
+  F:["cal","remo","pecho","hombro","bulgara","pm1","plancha","paseo","curl","triceps","estir"],
+  S:["cal","remo","hombro","pecho","estir"]
 };
 /* Dosis del corte por ejercicio: [series, reps]. reps null = la de la tabla. */
 const CORTE_DOSIS = {
   F:{remo:[3,"8-10 por brazo"], hombro:[3,"8"], pecho:[3,"10"],
      bulgara:[3,"8-10 por pierna"], pm1:[2,"10 por pierna"],
      curl:[2,"12"], triceps:[2,"12"], plancha:[2,null], paseo:[2,null]},
-  S:{plancha:[3,null], bicho:[2,"10 por lado"], planchaL:[2,null],
-     flex:[2,"10-12, a medio gas"], gluteo:[2,"15"], pajaro:[2,"12-15"],
-     talones:[2,"20"], paseo:[2,null]}
+  S:{remo:[2,"8 por brazo, lejos del fallo"], hombro:[2,"8, lejos del fallo"],
+     pecho:[2,"8-10, lejos del fallo"]}
 };
 const tipoDia = () => ([1,3,5].indexOf(S.dia) >= 0 ? "F" : "S");
 
 function listaEj(){
   let l = CORTE[tipoDia()].slice();
-  // Curl y triceps solo lunes y viernes; el miercoles la fuerte va sin brazo.
-  if(tipoDia() === "F" && S.dia !== 1 && S.dia !== 5)
+  // El brazo, SOLO los viernes (revision del 13-ago).
+  if(tipoDia() === "F" && S.dia !== 5)
     l = l.filter(id => id !== "curl" && id !== "triceps");
   return l.filter(id => !EJ[id].material || S.material[EJ[id].material]);
 }
@@ -2672,8 +2686,8 @@ function pintarHoy(){
   if(tipoDia() === "S"){
     const n = document.createElement("div");
     n.className = "nota ambar";
-    n.innerHTML = "<p><strong>Sesión suave: nunca al fallo.</strong> Deja siempre " +
-      "3-4 repeticiones en la recámara. Hoy se trata de mover el cuerpo, no de romperlo.</p>";
+    n.innerHTML = "<p><strong>Sesión suave: mantener la señal, no rendir.</strong> " +
+      "Tres movimientos, dos series, lejos del fallo, veinte minutos y a casa.</p>";
     cont.appendChild(n);
   }
 
@@ -3931,8 +3945,8 @@ function pintarCaminoAgosto(){
   const p2 = document.createElement("p");
   p2.style.cssText = "margin:8px 0 0;font-size:.78rem;color:var(--acero)";
   p2.textContent = "Hitos: 92 el 16 · 90,5 el 23 · 89-90 el 30. La media semanal manda, " +
-    "no la pesada de un día: al volver a comer normal, +1 kg de agua y glucógeno " +
-    "es lo esperable, no grasa.";
+    "no la pesada de un día. Y ojo esta semana: al volver a comer sólido, la báscula " +
+    "puede subir 1-2 kg al rellenarse el glucógeno con su agua. Es depósito, no retroceso.";
   t.appendChild(p2);
   caja.appendChild(t);
 }
@@ -5741,10 +5755,10 @@ function pintarSemana(){
     const d = DIAS[i];
     const tipo = [1,3,5].indexOf(i) >= 0 ? "F" : "S";
     let l = CORTE[tipo].slice();
-    if(tipo === "F" && i !== 1 && i !== 5) l = l.filter(x => x !== "curl" && x !== "triceps");
+    if(tipo === "F" && i !== 5) l = l.filter(x => x !== "curl" && x !== "triceps");
     const et2 = tipo === "F" ? "Fuerte" : "Suave";
     const nEj = l.length;
-    const mins = tipo === "F" ? "40-45 min" : "20-25 min";
+    const mins = tipo === "F" ? "45-55 min" : "20 min";
     return '<div class="dfila' + (i === hoy ? " hoy" : "") + '"><b>' + d.n + (i === hoy ? " · hoy" : "") +
       '</b><span class="et">' + et2 + '</span><span class="mn">' + nEj + " ej · " + mins + '</span></div>';
   }).join("");
@@ -6098,6 +6112,14 @@ const ALIMENTOS = [
   ["Ternera, filete",150,21], ["Lomo de cerdo",130,22], ["Cerdo, panceta",500,10],
   ["Atún al natural (escurrido)",110,25], ["Atún en aceite (escurrido)",190,24],
   ["Pollo asado con piel",215,25], ["Boloñesa casera (la del plan)",275,17],
+  ["Arroz con garbanzos, tomate y queso (ración)",630,32,"ud"],
+  ["Macarrones a la boloñesa con queso (ración)",710,40,"ud"],
+  ["Pollo guisado con tomate + arroz (ración)",625,60,"ud"],
+  ["Garbanzos guisados con picada (ración)",600,43,"ud"],
+  ["Hamburguesas + patatas gajos + tomate (ración)",700,38,"ud"],
+  ["Arroz meloso con carne y verduras (ración)",760,40,"ud"],
+  ["Lentejas guisadas con picada (ración)",600,43,"ud"],
+  ["Leche entera (vaso 250 ml)",155,8,"ud"],
   ["Merluza",85,18], ["Bacalao",82,18], ["Salmón",200,20], ["Gambas",85,20],
   ["Huevo",72,6.3,"ud"], ["Clara de huevo",52,11],
   /* SU yogur, medido por el: siempre la unidad de 125 g, 163 kcal y 6,3 g.
@@ -6141,18 +6163,25 @@ const ALIMENTOS = [
   ["Pizza",260,11], ["Hamburguesa completa",250,13], ["Croquetas",230,7]
 ];
 
+/* Los platos del plan de solidos (14-ago): raciones REALES ya pesadas por el.
+   Se apunta "1 racion", nunca gramos. Cada plato se come dos veces (cena
+   fresca, mediodia de ayer), asi que el boton SUMA raciones — repetible, no
+   un interruptor. Quitar, desde la lista de abajo con su aspa. */
 const PLATOS = [
-  {id:"des", n:"Desayuno", d:"Tortilla francesa de 3 huevos",       kcal:260, prot:19},
-  {id:"com", n:"Comida",   d:"200 g de pollo + 70 g de arroz",      kcal:560, prot:51},
-  {id:"mer", n:"Merienda", d:"200 g de yogur griego + fruta",       kcal:190, prot:21},
-  {id:"cen", n:"Cena",     d:"200 g de pollo + 250 g de lentejas",  kcal:600, prot:68}
+  {id:"r-arrgarb", n:"Arroz con garbanzos, tomate y queso",   kcal:630, prot:32},
+  {id:"r-macbol",  n:"Macarrones a la boloñesa con queso",    kcal:710, prot:40},
+  {id:"r-polgui",  n:"Pollo guisado con tomate + arroz",      kcal:625, prot:60},
+  {id:"r-garbpic", n:"Garbanzos guisados con picada",         kcal:600, prot:43},
+  {id:"r-hamb",    n:"Hamburguesas + patatas gajos + tomate", kcal:700, prot:38},
+  {id:"r-melo",    n:"Arroz meloso con carne y verduras",     kcal:760, prot:40},
+  {id:"r-lentpic", n:"Lentejas guisadas con picada",          kcal:600, prot:43}
 ];
 /* Los objetivos del dia son LOS DEL PLAN, no la suma de los platos genericos:
    esa suma daba 159 g de proteina, un numero que no venia de ningun sitio
    real. El plan de agosto pide ~100-110 g y el fijo como objetivo 125 (lo dio
    el, 9-ago). Las kcal se quedan en 1610: caen dentro de su presupuesto real
    de 1.500-1.650 con el cafe y el margen del gin. */
-const OBJ = {kcal:1610, prot:125};
+const OBJ = {kcal:1700, prot:125};   // ~1.600-1.750 en la fase de solidos (14-ago)
 
 let comDia = hoyISO();
 
@@ -6174,7 +6203,7 @@ const MENU_AGOSTO = {desde:"2026-08-10", hasta:"2026-08-31", dias:[
   /* D */ {comida:{n:"Hervido frío: patata 300 g + judía verde + 2 latas de atún", kcal:505, prot:40},
            cena:{n:"Pollo 250 g + tomate aliñado", kcal:450, prot:57}},
   /* L */ {comida:{n:"Macarrones 70 g + boloñesa 150 g + queso 20 g", kcal:740, prot:39},
-           cena:{n:"Pollo 250 g + judía verde", kcal:450, prot:60}},
+           cena:{n:"Pollo 250 g + judía verde", kcal:395, prot:60}},
   /* M */ {comida:{n:"Arroz 70 g + pollo 250 g + tomate frito 40 g", kcal:655, prot:62},
            cena:{n:"Lentejas 250 g + 1 lata de atún", kcal:350, prot:32}},
   /* X */ {comida:{n:"Garbanzos 250 g + boloñesa 150 g", kcal:710, prot:40},
@@ -6201,7 +6230,7 @@ const CIERRE_PLAN = {n:"Cierre: leche entera 250 ml + yogur", kcal:320, prot:14}
 /* Los comodines del plan: sustitutos oficiales, registrables a un toque como
    los platos del dia. Las kcal son LAS SUYAS (las dio el 9-ago). */
 const COMODINES_PLAN = [
-  {id:"batido", n:"Batido: plátano + leche 250 + yogur", kcal:420, prot:14},
+  {id:"batido", n:"Batido: plátano + leche 250 + yogur", kcal:420, prot:15},
   {id:"atun",   n:"2 latas de atún + tomate aliñado",    kcal:170, prot:31},
   {id:"patata", n:"Patata cocida 300 g",                 kcal:250, prot:6}
 ];
@@ -6551,7 +6580,17 @@ function gastoDe(f){
   const andadoRutas = rutasF.reduce((acc, c) =>
     acc + (Number(c.pasos) || Math.round((Number(c.km) || 0) * 1330)), 0);
   const pasos = Math.max(S.pasos[f] || 0, andadoRutas) * pes * 0.0004;
-  const entreno = S.hist.some(h => h.f === f) ? 280 : 0;
+  /* El entreno, por su formula (13-ago): MET ~3,75 → kcal = 3,75 x kg x horas,
+     con la DURACION REAL de la sesion. El 280 fijo de antes sobrevaloraba las
+     suaves (20 min) y le daba igual 45 que 70 minutos. Sin duracion guardada
+     (sesiones viejas), 50 min si fue dia fuerte y 22 si suave. */
+  const sesF = S.hist.find(h => h.f === f);
+  let entreno = 0;
+  if(sesF){
+    const seg = Number(sesF.seg) > 0 ? Number(sesF.seg)
+      : ([1,3,5].indexOf(new Date(f + "T12:00:00").getDay()) >= 0 ? 3000 : 1320);
+    entreno = 3.75 * pes * (seg / 3600);
+  }
   /* La cuesta. Los pasos cuentan el terreno llano; subir es aparte y en sus
      rutas de Collserola no es poco. 0,008 kcal por kilo y metro de subida: el
      numero es SUYO (9-ago, cuadra con su quema medida de ~590 en 7,9 km +300 m)
@@ -6571,6 +6610,18 @@ function medidor(et, val, obj, ud){
 
 /* El estado del deficit del dia contra la zona objetivo. Los textos son los
    suyos. Se pinta con esc() ninguno: todo es texto fijo y numeros propios. */
+/* El modo del dia segun cuantos PLATOS solidos lleva: 0 = A (liquido, la red
+   de seguridad), 1 = B (a medias), 2+ = C (solidos, el objetivo). Cuenta las
+   raciones del plan y las comidas/cenas del menu; los liquidos no. */
+function modoDelDia(f){
+  const solidos = comidasDe(f).filter(c =>
+    c.plato && (c.plato.indexOf("r-") === 0 ||
+                c.plato === "menu-comida" || c.plato === "menu-cena")).length;
+  if(solidos >= 2) return {m:"C", t:"sólidos — el objetivo", n:solidos, clase:"zOk"};
+  if(solidos === 1) return {m:"B", t:"a medias: un plato sólido", n:1, clase:"zAlto"};
+  return {m:"A", t:"líquido — red de seguridad", n:0, clase:"zBajo"};
+}
+
 function zonaHtml(f, gasto, comido){
   const z = zonaDeficit(f);
   if(!z || !gasto) return "";
@@ -6594,6 +6645,13 @@ function zonaHtml(f, gasto, comido){
     '<p class="zPie">Con ' + z.grasa.toString().replace(".", ",") + " kg de grasa (" +
     String(grasaEn(f)).replace(".", ",") + " % de " + pesoEn(f).toFixed(1).replace(".", ",") +
     ' kg en ayunas). Se recalcula sola al bajar.</p></div>';
+}
+
+function modoHtml(f){
+  const m = modoDelDia(f);
+  return '<div class="modoDia ' + m.clase + '"><b>Modo ' + m.m + '</b> · ' + m.t +
+    (m.n ? ' (' + m.n + (m.n === 1 ? ' plato' : ' platos') + ')' : '') +
+    '<span>1 plato ≈ 1 batido + 2 vasos de leche</span></div>';
 }
 
 function pintarComida(){
@@ -6639,6 +6697,7 @@ function pintarComida(){
       '<div><b>' + Math.round(t.kcal) + '</b><span>Comido</span></div>' +
       '<div class="' + (bal < 0 ? "def" : "sup") + '"><b>' + (bal > 0 ? "+" : "") + bal +
       '</b><span>' + (bal < 0 ? "Déficit" : "Superávit") + '</span></div></div>' +
+      modoHtml(comDia) +
       zonaHtml(comDia, gasto, t.kcal) +
       '<p style="font-size:.78rem;color:var(--acero);margin:9px 0 0">Estimación: metabolismo basal + ' +
       'vida normal' + ((S.pasos[comDia]||0) ? " + " + S.pasos[comDia] + " pasos" : "") +
@@ -6650,11 +6709,14 @@ function pintarComida(){
   }
   $("#comResumen").innerHTML = html;
 
-  const puestos = comidasDe(comDia).map(c => c.plato).filter(Boolean);
-  $("#comPlan").innerHTML = PLATOS.map(p =>
-    '<button class="plato' + (puestos.indexOf(p.id) >= 0 ? " puesto" : "") + '" data-plato="' + p.id + '">' +
-    '<b>' + p.n + (puestos.indexOf(p.id) >= 0 ? " ✓" : "") + '</b><span>' + p.d + '</span>' +
-    '<span class="mn">' + p.kcal + ' kcal · ' + p.prot + ' g</span></button>').join("");
+  const raciones = {};
+  comidasDe(comDia).forEach(c => { if(c.plato) raciones[c.plato] = (raciones[c.plato] || 0) + 1; });
+  $("#comPlan").innerHTML = PLATOS.map(p => {
+    const n = raciones[p.id] || 0;
+    return '<button class="plato' + (n ? " puesto" : "") + '" data-plato="' + p.id + '">' +
+      '<b>' + esc(p.n) + (n ? " ×" + n : "") + '</b>' +
+      '<span class="mn">' + p.kcal + ' kcal · ' + p.prot + ' g · +1 ración</span></button>';
+  }).join("");
 
   const l = comidasDe(comDia);
   $("#comTitLista").textContent = esHoy ? "Lo que llevas hoy"
@@ -6760,9 +6822,9 @@ $("#comPlan").addEventListener("click", e => {
   const b = e.target.closest("[data-plato]");
   if(!b) return;
   const p = PLATOS.find(x => x.id === b.dataset.plato);
-  const ya = comidasDe(comDia).findIndex(c => c.plato === p.id);
-  if(ya >= 0){ quitarComida(comDia, ya); pintarComida(); pintarInicio(); }
-  else anotar({n:p.n + " — " + p.d, kcal:p.kcal, prot:p.prot, plato:p.id});
+  // SUMA una racion cada toque: el mismo plato se come dos veces. Quitar se
+  // quita desde la lista, con su aspa, como cualquier apunte.
+  anotar({n:p.n + " (1 ración)", kcal:p.kcal, prot:p.prot, plato:p.id});
 });
 /* Quitar un apunte de comida. TODOS los sitios que quiten comida tienen que
    pasar por aqui: si uno se salta la baja, ese apunte vuelve desde el otro
