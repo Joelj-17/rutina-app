@@ -1750,10 +1750,13 @@ const POSES = {
            rod2:[74,80],pie2:[92,86],pun2:[100,82],cod:[26,60],man:[11,56],
            cod2:[35,57],man2:[37,41]},
 
+  /* El antebrazo apoya hacia DELANTE (hacia la cabeza), no plegado bajo el
+     pecho: codo debajo del hombro y mano por delante. Antes la mano caia hacia
+     los pies, que es anatomicamente imposible en una plancha. */
   plancha :{cab:[16,56],cue:[28,59],cad:[60,68],rod:[78,73],pie:[92,78],pun:[92,88],
-            cod:[24,78],man:[36,78]},
+            cod:[28,78],man:[13,78]},
   planchaL:{cab:[18,46],cue:[30,52],cad:[60,72],rod:[76,80],pie:[92,88],pun:[102,90],
-            cod:[24,76],man:[38,74],cod2:[34,34],man2:[36,16]},
+            cod:[30,80],man:[15,82],cod2:[34,34],man2:[36,16]},
   bicho   :{cab:[18,68],cue:[30,70],cad:[60,72],rod:[70,52],pie:[84,56],pun:[92,50],
             rod2:[68,86],pie2:[86,88],pun2:[94,84],cod:[34,56],man:[38,40],
             cod2:[38,82],man2:[26,90]},
@@ -1933,7 +1936,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-10 · 54";
+const VERSION = "2026-08-13 · 55";
 let S = {
   fase:0, dia:new Date().getDay(), ajustes:{},
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -4895,6 +4898,21 @@ function miraSiHaCambiadoElDia(){
   const estabaEnHoy = (comDia === diaVisto);
   diaVisto = hoy;
   if(estabaEnHoy) comDia = hoy;
+  /* Una sesion dejada abierta de otro dia no puede secuestrar el dia nuevo.
+     Al RECARGAR ya se descartaba (cargar solo recupera la recien empezada),
+     pero una pestaña que sigue viva no recarga: aplicarAuto veia S.t0 y
+     clavaba el dia al de la sesion — el jueves 13 enseñaba "Martes". Misma
+     regla que al cargar: solo sobrevive la que empezo hace <3 h con latido
+     reciente (el caso real de la medianoche). */
+  const viva = S.t0 && (Date.now() - S.t0) < 3*3600*1000 &&
+               (!S.latido || (Date.now() - S.latido) < 2*3600*1000);
+  if(S.t0 && !viva){
+    S.t0 = null; S.hechos = {}; S.marcas = {}; S.acumPausa = 0; S.pausadoEn = null;
+    S.latido = null; S.sesionF = null; S.sesionDia = null; S.sesionFase = null;
+    S.sesionId = null; S.foco = null;
+    barraOff();
+    guardarSinMarcar();
+  }
   aplicarAuto();                 // recalcula el día de la rutina y la fase
   pintarHoy(); pintarComida(); pintarInicio(); pintarDiario();
   pintarSemana(); pintarPasos(); pintarEstadoSync();
