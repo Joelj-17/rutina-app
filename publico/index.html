@@ -1288,6 +1288,8 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
   <div class="avisoDia" id="camPlan" hidden></div>
   <div class="tarj">
     <div class="rejilla">
+      <div class="campo"><label for="camFecha">Día</label>
+        <input id="camFecha" type="date"></div>
       <div class="campo"><label for="camMin">Minutos</label>
         <input id="camMin" type="number" inputmode="numeric" min="1" step="5" placeholder="60"></div>
       <div class="campo"><label for="camKm">Km (de Wikiloc)</label>
@@ -1945,7 +1947,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-13 · 56";
+const VERSION = "2026-08-15 · 57";
 let S = {
   fase:0, dia:new Date().getDay(), ajustes:{},
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -5858,6 +5860,20 @@ function caminataQueToca(f){
 
 const SENS_CAM = [{v:"bien",t:"Bien"},{v:"normal",t:"Normal"},{v:"duro",t:"Duro"}];
 
+/* La fecha del formulario: hoy por defecto, pero editable — una ruta apuntada
+   al llegar tarde a casa es de ayer, no de hoy. Solo se pisa el valor si sigue
+   siendo el que puso la app (o esta vacio): una fecha elegida a mano se
+   respeta hasta guardar, incluso si entre medias cambia el dia. */
+let camFechaAuto = null;
+function ponerFechaCam(){
+  const cf = $("#camFecha");
+  if(!cf) return;
+  const hoy = hoyISO();
+  cf.max = hoy;
+  if(document.activeElement === cf) return;
+  if(!cf.value || cf.value === camFechaAuto){ cf.value = hoy; camFechaAuto = hoy; }
+}
+
 (function(){
   const dl = document.getElementById("listaRutas");
   if(dl) RUTAS_SUGERIDAS.forEach(r2 => {
@@ -5865,6 +5881,7 @@ const SENS_CAM = [{v:"bien",t:"Bien"},{v:"normal",t:"Normal"},{v:"duro",t:"Duro"
   });
   const bg = document.getElementById("camGuardar");
   if(bg) bg.addEventListener("click", guardarCaminata);
+  ponerFechaCam();
 })();
 
 /* Las kcal de UNA caminata entera, para enseñarlas junto a ella. Llano por
@@ -5885,6 +5902,7 @@ function kcalCaminata(c){
 
 function pintarCaminatas(){
   const hoy = hoyISO();
+  ponerFechaCam();
   const plan = $("#camPlan");
   if(plan){
     const t = caminataQueToca(hoy);
@@ -5960,10 +5978,15 @@ function pintarSensCam(){
 function guardarCaminata(){
   const min = num($("#camMin").value);
   if(!min || min <= 0){ aviso("Pon cuántos minutos has andado.", true); return; }
+  /* El dia elegido manda: la caminata cuenta en ese dia (kcal, pasos de ruta
+     y peso en ayunas de ESE dia), no en el de hoy. Por defecto es hoy. */
+  const cf = $("#camFecha");
+  const f = (cf && cf.value) || hoyISO();
+  if(f > hoyISO()){ aviso("Ese día aún no ha llegado.", true); return; }
   const desn = num($("#camDesnivel").value);
   const km = num($("#camKm").value);
   const pasosR = num($("#camPasos").value);
-  S.caminatas.push({id:idNuevo(), f:hoyISO(), min:Math.round(min),
+  S.caminatas.push({id:idNuevo(), f:f, min:Math.round(min),
     km:km != null && km > 0 ? Math.round(km*10)/10 : 0,
     pasos:pasosR != null && pasosR > 0 ? Math.round(pasosR) : 0,
     ruta:$("#camRuta").value.trim(), desnivel:desn != null && desn > 0 ? Math.round(desn) : 0,
@@ -5971,8 +5994,10 @@ function guardarCaminata(){
   guardar();
   $("#camMin").value = ""; $("#camRuta").value = ""; $("#camDesnivel").value = "";
   $("#camKm").value = ""; $("#camPasos").value = "";
+  if(cf){ cf.value = ""; camFechaAuto = null; }
   camSens = null; pintarSensCam(); pintarCaminatas(); pintarPasos(); pintarInicio();
-  aviso("Caminata guardada.");
+  aviso(f === hoyISO() ? "Caminata guardada."
+    : "Caminata apuntada al " + fechaCorta(f) + ".");
 }
 
 function pintarPasos(){
