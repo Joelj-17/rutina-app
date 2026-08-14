@@ -1282,6 +1282,23 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
     Apúntalos al final del día, cuando ya no vayas a andar más. Míralos en la app
     de tu móvil y tecléalos: una web no puede leerlos sola.</p>
 
+  <!-- Junto a los pasos de hoy, no al final de la pantalla: cuando alguien
+       llega tarde a casa y apunta la ruta de ayer, este es el segundo paso
+       natural y tiene que estar a la vista. -->
+  <h2 class="sec">Pasos de otro día</h2>
+  <div class="tarj">
+    <p style="font-size:.85rem;color:var(--acero);margin:0 0 12px">
+      Si un día se te pasó, ponlo aquí. Vale cualquier fecha anterior.</p>
+    <div class="rejilla">
+      <div class="campo"><label for="pasFecha">Día</label><input id="pasFecha" type="date"></div>
+      <div class="campo"><label for="pasValor">Pasos</label>
+        <input id="pasValor" type="number" inputmode="numeric" step="100" min="0" placeholder="8500"></div>
+    </div>
+    <div class="acciones" style="margin-top:12px">
+      <button class="bt p" id="pasAdd">Guardar ese día</button>
+    </div>
+  </div>
+
   <!-- La caminata del dia: que toca segun el plan, y apuntarla al volver.
        Los pasos ya cuentan las kcal del llano; aqui solo se anyade la cuesta. -->
   <h2 class="sec">La caminata</h2>
@@ -1312,20 +1329,6 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
       que la cuesta no sale gratis.</p>
   </div>
   <div class="hist" id="camLista" style="margin-top:10px"></div>
-
-  <h2 class="sec">Apuntar otro día</h2>
-  <div class="tarj">
-    <p style="font-size:.85rem;color:var(--acero);margin:0 0 12px">
-      Si un día se te pasó, ponlo aquí. Vale cualquier fecha anterior.</p>
-    <div class="rejilla">
-      <div class="campo"><label for="pasFecha">Día</label><input id="pasFecha" type="date"></div>
-      <div class="campo"><label for="pasValor">Pasos</label>
-        <input id="pasValor" type="number" inputmode="numeric" step="100" min="0" placeholder="8500"></div>
-    </div>
-    <div class="acciones" style="margin-top:12px">
-      <button class="bt p" id="pasAdd">Guardar ese día</button>
-    </div>
-  </div>
 
   <h2 class="sec">Cómo vas</h2>
   <div class="rachas" id="pasosCifras"></div>
@@ -1947,7 +1950,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-15 · 57";
+const VERSION = "2026-08-15 · 58";
 let S = {
   fase:0, dia:new Date().getDay(), ajustes:{},
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -6002,6 +6005,7 @@ function guardarCaminata(){
 
 function pintarPasos(){
   const hoy = hoyISO(), hoyV = S.pasos[hoy] || 0;
+  if($("#pasFecha")) $("#pasFecha").max = hoy;
   const pes = ultimoPeso();
   const inp = $("#pasHoy");
   if(inp && document.activeElement !== inp) inp.value = hoyV || "";
