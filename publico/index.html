@@ -1054,6 +1054,10 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
   <button class="empezar" id="btnEmpezar">Empezar la sesión</button>
   <div id="finBox"></div>
   <div class="lista" id="lista"></div>
+  <!-- El detector de perdida de musculo: si la fuerza baja dos semanas
+       seguidas, el volumen es excesivo y sobra un dia suave. -->
+  <h2 class="sec">La fuerza, semana a semana</h2>
+  <div class="tarj" id="fuerzaSem"></div>
 </main>
 
 <!-- ============ COMIDA ============ -->
@@ -1644,12 +1648,12 @@ const EJ = {
     tip:"Con 14 años de natación encima esto no es opcional: es lo que compensa los años de brazada.",
     err:"Saltárselo por prisa. Son 3 minutos."}
 };
-/* La rutina. UNA sola, la suya: L/X/V la sesion fuerte y el resto la suave,
-   puesta automaticamente segun el dia. La antigua A/B/floja se retiro el 9 de
+/* La rutina. UNA sola, la suya: L/X/V fuerte, martes/jueves/sabado suave y
+   domingo descanso total, puesta automaticamente segun el dia. La antigua A/B/floja se retiro el 9 de
    agosto de 2026 a peticion suya; sus sesiones guardadas y sus pesos
    (clave ejercicio|fase) quedan intactos en el historial. */
 const DIAS = [
-  {n:"Domingo",et:"Suave"},{n:"Lunes",et:"Fuerte"},{n:"Martes",et:"Suave"},
+  {n:"Domingo",et:"Descanso"},{n:"Lunes",et:"Fuerte"},{n:"Martes",et:"Suave"},
   {n:"Miércoles",et:"Fuerte"},{n:"Jueves",et:"Suave"},{n:"Viernes",et:"Fuerte"},
   {n:"Sábado",et:"Suave"}
 ];
@@ -1659,13 +1663,13 @@ const ESFUERZO = [
 const MOLESTIAS = ["Ninguna","Hombro","Codo","Muñeca","Lumbar","Rodilla","Cadera","Cuello"];
 /* Aviso inmediato según la molestia declarada. Es el germen del análisis de pago. */
 const CONSEJO = {
-  Hombro:"Con tu historial de natación, el hombro es la zona a vigilar. Pasa el press a <strong>agarre neutro</strong> (palmas mirándose) y no subas las aperturas laterales por encima del hombro. Si sigue tras 3 días, quita el press unos días — el remo y el pájaro puedes mantenerlos.",
+  Hombro:"Con tu historial de natación, el hombro es la zona a vigilar. Pasa el press a <strong>agarre neutro</strong> (palmas mirándose). Si sigue tras 3 días, quita el press unos días — el remo puedes mantenerlo.",
   Codo:"Suele venir del curl y la extensión de tríceps hechos a diario. Baja 1-2 kg en los dos y asegúrate de no bloquear el codo al estirar. Si persiste, salta el bloque de brazo dos días: el press y el remo ya trabajan bíceps y tríceps.",
-  Lumbar:"Casi siempre es técnica en el peso muerto rumano, no exceso de peso. Revisa que la espalda no se redondee y que lo notes <strong>detrás del muslo</strong>. Baja el recorrido hasta donde puedas mantenerla plana. Si aparece en la plancha, es que la cadera se hunde.",
+  Lumbar:"Casi siempre es técnica en el peso muerto a una pierna, no exceso de peso. Revisa que la espalda no se redondee y que lo notes <strong>detrás del muslo</strong>. Baja el recorrido hasta donde puedas mantenerla plana. Si aparece en la plancha, es que la cadera se hunde.",
   Rodilla:"Revisa la sentadilla (talones pegados al suelo) y la zancada (paso largo, rodilla delantera no por delante del pie). Reduce el recorrido antes que el peso.",
   Muñeca:"Prueba agarre neutro en press y flexiones, o apoya sobre los puños en vez de las palmas. Suele arreglarse solo con cambiar la posición.",
   Cadera:"Suele venir de las zancadas. Acorta el recorrido y comprueba que el tronco va vertical, no inclinado hacia delante.",
-  Cuello:"Casi siempre es el trapecio metiéndose en las aperturas laterales. Baja el peso y no pases de la altura del hombro."
+  Cuello:"Casi siempre es el trapecio metiéndose en el press o encogiéndose en el paseo del granjero. Hombros lejos de las orejas; si sigue, baja el peso."
 };
 
 /* ============ ESQUEMAS DE LOS EJERCICIOS ============ */
@@ -1950,7 +1954,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-15 · 58";
+const VERSION = "2026-08-15 · 59";
 let S = {
   fase:0, dia:new Date().getDay(), ajustes:{},
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -1997,12 +2001,15 @@ const ZONAS = {
 };
 const zonasDe = id => ZONAS[id] || ["Hombro","Codo","Lumbar","Rodilla"];
 
-/* Las palabras del encargo: facil / bien / duro. Los valores internos no
-   cambian (sobra/justo/limite): el historial viejo sigue leyendose. */
+/* Las palabras del encargo: facil / bien / duro, con el RIR explicito desde
+   el 15-ago — parar con 2-3 en la recamara ES el objetivo, no una version
+   rebajada: el fallo absoluto anade poco estimulo y mucha fatiga, y en
+   deficit arruina la sesion siguiente. Los valores internos no cambian
+   (sobra/justo/limite): el historial viejo sigue leyendose. */
 const VALORES = [
-  {v:"sobra",  t:"Fácil", ayuda:"Podías con 3 o más repes de más"},
-  {v:"justo",  t:"Bien",  ayuda:"Acabaste con 2-3 en la recámara"},
-  {v:"limite", t:"Duro",  ayuda:"Las últimas costaron de verdad"}
+  {v:"sobra",  t:"Fácil", ayuda:"Te quedaban 4 o más en la recámara (RIR 4+): toca subir"},
+  {v:"justo",  t:"Bien",  ayuda:"Paraste con 2-3 en la recámara (RIR 2-3): el objetivo"},
+  {v:"limite", t:"Duro",  ayuda:"Al fallo o casi (RIR 0-1): en déficit, eso es pasarse"}
 ];
 /* Avisos opcionales. Solo los marcas si han pasado. */
 const EXTRAS = [
@@ -2237,29 +2244,34 @@ if(navigator.storage && navigator.storage.persist){
 const $ = s => document.querySelector(s);
 
 /* ============ LAS SESIONES ============
-   Fuerte (~40-45 min) lunes, miercoles y viernes; suave (~20-25, nunca al
-   fallo) el resto. Sin dominadas por ahora: no tiene donde montar la barra.
-   Pecho con mancuernas en la fuerte; flexiones a medio gas en la suave.
-   Curl y triceps solo lunes y viernes. */
-/* Revisada el 13-ago: en deficit sobraban ejercicios. La FUERTE baja de 11 a
-   7 (fuera las laterales —las registro como limite/forzado, forma rota— y el
-   rumano —"sobra", redundante con el peso muerto a una pierna—). El brazo,
-   SOLO los viernes: una señal por semana sin comerse la recuperacion. La
-   SUAVE pasa a 3 movimientos, 2 series lejos del fallo, ~20 min: mantener la
-   señal, no rendir. */
+   Revisada el 15-ago: se entrena TODOS los dias menos el domingo, alternando.
+   FUERTE lunes/miercoles/viernes, 7 ejercicios (fuera el rumano desde el
+   13-ago; el brazo, solo los viernes). SUAVE martes/jueves/sabado:
+   NO repite los compuestos —remo y press necesitan sus 48 h entre fuertes, y
+   en deficit robarselas es fuerza bajando semana a semana—; trabaja core,
+   brazos y movilidad en ~20 min. Suave = MENOS SERIES, no menos peso.
+   DOMINGO descanso total: ni pesas ni caminata. Arranque el sabado 15 con la
+   suave (un solo dia de carbohidratos en el deposito); lunes 17, primera
+   fuerte. */
 const CORTE = {
   F:["cal","remo","pecho","hombro","bulgara","pm1","plancha","paseo","curl","triceps","estir"],
-  S:["cal","remo","hombro","pecho","estir"]
+  S:["plancha","curl","triceps","laterales","paseo","planchaL","estir"],
+  D:[]
 };
-/* Dosis del corte por ejercicio: [series, reps]. reps null = la de la tabla. */
+/* Dosis del corte por ejercicio: [series, reps]. reps null = la de la tabla.
+   Las laterales VUELVEN el 15-ago, pero a la suave y ligeras: el problema era
+   la carga, no el ejercicio — y los hombros le importan de cara al 31. */
 const CORTE_DOSIS = {
   F:{remo:[3,"8-10 por brazo"], hombro:[3,"8"], pecho:[3,"10"],
      bulgara:[3,"8-10 por pierna"], pm1:[2,"10 por pierna"],
      curl:[2,"12"], triceps:[2,"12"], plancha:[2,null], paseo:[2,null]},
-  S:{remo:[2,"8 por brazo, lejos del fallo"], hombro:[2,"8, lejos del fallo"],
-     pecho:[2,"8-10, lejos del fallo"]}
+  S:{plancha:[3,null], curl:[3,"10-12, parando 2-3 antes del fallo"],
+     triceps:[3,"10-12, parando 2-3 antes del fallo"],
+     laterales:[3,"12-15, ligeras: sube despacio, baja más despacio"],
+     paseo:[3,null], planchaL:[2,null]},
+  D:{}
 };
-const tipoDia = () => ([1,3,5].indexOf(S.dia) >= 0 ? "F" : "S");
+const tipoDia = () => (S.dia === 0 ? "D" : [1,3,5].indexOf(S.dia) >= 0 ? "F" : "S");
 
 function listaEj(){
   let l = CORTE[tipoDia()].slice();
@@ -2291,7 +2303,9 @@ function plan(id){
 
 /* La etiqueta del dia depende del modelo. */
 function etiquetaDia(){
-  return tipoDia() === "F" ? "Fuerte" : "Suave · nunca al fallo";
+  return tipoDia() === "F" ? "Fuerte"
+       : tipoDia() === "S" ? "Suave · core y brazos"
+       : "Descanso total";
 }
 
 /* Deshace la ambigüedad de "12 por brazo": una serie son los dos lados. */
@@ -2485,12 +2499,16 @@ function siguienteId(){ return listaEj().find(i => !estaHecho(i)) || null; }
 function pintarReloj(){
   const ids = listaEj(), hechos = ids.filter(estaHecho).length;
   $("#crono").textContent = mmss(transcurrido());
-  $("#barra").style.width = (hechos/ids.length*100).toFixed(1)+"%";
+  /* Con la lista vacia (domingo) 0/0 daba "NaN%": el navegador lo ignora y la
+     barra se quedaba con el ancho del sabado. A cero explicito. */
+  $("#barra").style.width = (ids.length ? (hechos/ids.length*100).toFixed(1) : 0)+"%";
   const r = $("#reloj");
   if(!S.t0){
     r.classList.remove("corriendo");
-    $("#relojEt").textContent = "Sin empezar";
-    $("#relojTit").textContent = "Pulsa Empezar cuando estés listo";
+    const descanso = tipoDia() === "D";
+    $("#relojEt").textContent = descanso ? "Domingo" : "Sin empezar";
+    $("#relojTit").textContent = descanso ? "Descanso total: hoy no hay sesión"
+                                          : "Pulsa Empezar cuando estés listo";
     $("#btnPausa").hidden = true;
   }else{
     r.classList.add("corriendo");
@@ -2592,6 +2610,111 @@ function marcaDe(id){
   if(typeof m.nota !== "string") m.nota = "";
   return m;
 }
+
+/* ============ LA FUERZA, SEMANA A SEMANA ============
+   El detector de perdida de musculo (15-ago): si en dos semanas los pesos del
+   remo y los press bajan en vez de subir, el volumen es excesivo y sobra un
+   dia suave. La fuerza es el termometro del musculo — no las sensaciones ni
+   la bascula. De cada semana se toma el MAXIMO apuntado: un dia flojo no
+   borra la marca real. Sale de las sesiones archivadas (h.pesos). */
+const FUERZA_EJS = [["remo","Remo"],["pecho","Pecho"],["hombro","Hombro"],["bulgara","Búlgara"],
+                    ["pm1","P. muerto 1p"],["paseo","Paseo"],["curl","Curl"],["triceps","Tríceps"],
+                    ["laterales","Laterales"]];
+function lunesDe(f){
+  const d = new Date(f + "T12:00:00");
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return hoyISO(d);
+}
+function pesoDeTexto(v){
+  const s = String(v == null ? "" : v);
+  /* Un rango o una notacion de series ("8-10", "2x10", "10→12") no es un peso
+     medido, es texto del plan que se colo en el campo: leerle el primer
+     numero fabricaba bajadas inexistentes (4 → "3-4" contaba como 3). Mejor
+     sin dato que con dato falso. */
+  if(/\d\s*[-–—→xX×]\s*\d/.test(s)) return null;
+  const m = /(\d+(?:[.,]\d+)?)/.exec(s);
+  return m ? Number(m[1].replace(",", ".")) : null;
+}
+function fuerzaPorSemana(){
+  const mapa = {};
+  (S.hist || []).forEach(h => {
+    /* Una fecha rara (importada o fundida de otro aparato) generaba la
+       semana "NaN-NaN-NaN", que el orden alfabetico ponia como la mas
+       reciente y podia disparar la alarma en falso. */
+    if(!h || !h.pesos || !/^\d{4}-\d{2}-\d{2}$/.test(String(h.f))) return;
+    const sem = lunesDe(h.f);
+    Object.keys(h.pesos).forEach(id => {
+      const p = pesoDeTexto(h.pesos[id]);
+      if(p == null) return;
+      const m = mapa[id] || (mapa[id] = {});
+      if(m[sem] == null || p > m[sem]) m[sem] = p;
+    });
+  });
+  return mapa;
+}
+function pintarFuerzaSem(){
+  const cont = $("#fuerzaSem");
+  if(!cont) return;
+  const mapa = fuerzaPorSemana();
+  const sems = [];
+  for(let i = 3; i >= 0; i--){
+    const d = new Date(lunesDe(hoyISO()) + "T12:00:00");
+    d.setDate(d.getDate() - i*7);
+    sems.push(hoyISO(d));
+  }
+  /* Solo ejercicios con algun dato en las 4 semanas visibles: una fila de
+     rayas con datos de hace meses no cuenta nada. */
+  const filas = FUERZA_EJS.filter(par =>
+    mapa[par[0]] && sems.some(s => mapa[par[0]][s] != null));
+  if(!filas.length){
+    cont.innerHTML = '<div class="vacio">Cuando haya sesiones cerradas con peso apuntado, aquí ' +
+      'se verá si la fuerza sube o baja: el termómetro del músculo.</div>';
+    return;
+  }
+  /* La alarma del detector: remo o press bajando dos semanas seguidas. Se
+     mide sobre las tres semanas de calendario CERRADAS del cuadro (la actual
+     no cuenta: con una sola sesion a medias saltaba la alarma un lunes por la
+     mañana), y exige dato en las tres — semanas sueltas con meses en medio no
+     son "seguidas". */
+  const alarmas = [];
+  ["remo","pecho","hombro"].forEach(id => {
+    const m = mapa[id] || {};
+    const a2 = m[sems[0]], b2 = m[sems[1]], c2 = m[sems[2]];
+    if(a2 != null && b2 != null && c2 != null && c2 < b2 && b2 < a2)
+      alarmas.push(FUERZA_EJS.find(p => p[0] === id)[1]);
+  });
+  const cab = '<thead><tr><th>Ejercicio</th>' + sems.map(s => {
+    const d = new Date(s + "T12:00:00");
+    return '<th class="n">' + d.getDate() + "/" + (d.getMonth()+1) + '</th>';
+  }).join("") + '</tr></thead>';
+  const cuerpo = '<tbody>' + filas.map(par => {
+    const m = mapa[par[0]];
+    const con = sems.filter(s => m[s] != null);
+    let flecha = "";
+    if(con.length >= 2){
+      const ant = m[con[con.length-2]], ult = m[con[con.length-1]];
+      flecha = ult > ant ? ' <span style="color:var(--hecho)">↑</span>'
+             : ult < ant ? ' <span style="color:var(--descanso)">↓</span>' : "";
+    }
+    return '<tr><td>' + par[1] + '</td>' + sems.map((s, k) =>
+      '<td class="n">' + (m[s] != null
+        ? String(m[s]).replace(".", ",") + (k === sems.length-1 ? flecha : "")
+        : '<span style="color:var(--acero)">—</span>') + '</td>').join("") + '</tr>';
+  }).join("") + '</tbody>';
+  cont.innerHTML =
+    (alarmas.length
+      ? '<div class="nota ambar" style="margin-bottom:10px"><p><strong>⚠ ' +
+        (alarmas.length === 1
+          ? alarmas[0] + ' lleva dos semanas bajando.'
+          : alarmas.join(" y ") + ' llevan dos semanas bajando.') +
+        '</strong> El volumen puede ser excesivo: quita un día suave y vuelve a mirar aquí.</p></div>'
+      : "") +
+    '<div class="tabla-env"><table id="tablaFuerza">' + cab + cuerpo + '</table></div>' +
+    '<p style="font-size:.78rem;color:var(--acero);margin:8px 0 0">El mejor peso apuntado cada ' +
+    'semana (de lunes a domingo; la última columna es la semana en curso, aún abierta). ' +
+    'Si el remo o los press bajan dos semanas seguidas, sobra un día suave.</p>';
+}
+
 /* ============ HOY ============ */
 
 /* UNA TARJETA A LA VEZ.
@@ -2660,14 +2783,17 @@ function pintarHoy(){
   $("#diaNom").textContent = d.n;
   $("#diaChip").textContent = etiquetaDia();
   const totalSeries = ids.reduce((a,i) => { const p = plan(i); return a + (p ? p.series : 0); }, 0);
-  $("#diaSub").textContent = ids.length+" ejercicios · "+totalSeries+" series";
+  $("#diaSub").textContent = tipoDia() === "D"
+    ? "descanso total — sin pesas ni caminata"
+    : ids.length+" ejercicios · "+totalSeries+" series";
   $("#selDia").value = String(S.dia);
   $("#selFase").value = String(S.fase);
+  pintarFuerzaSem();
   /* La salida de emergencia. Si hay una sesion abierta que NO es de hoy, tiene
      que haber una forma de dejarla desde esta misma pantalla: si no, la unica
      salida son los Ajustes, que ademas la borran sin avisar. */
   const sesionDeOtroDia = !!S.t0 && fechaSesion() !== hoyISO();
-  $("#btnEmpezar").hidden = !!S.t0 && !sesionDeOtroDia;
+  $("#btnEmpezar").hidden = (!!S.t0 && !sesionDeOtroDia) || (tipoDia() === "D" && !S.t0);
   if(sesionDeOtroDia){
     $("#btnEmpezar").textContent = "Descartar la de ayer y empezar hoy";
     $("#btnEmpezar").dataset.descarta = "1";
@@ -2686,13 +2812,27 @@ function pintarHoy(){
   cont.innerHTML = "";
   const focoId = ejercicioEnFoco();
 
-  /* La regla de la sesion suave, visible SIEMPRE que estes en una: es la que
-     evita que el corte se coma el musculo entrenando vacio de calorias. */
+  /* La regla de la sesion suave, visible SIEMPRE que estes en una: la suave
+     NO repite los compuestos. Remo y press necesitan sus 48 h entre fuertes;
+     robarselas en deficit es fuerza bajando semana a semana. */
   if(tipoDia() === "S"){
     const n = document.createElement("div");
     n.className = "nota ambar";
-    n.innerHTML = "<p><strong>Sesión suave: mantener la señal, no rendir.</strong> " +
-      "Tres movimientos, dos series, lejos del fallo, veinte minutos y a casa.</p>";
+    n.innerHTML = "<p><strong>Suave: core, hombros, brazos y movilidad.</strong> " +
+      "Sin remo ni press, que se están recuperando de ayer. Mismo peso, menos " +
+      "series (las laterales, ligeras y lentas), parando 2-3 antes del fallo. " +
+      "Veinte minutos y a casa.</p>";
+    cont.appendChild(n);
+  }
+
+  /* Domingo: descanso total, sin lista y sin boton. Un descanso con deberes
+     no es descanso. Si aun asi quiere entrenar, en «cambiar» puede poner otro
+     dia a mano — eso es una decision, no un despiste. */
+  if(tipoDia() === "D" && !S.t0){
+    const n = document.createElement("div");
+    n.className = "nota";
+    n.innerHTML = "<p><strong>Domingo: descanso total.</strong> Ni pesas ni caminata. " +
+      "El músculo se construye hoy, mientras el depósito se rellena. Mañana, la fuerte.</p>";
     cont.appendChild(n);
   }
 
@@ -3010,14 +3150,27 @@ function pintarHoy(){
           cuerpo.appendChild(prop);
         }
 
+        /* La otra cara de la regla de las dos: dos sesiones AL FALLO seguidas
+           en el mismo ejercicio (15-ago). El objetivo es RIR 2-3: el fallo
+           añade poca señal y mucha fatiga, y en déficit arruina la sesión
+           siguiente. */
+        if(dos.length === 2 && dos[0].esf === "limite" && dos[1].esf === "limite"){
+          const fallo = document.createElement("div");
+          fallo.className = "nota ambar";
+          fallo.style.marginBottom = "12px";
+          fallo.innerHTML = "<p><strong>Dos sesiones al fallo en este ejercicio.</strong> " +
+            "El objetivo es parar con 2-3 en la recámara: baja 1 kg o corta la serie antes.</p>";
+          cuerpo.appendChild(fallo);
+        }
+
         // Qué te pasó la última vez con este ejercicio.
         const ult = ultimaMarca(id);
         if(ult){
           const avisos = [];
           if(ult.tecnica || ult.forzado) avisos.push("la técnica se rompió → <b>baja 1-2 kg</b>");
           else if(ult.esf === "sobra")   avisos.push("te sobraba → <b>prueba a subir 1 kg</b>");
-          else if(ult.esf === "limite")  avisos.push("acabaste casi al límite → <b>mantén el peso</b>");
-          else if(ult.esf === "justo")   avisos.push("fue justo → <b>mantén el peso</b>");
+          else if(ult.esf === "limite")  avisos.push("llegaste al límite → <b>esta vez para 2-3 antes</b>");
+          else if(ult.esf === "justo")   avisos.push("RIR 2-3 clavado → <b>repite ese peso</b>");
           if(ult.molestia) avisos.push("<b>te molestó</b>" +
             ((ult.zonas && ult.zonas.length) ? " en " + esc(ult.zonas.join(" y ")) : "") +
             (ult.zonaOtra ? " (" + esc(ult.zonaOtra) + ")" : "") + ", vigílalo");
@@ -3342,6 +3495,12 @@ function saltarEjercicio(id){
 }
 
 function empezar(){
+  /* El domingo no se entrena ni por descuido: si de verdad lo quiere, que
+     ponga el dia a mano en «cambiar» — decision consciente, no boton. */
+  if(tipoDia() === "D"){
+    aviso("Domingo: descanso total. Para entrenar igualmente, cambia el día a mano.", true);
+    return;
+  }
   barraOff();
   S.t0 = Date.now(); S.acumPausa = 0; S.pausadoEn = null; S.hechos = {};
   S.marcas = {}; S.ultimoHecho = null; S.latido = Date.now();
@@ -3362,6 +3521,11 @@ $("#btnEmpezar").addEventListener("click", () => {
     S.latido = null; S.sesionF = null; S.sesionDia = null; S.sesionFase = null;
     S.sesionId = null;
     aplicarAuto();
+    /* El descarte se consolida y se repinta AQUI, no fiandolo a empezar():
+       desde el 15-ago empezar() puede rechazar (domingo), y sin esto el
+       descarte ni se guardaba ni se veia — pantalla congelada con la sesion
+       del sabado y una sesion zombi en localStorage que revivia al recargar. */
+    barraOff(); guardar(); pintarHoy();
   }
   empezar();
 });
@@ -4935,6 +5099,10 @@ function miraSiHaCambiadoElDia(){
   aplicarAuto();                 // recalcula el día de la rutina y la fase
   pintarHoy(); pintarComida(); pintarInicio(); pintarDiario();
   pintarSemana(); pintarPasos(); pintarEstadoSync();
+  /* El banner de la caminata depende del dia concreto desde el 15-ago (el
+     domingo no se camina): sin repintarlo aqui, el lunes seguia diciendo
+     "descanso total" a quien dejo la pestaña de pasos abierta. */
+  pintarCaminatas();
 }
 setInterval(miraSiHaCambiadoElDia, 60000);
 document.addEventListener("visibilitychange", () => {
@@ -5758,14 +5926,17 @@ function pintarSemana(){
   const hoy = new Date().getDay(), orden = [1,2,3,4,5,6,0];
   $("#semanaLista").innerHTML = orden.map(i => {
     const d = DIAS[i];
+    const cabecera = '<div class="dfila' + (i === hoy ? " hoy" : "") + '"><b>' + d.n +
+      (i === hoy ? " · hoy" : "") + '</b>';
+    if(i === 0)
+      return cabecera + '<span class="et">Descanso</span><span class="mn">total · sin caminata</span></div>';
     const tipo = [1,3,5].indexOf(i) >= 0 ? "F" : "S";
     let l = CORTE[tipo].slice();
     if(tipo === "F" && i !== 5) l = l.filter(x => x !== "curl" && x !== "triceps");
     const et2 = tipo === "F" ? "Fuerte" : "Suave";
     const nEj = l.length;
     const mins = tipo === "F" ? "45-55 min" : "20 min";
-    return '<div class="dfila' + (i === hoy ? " hoy" : "") + '"><b>' + d.n + (i === hoy ? " · hoy" : "") +
-      '</b><span class="et">' + et2 + '</span><span class="mn">' + nEj + " ej · " + mins + '</span></div>';
+    return cabecera + '<span class="et">' + et2 + '</span><span class="mn">' + nEj + " ej · " + mins + '</span></div>';
   }).join("");
 
 
@@ -5908,9 +6079,17 @@ function pintarCaminatas(){
   ponerFechaCam();
   const plan = $("#camPlan");
   if(plan){
-    const t = caminataQueToca(hoy);
-    plan.hidden = !t;
-    if(t){
+    /* El domingo no hay caminata: descanso total (decidido el 15-ago). */
+    const esDomingo = new Date(hoy + "T12:00:00").getDay() === 0;
+    const t = esDomingo ? null : caminataQueToca(hoy);
+    plan.hidden = !t && !esDomingo;
+    if(esDomingo){
+      plan.innerHTML = "";
+      const b = document.createElement("b"); b.textContent = "Domingo: descanso total. ";
+      const x = document.createElement("span");
+      x.textContent = "Hoy tampoco se camina. Las piernas también se construyen descansando.";
+      plan.appendChild(b); plan.appendChild(x);
+    }else if(t){
       plan.innerHTML = "";
       const b = document.createElement("b"); b.textContent = "Hoy toca: ";
       const x = document.createElement("span"); x.textContent = t;
@@ -6210,7 +6389,70 @@ const PLATOS = [
    real. El plan de agosto pide ~100-110 g y el fijo como objetivo 125 (lo dio
    el, 9-ago). Las kcal se quedan en 1610: caen dentro de su presupuesto real
    de 1.500-1.650 con el cafe y el margen del gin. */
-const OBJ = {kcal:1700, prot:125};   // ~1.600-1.750 en la fase de solidos (14-ago)
+/* Objetivo de ENTRADA por dia (15-ago): ~1.900 los dias fuertes, ~1.750 los
+   suaves y ~1.500 el domingo de descanso. Sale del dia de la semana de la
+   fecha, asi cada dia pasado conserva el objetivo que le tocaba — y los dias
+   ANTERIORES al esquema conservan el objetivo con el que se vivieron (1.610
+   hasta el 13-ago, 1.700 el 14): reescribirles el liston les cambiaria el
+   color del medidor a toro pasado. */
+function objetivoKcal(f){
+  if(f < "2026-08-14") return 1610;
+  if(f < "2026-08-15") return 1700;
+  const d = new Date(f + "T12:00:00").getDay();
+  return d === 0 ? 1500 : [1,3,5].indexOf(d) >= 0 ? 1900 : 1750;
+}
+
+/* La proteina, por regla semanal (15-ago), no por objetivo diario rigido:
+   media semanal de 90-100 g y nunca dos dias seguidos por debajo de 70. El
+   dato del dia suelto genera ansiedad sin aportar — el cuerpo hace la cuenta
+   por semanas. La media es de los 7 dias COMPLETOS anteriores: hoy a medio
+   dia siempre parece que vas mal, y ese sesgo es justo lo que se evita. Un
+   dia sin ningun apunte cuenta 0: la media real incluye los dias malos. */
+function mediaProt7(f){
+  let suma = 0, conAlgo = 0;
+  for(let i = 1; i <= 7; i++){
+    const d = hoyISO(new Date(new Date(f + "T12:00:00").getTime() - i*86400000));
+    suma += totalDe(d).prot;
+    if(comidasDe(d).length) conAlgo++;
+  }
+  /* Con menos de 4 dias apuntados la media no se enseña: dividir entre 7 con
+     un solo dia registrado pintaba "media 14 g" en rojo a quien acababa de
+     empezar o volvia de unos dias sin apuntar — los dias SIN datos no son
+     dias malos comidos de verdad, son dias que no se saben. */
+  return conAlgo >= 4 ? {media:Math.round(suma/7), dias:conAlgo} : null;
+}
+/* Ayer y anteayer, completos y CON apuntes, ambos por debajo de 70 g. Los
+   dias sin apuntes no disparan la alarma: no se sabe que comio, y una alarma
+   en falso enseña a ignorarlas. */
+function protBaja2(f){
+  for(let i = 1; i <= 2; i++){
+    const d = hoyISO(new Date(new Date(f + "T12:00:00").getTime() - i*86400000));
+    if(!comidasDe(d).length || totalDe(d).prot >= 70) return false;
+  }
+  return true;
+}
+function protHtml(f, protHoy){
+  const m = mediaProt7(f);
+  /* En un dia pasado no se dice "hoy" (la pantalla ya avisa arriba de que no
+     estas en hoy) y la alarma de accion no se enseña: empujar a comer atun
+     mirando el martes pasado no tiene sentido. */
+  const esHoy = f === hoyISO();
+  const etiq = ' g ' + (esHoy ? 'hoy' : 'ese día') + '';
+  let html;
+  if(m){
+    const clase = m.media >= 90 ? "zOk" : m.media >= 70 ? "zBajo" : "zAlto";
+    html = '<div class="modoDia ' + clase + '"><b>Proteína</b> · ' + Math.round(protHoy) +
+      etiq + ' · media 7 días: <b>' + m.media + '</b> g' +
+      '<span>La regla: media semanal de 90-100 · nunca dos días seguidos por debajo de 70.</span></div>';
+  }else{
+    html = '<div class="modoDia zBajo"><b>Proteína</b> · ' + Math.round(protHoy) + etiq +
+      '<span>La regla: media semanal de 90-100 · nunca dos días seguidos por debajo de 70.</span></div>';
+  }
+  if(esHoy && protBaja2(f))
+    html += '<div class="modoDia zAlto"><b>⚠ Dos días seguidos bajo 70 g</b> · hoy la proteína va primero' +
+      '<span>Lo que más suma por volumen: atún (13 g/lata) · queso rallado · pollo · picada.</span></div>';
+  return html;
+}
 
 let comDia = hoyISO();
 
@@ -6232,7 +6474,7 @@ const MENU_AGOSTO = {desde:"2026-08-10", hasta:"2026-08-31", dias:[
   /* D */ {comida:{n:"Hervido frío: patata 300 g + judía verde + 2 latas de atún", kcal:505, prot:40},
            cena:{n:"Pollo 250 g + tomate aliñado", kcal:450, prot:57}},
   /* L */ {comida:{n:"Macarrones 70 g + boloñesa 150 g + queso 20 g", kcal:740, prot:39},
-           cena:{n:"Pollo 250 g + judía verde", kcal:395, prot:60}},
+           cena:{n:"Pollo 250 g + judía verde", kcal:305, prot:60}},
   /* M */ {comida:{n:"Arroz 70 g + pollo 250 g + tomate frito 40 g", kcal:655, prot:62},
            cena:{n:"Lentejas 250 g + 1 lata de atún", kcal:350, prot:32}},
   /* X */ {comida:{n:"Garbanzos 250 g + boloñesa 150 g", kcal:710, prot:40},
@@ -6717,8 +6959,8 @@ function pintarComida(){
     av.appendChild(t1); av.appendChild(t2);
   }
 
-  let html = medidor("Calorías", t.kcal, OBJ.kcal, "kcal") +
-             medidor("Proteína", t.prot, OBJ.prot, "g");
+  let html = medidor("Calorías", t.kcal, objetivoKcal(comDia), "kcal") +
+             protHtml(comDia, t.prot);
   if(gasto){
     const bal = Math.round(t.kcal - gasto);
     html += '<div class="balance">' +
@@ -7068,15 +7310,20 @@ function pintarMapa(){
     entEstado = mmss(h.seg) + (isFinite(nEj) && nEj > 0 ? " · " + nEj + " ejercicios" : "") +
                 (h.rpe ? " · esfuerzo " + h.rpe + "/10" : "");
     entValor = "✓ hecha"; entOk = true;
+  }else if(tipoDia() === "D"){
+    entEstado = "Descanso total — sin pesas ni caminata";
+    entValor = "domingo";
   }else{
     entEstado = etiquetaDia() + " · " + ids.length + " ejercicios";
-    entValor = (S.fase === 0 ? "50" : S.fase === 1 ? "60" : "70") + " min";
+    entValor = tipoDia() === "F"
+      ? (S.fase === 0 ? "50" : S.fase === 1 ? "60" : "70") + " min"
+      : "20 min";
   }
 
   const nComidas = comidasDe(f).length;
   const destinos = [
     {t:"hoy", ic:"🏋️", n:"Entrenamiento", e:entEstado, v:entValor, ok:entOk},
-    {t:"comida", ic:"🍽️", n:"Comida", ok:t.kcal >= OBJ.kcal * 0.9,
+    {t:"comida", ic:"🍽️", n:"Comida", ok:t.kcal >= objetivoKcal(f) * 0.9,
      e:nComidas ? nComidas + (nComidas === 1 ? " cosa apuntada" : " cosas apuntadas")
                 : "Nada apuntado todavía",
      v:Math.round(t.kcal) + " kcal"},
@@ -7135,6 +7382,8 @@ function pintarInicio(){
     btn.textContent = "Cerrar la sesión";
   }else if(yaHecha){
     btn.hidden = true;               // hecha: no hay nada que empujar
+  }else if(tipoDia() === "D"){
+    btn.hidden = true;               // domingo: descanso total, nada que empujar
   }else{
     btn.textContent = "▶ Empezar la sesión";
   }
@@ -7144,9 +7393,10 @@ function pintarInicio(){
          en Comida, a un toque. --- */
   const t = totalDe(f);
   const gastoHoy = gastoDe(f);
-  $("#vComTxt").textContent = t.kcal > 0
+  $("#vComTxt").textContent = (t.kcal > 0
     ? Math.round(t.kcal) + " kcal · " + Math.round(t.prot) + " g de proteína"
-    : "nada apuntado todavía";
+    : "nada apuntado todavía") +
+    (protBaja2(f) ? " · ⚠ dos días bajos de proteína" : "");
   const vb = $("#vComBal");
   if(gastoHoy && t.kcal > 0){
     const bal = Math.round(t.kcal - gastoHoy);
@@ -7154,7 +7404,7 @@ function pintarInicio(){
     vb.className = "vBal " + (bal < 0 ? "def" : "sup");
     vb.title = bal < 0 ? "Déficit de hoy" : "Superávit de hoy";
   }else{
-    vb.textContent = Math.round(t.kcal) + " / " + OBJ.kcal;
+    vb.textContent = Math.round(t.kcal) + " / " + objetivoKcal(f);
     vb.className = "vBal neutro";
   }
 
