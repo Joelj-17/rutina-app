@@ -1020,6 +1020,12 @@ body{padding-bottom:calc(var(--menuAlto) + 8px + env(safe-area-inset-bottom))}
         <div class="caras" id="vAnimo"></div>
       </div>
     </div>
+    <!-- El extra diario del 7c: no se registra, solo se recuerda. Es lo unico
+         que trabaja el transverso, y no cansa. -->
+    <p style="font-size:.78rem;color:var(--acero);margin:8px 2px 0">
+      Extra de cualquier momento: <strong>vacío abdominal</strong>, 3 × 10 s con los
+      pulmones vacíos. Es lo que baja la cintura. Cómo se hace, en la
+      <button class="enlace" data-ir="guia">Guía</button>.</p>
   </div>
 
   <!-- Lo de consulta y lo de configurar: no hace falta en el menú de abajo,
@@ -1596,19 +1602,25 @@ const EJ = {
     tip:"<b>El codo se queda quieto y pegado al cuerpo.</b> Solo estiras el antebrazo hacia atrás hasta dejar el brazo recto. Aprieta 1 segundo arriba y vuelve despacio. Necesita menos peso del que crees.",
     alt:"Si prefieres la <b>extensión por encima de la cabeza sentado</b> (una mancuerna con las dos manos, bajando por detrás de la nuca), también sirve — pero carga más el codo, así que no subas peso alegremente haciéndola a diario.",
     err:"Separar el codo del cuerpo o balancear el brazo entero. Si necesitas impulso, pesa demasiado."},
-  plancha:{n:"Plancha", r:45, zona:"core", tiempo:{seg:[20,30,45], lados:1, et:"Aguanta"},
-    f:[[2,"20 segundos","—"],[2,"30 segundos","—"],[3,"45 segundos","—"]],
+  plancha:{n:"Plancha", r:45, zona:"core", tiempo:{seg:[30,60,60], lados:1, et:"Aguanta"},
+    f:[[3,"30 segundos","—"],[3,"60 segundos","—"],[3,"60 segundos","—"]],
     v:"plancha abdominal técnica correcta",
-    tip:"<b>Aprieta glúteo y abdomen</b> como si fueras a recibir un puñetazo. Bien hecha, 20 s cuestan.",
+    tip:"<b>Codos bajo los hombros y glúteos APRETADOS</b>: sin eso la cadera se hunde y trabaja la lumbar. Ombligo hacia dentro, cuerpo en línea. Si no aguantas estirado, elige variante en la tarjeta: elevada (mesa → sofá → silla → suelo), con rodillas, o series cortas.",
     err:"Cadera hundida (daña la lumbar) o culo demasiado alto. Aguantar más tiempo con mala postura no suma."},
-  bicho:{n:"Bicho muerto", r:45, zona:"core",
-    f:[[2,"8 por lado","—"],[2,"10 por lado","—"],[3,"10 por lado","—"]],
+  bicho:{n:"Bicho muerto (dead bug)", r:45, zona:"core",
+    f:[[2,"8 por lado","—"],[3,"12 por lado","—"],[3,"12 por lado","—"]],
     v:"bicho muerto dead bug ejercicio técnica",
     pos:"Boca arriba, brazos hacia el techo, rodillas dobladas 90° en el aire.",
-    tip:"Baja despacio <b>brazo y pierna contrarios</b> a la vez, sin tocar el suelo.",
+    tip:"Baja despacio <b>brazo y pierna contrarios</b> a la vez, estirándolos sin tocar el suelo, vuelve y cambia. Sin carga ni impacto: vale a diario. El «clack» de la cadera es benigno mientras no duela (ver el estiramiento de psoas).",
     err:"Que la lumbar se despegue del suelo. Ahí está todo el ejercicio: si se despega, acorta el recorrido."},
-  planchaL:{n:"Plancha lateral", r:45, zona:"core", tiempo:{seg:[15,20,30], lados:2, cambio:8},
-    f:[[2,"15 s por lado","—"],[2,"20 s por lado","—"],[3,"30 s por lado","—"]],
+  elevp:{n:"Elevación de piernas tumbado", r:45, zona:"core",
+    f:[[2,"8","—"],[3,"10","—"],[3,"12","—"]],
+    v:"elevación de piernas tumbado abdominales técnica",
+    pos:"Tumbado boca arriba, manos bajo el culo o a los lados, piernas estiradas.",
+    tip:"Sube las piernas hasta la vertical y bájalas <b>despacio</b>, sin que la lumbar se despegue del suelo. Si se arquea, dobla un poco las rodillas o no bajes tanto.",
+    err:"Dejar caer las piernas y arquear la lumbar. El control al bajar ES el ejercicio."},
+  planchaL:{n:"Plancha lateral", r:45, zona:"core", tiempo:{seg:[20,30,30], lados:2, cambio:8},
+    f:[[2,"20 s por lado","—"],[3,"30 s por lado","—"],[3,"30 s por lado","—"]],
     v:"plancha lateral técnica correcta",
     tip:"De lado, sobre un antebrazo y el canto del pie. <b>Más fácil:</b> apoya la rodilla de abajo en el suelo.",
     err:"Dejar caer la cadera o rotar el tronco hacia el suelo."},
@@ -1642,11 +1654,16 @@ const EJ = {
     pos:"Tumbado boca arriba, rodillas dobladas, pies apoyados cerca del culo, brazos a los lados.",
     tip:"Sube la cadera <b>apretando el glúteo</b>, no arqueando la lumbar, hasta que hombro-cadera-rodilla hagan línea recta. Un segundo arriba y bajas controlado.",
     err:"Empujar con la lumbar en vez de con el glúteo. Si al acabar te duele la espalda baja y no el culo, era eso."},
-  estir:{n:"Estiramientos", bloque:true, dur:"3 min",
-    d:"Pectoral en marco de puerta 30 s/lado · dorsal 30 s/lado",
-    v:"estiramiento pectoral marco puerta y dorsal",
-    tip:"Con 14 años de natación encima esto no es opcional: es lo que compensa los años de brazada.",
-    err:"Saltárselo por prisa. Son 3 minutos."}
+  estir:{n:"Estiramientos", bloque:true, dur:"5 min",
+    d:"Pectoral en marco de puerta 30 s/lado · dorsal 30 s/lado · psoas en zancada con la rodilla en el suelo 30 s/lado, empujando la cadera adelante y apretando el glúteo de atrás",
+    v:"estiramiento pectoral dorsal psoas zancada",
+    tip:"Con 14 años de natación encima esto no es opcional: es lo que compensa los años de brazada. El psoas (nuevo del 15-ago) es el remedio del «clack» de la cadera: un tendón resbalando por flexores acortados de tanta silla, benigno mientras no duela.",
+    err:"Saltárselo por prisa. Son 5 minutos."},
+  vacio:{n:"Vacío abdominal", bloque:true, dur:"1 min",
+    d:"3 × 10 s: suelta TODO el aire y, con los pulmones vacíos, mete la tripa como si el ombligo tocara la espalda",
+    v:"stomach vacuum vacío abdominal técnica",
+    tip:"Extra diario, opcional, a cualquier hora — no cansa. Es lo único que trabaja el <b>transverso</b> directamente, lo que de verdad baja el contorno de cintura por tono. Ojo: los abdominales no queman la grasa de la barriga; esto pone tono debajo mientras la dieta hace su parte.",
+    err:"Hacerlo con aire dentro. Primero vacía los pulmones del todo, luego mete la tripa."}
 };
 /* La rutina. UNA sola, la suya: L/X/V fuerte, martes/jueves/sabado suave y
    domingo descanso total, puesta automaticamente segun el dia. La antigua A/B/floja se retiro el 9 de
@@ -1848,7 +1865,16 @@ const APOYO = {
   silla : (x) => '<path d="M'+(x+20)+' 50 H'+(x+48)+' M'+(x+22)+' 50 V88 M'+(x+46)+' 50 V88" stroke="currentColor" stroke-width="1.6" fill="none" opacity=".28"/>' +
                  '<line x1="'+(x+4)+'" y1="92" x2="'+(x+96)+'" y2="92" stroke="currentColor" stroke-width="1.5" opacity=".28"/>',
   puerta: (x) => '<line x1="'+(x+14)+'" y1="4" x2="'+(x+14)+'" y2="92" stroke="currentColor" stroke-width="3" opacity=".32"/>' +
-                 '<line x1="'+(x+4)+'" y1="92" x2="'+(x+96)+'" y2="92" stroke="currentColor" stroke-width="1.5" opacity=".28"/>'
+                 '<line x1="'+(x+4)+'" y1="92" x2="'+(x+96)+'" y2="92" stroke="currentColor" stroke-width="1.5" opacity=".28"/>',
+  /* Los tres apoyos de la plancha elevada (7c): la altura es lo unico que
+     cambia entre viñetas, asi que tiene que verse clara — mesa alta, sofa a
+     media altura (macizo), silla baja. Todos con el suelo debajo. */
+  mesa  : (x) => '<path d="M'+(x+2)+' 36 H'+(x+32)+' M'+(x+6)+' 36 V92 M'+(x+28)+' 36 V92" stroke="currentColor" stroke-width="1.6" fill="none" opacity=".28"/>' +
+                 '<line x1="'+(x+2)+'" y1="92" x2="'+(x+96)+'" y2="92" stroke="currentColor" stroke-width="1.5" opacity=".28"/>',
+  sofa  : (x) => '<path d="M'+(x+2)+' 56 H'+(x+30)+' V92 H'+(x+2)+' Z" stroke="currentColor" stroke-width="1.6" fill="none" opacity=".28"/>' +
+                 '<line x1="'+(x+2)+'" y1="92" x2="'+(x+96)+'" y2="92" stroke="currentColor" stroke-width="1.5" opacity=".28"/>',
+  sillaB: (x) => '<path d="M'+(x+2)+' 70 H'+(x+26)+' M'+(x+5)+' 70 V92 M'+(x+23)+' 70 V92" stroke="currentColor" stroke-width="1.6" fill="none" opacity=".28"/>' +
+                 '<line x1="'+(x+2)+'" y1="92" x2="'+(x+96)+'" y2="92" stroke="currentColor" stroke-width="1.5" opacity=".28"/>'
 };
 
 /* Poses de los tres ejercicios del corte. La bulgara con el pie atrasado en la
@@ -1865,7 +1891,38 @@ Object.assign(POSES, {
   glut_a:{cab:[16,78],cue:[26,78],cad:[50,78],rod:[62,64],pie:[66,82],pun:[72,82],
           cod:[34,84],man:[42,84]},
   glut_b:{cab:[16,78],cue:[26,74],cad:[50,58],rod:[62,60],pie:[66,82],pun:[72,82],
-          cod:[34,84],man:[42,84]}
+          cod:[34,84],man:[42,84]},
+
+  /* ---- El bloque de core del 7c ---- */
+
+  /* Plancha elevada: mismo cuerpo en linea, solo baja la altura del apoyo de
+     los antebrazos (mesa 36 → sofa 56 → silla 70 → suelo). El codo queda
+     debajo del hombro y la mano por delante, como en la del suelo. */
+  pl_mesa :{cab:[12,20],cue:[24,26],cad:[52,56],rod:[68,70],pie:[84,88],pun:[93,88],
+            cod:[24,36],man:[8,36]},
+  pl_sofa :{cab:[10,40],cue:[22,45],cad:[52,68],rod:[68,78],pie:[84,88],pun:[93,88],
+            cod:[22,56],man:[6,56]},
+  pl_silla:{cab:[8,54],cue:[20,58],cad:[50,76],rod:[66,83],pie:[84,88],pun:[93,88],
+            cod:[20,70],man:[4,70]},
+  /* Con rodillas: antebrazos en el suelo, rodillas apoyadas y tibias al aire. */
+  pl_rodillas:{cab:[16,58],cue:[28,61],cad:[56,72],rod:[72,80],pie:[86,70],pun:[90,62],
+               cod:[28,80],man:[13,80]},
+
+  /* Elevacion de piernas: tumbado, las piernas suben de la horizontal a la
+     vertical con la lumbar pegada al suelo. */
+  elevp_a:{cab:[14,76],cue:[26,76],cad:[56,76],rod:[70,76],pie:[84,76],pun:[92,72],
+           cod:[34,78],man:[44,78]},
+  elevp_b:{cab:[14,76],cue:[26,76],cad:[56,76],rod:[58,56],pie:[60,40],pun:[66,34],
+           cod:[34,78],man:[44,78]},
+
+  /* Vacio abdominal: de pie, la flecha (e.tripa) señala la tripa metida. */
+  vacio_p:{cab:[46,14],cue:[46,26],cad:[46,54],rod:[46,73],pie:[46,90],pun:[55,90],
+           cod:[40,38],man:[42,52]},
+
+  /* Psoas: zancada con la rodilla de atras EN el suelo, cadera empujando
+     adelante. La pierna delantera a 90 grados. */
+  estir_psoas:{cab:[40,22],cue:[41,32],cad:[44,60],rod:[62,70],pie:[62,88],pun:[71,88],
+               rod2:[28,88],pie2:[12,84],pun2:[6,80],cod:[50,46],man:[52,60]}
 });
 
 const ESQUEMAS = {
@@ -1892,10 +1949,17 @@ const ESQUEMAS = {
   plancha  :{a:"plancha",  apoyo:"suelo2", reloj:true},
   planchaL :{p:["planchaL","-planchaL"], apoyo:"suelo3", reloj:true},
   bicho    :{p:["bicho_a","bicho_b"], apoyo:"suelo2"},
+  elevp    :{a:"elevp_a", b:"elevp_b", apoyo:"suelo2"},
+  vacio    :{a:"vacio_p", apoyo:"suelo", tripa:true},
   paseo    :{a:"paseo",    apoyo:"suelo",  reloj:true},
-  estir    :{p:["estir_pec","estir_dor"], lista:true, reloj:true,
-             apoyos:["puerta","suelo"],
-             nombres:["Pectoral en el marco","Dorsal, brazo arriba"]}
+  estir    :{p:["estir_pec","estir_dor","estir_psoas"], lista:true, reloj:true,
+             apoyos:["puerta","suelo","suelo"],
+             nombres:["Pectoral en el marco","Dorsal, brazo arriba","Psoas, rodilla al suelo"]},
+  /* Las regresiones de la plancha, de mas facil a la completa, con la de
+     rodillas como alternativa. Se enseña en la tarjeta de la plancha. */
+  planchaVar:{p:["pl_mesa","pl_sofa","pl_silla","plancha","pl_rodillas"], lista:true,
+              apoyos:["mesa","sofa","sillaB","suelo2","suelo2"],
+              nombres:["Mesa","Sofá","Silla","Suelo","Con rodillas"]}
 };
 
 /* Dibuja una viñeta por paso. Hay dos usos y conviene no confundirlos:
@@ -1944,6 +2008,9 @@ function esquema(id){
                   'fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/>';
   if(e.reloj) s += '<text x="' + (W - 12) + '" y="20" text-anchor="middle" font-size="15" ' +
                    'fill="var(--agua)">&#9203;</text>';
+  /* El vacio abdominal: la flecha apunta a la tripa metida, que es todo el
+     ejercicio y un monigote de palo no puede enseñarlo de otra forma. */
+  if(e.tripa) s += flecha(68, 42, 51, 45);
   s += '</svg>';
   return s;
 }
@@ -1954,7 +2021,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-15 · 59";
+const VERSION = "2026-08-15 · 60";
 let S = {
   fase:0, dia:new Date().getDay(), ajustes:{},
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -1993,6 +2060,7 @@ const ZONAS = {
   plancha: ["Lumbar","Hombro","Muñeca","Cuello"],
   planchaL:["Hombro","Lumbar","Cadera","Muñeca"],
   bicho:   ["Lumbar","Cuello","Cadera"],
+  elevp:   ["Lumbar","Cadera","Cuello"],
   talones: ["Tobillo","Gemelo","Rodilla"],
   bulgara: ["Rodilla","Cadera","Lumbar","Tobillo"],
   pm1:     ["Isquios","Lumbar","Cadera","Tobillo"],
@@ -2254,21 +2322,26 @@ const $ = s => document.querySelector(s);
    suave (un solo dia de carbohidratos en el deposito); lunes 17, primera
    fuerte. */
 const CORTE = {
-  F:["cal","remo","pecho","hombro","bulgara","pm1","plancha","paseo","curl","triceps","estir"],
-  S:["plancha","curl","triceps","laterales","paseo","planchaL","estir"],
+  F:["cal","remo","pecho","hombro","bulgara","pm1","plancha","planchaL","bicho","elevp","paseo","curl","triceps","estir"],
+  S:["plancha","planchaL","bicho","elevp","curl","triceps","laterales","paseo","estir"],
   D:[]
 };
 /* Dosis del corte por ejercicio: [series, reps]. reps null = la de la tabla.
    Las laterales VUELVEN el 15-ago, pero a la suave y ligeras: el problema era
-   la carga, no el ejercicio — y los hombros le importan de cara al 31. */
+   la carga, no el ejercicio — y los hombros le importan de cara al 31.
+   El BLOQUE DE CORE (7c, 15-ago) va en LAS DOS sesiones: plancha, plancha
+   lateral, bicho muerto y (desde la semana 3) elevacion de piernas. Cinco
+   minutos, sin fatiga que acumular. Sus series por fase van en la tabla f de
+   cada ejercicio (3x30s → 3x60s la plancha, 2x8 → 3x12 el bicho...), por eso
+   aqui no llevan dosis: la del corte ES la de la tabla. */
 const CORTE_DOSIS = {
   F:{remo:[3,"8-10 por brazo"], hombro:[3,"8"], pecho:[3,"10"],
      bulgara:[3,"8-10 por pierna"], pm1:[2,"10 por pierna"],
-     curl:[2,"12"], triceps:[2,"12"], plancha:[2,null], paseo:[2,null]},
-  S:{plancha:[3,null], curl:[3,"10-12, parando 2-3 antes del fallo"],
+     curl:[2,"12"], triceps:[2,"12"], paseo:[2,null]},
+  S:{curl:[3,"10-12, parando 2-3 antes del fallo"],
      triceps:[3,"10-12, parando 2-3 antes del fallo"],
      laterales:[3,"12-15, ligeras: sube despacio, baja más despacio"],
-     paseo:[3,null], planchaL:[2,null]},
+     paseo:[3,null]},
   D:{}
 };
 const tipoDia = () => (S.dia === 0 ? "D" : [1,3,5].indexOf(S.dia) >= 0 ? "F" : "S");
@@ -2278,6 +2351,8 @@ function listaEj(){
   // El brazo, SOLO los viernes (revision del 13-ago).
   if(tipoDia() === "F" && S.dia !== 5)
     l = l.filter(id => id !== "curl" && id !== "triceps");
+  // La elevacion de piernas entra a partir de la semana 3 (7c).
+  if(S.fase === 0) l = l.filter(id => id !== "elevp");
   return l.filter(id => !EJ[id].material || S.material[EJ[id].material]);
 }
 
@@ -2299,6 +2374,35 @@ function plan(id){
     if(aj.reps) reps = aj.reps;
   }
   return {series:series, reps:reps, peso:peso};
+}
+
+/* Las variantes de la plancha (7c, 15-ago): no aguanta el cuerpo estirado,
+   asi que la tarjeta ofrece las regresiones y recuerda la elegida (en
+   ajustes, que ya viaja con la sincronizacion). Su progresion de altura:
+   antebrazos en la mesa → sofa → silla → suelo. "cortas" ademas cambia la
+   dosis DE VERDAD: 6 x 10 s con 15 s de descanso — mismo tiempo bajo
+   tension, infinitamente mas llevadero. */
+const PLANCHA_VARIANTES = [
+  ["mesa","En la mesa"], ["sofa","En el sofá"], ["silla","En la silla"],
+  ["suelo","En el suelo"], ["rodillas","Con rodillas"], ["cortas","6 × 10 s"]
+];
+function variantePlancha(){
+  const aj = (S.ajustes || {}).plancha;
+  return (aj && aj.variante) || "suelo";
+}
+function ponVariantePlancha(v){
+  const aj = Object.assign({}, (S.ajustes || {}).plancha || {});
+  const antes = aj.variante || "suelo";
+  aj.variante = v;
+  // Solo "cortas" toca la dosis; al salir de "cortas" se limpia lo que puso.
+  if(v === "cortas"){ aj.series = 6; aj.reps = "10 s (descansa 15 entre series)"; }
+  else if(antes === "cortas"){ delete aj.series; delete aj.reps; }
+  S.ajustes.plancha = aj;
+  guardar(); pintarHoy();
+}
+function segTiempo(id){
+  if(id === "plancha" && variantePlancha() === "cortas") return 10;
+  return EJ[id].tiempo.seg[S.fase];
 }
 
 /* La etiqueta del dia depende del modelo. */
@@ -2452,7 +2556,7 @@ function prepararSiguiente(id, recomendado){
 
 /* --- Ejercicios de aguante: te canta el tiempo y el cambio de lado --- */
 function correrTiempo(id){
-  const e = EJ[id], t = e.tiempo, seg = t.seg[S.fase];
+  const e = EJ[id], t = e.tiempo, seg = segTiempo(id);
   const fases = t.lados === 2
     ? [{et:"Lado derecho", s:seg, cambio:false},
        {et:"Cambia de lado", s:t.cambio || 8, cambio:true},
@@ -2821,7 +2925,7 @@ function pintarHoy(){
     n.innerHTML = "<p><strong>Suave: core, hombros, brazos y movilidad.</strong> " +
       "Sin remo ni press, que se están recuperando de ayer. Mismo peso, menos " +
       "series (las laterales, ligeras y lentas), parando 2-3 antes del fallo. " +
-      "Veinte minutos y a casa.</p>";
+      "Veinticinco minutos y a casa.</p>";
     cont.appendChild(n);
   }
 
@@ -2832,7 +2936,8 @@ function pintarHoy(){
     const n = document.createElement("div");
     n.className = "nota";
     n.innerHTML = "<p><strong>Domingo: descanso total.</strong> Ni pesas ni caminata. " +
-      "El músculo se construye hoy, mientras el depósito se rellena. Mañana, la fuerte.</p>";
+      "El músculo se construye hoy, mientras el depósito se rellena. Mañana, la fuerte. " +
+      "(El vacío abdominal sí vale hoy: 3 × 10 s, no cansa.)</p>";
     cont.appendChild(n);
   }
 
@@ -3040,11 +3145,42 @@ function pintarHoy(){
       }else{
         const yaHechas = h ? h.series : 0;
 
+        /* La plancha con sus regresiones (7c): se elige como se hace hoy y la
+           app lo recuerda. La clave tecnica va SIEMPRE a la vista, valga la
+           variante que valga: es el fallo numero uno. */
+        if(id === "plancha" && !hecho){
+          const cajaV = document.createElement("div");
+          const pregV = document.createElement("div");
+          pregV.className = "preg";
+          pregV.textContent = "¿Cómo la haces hoy?";
+          cajaV.appendChild(pregV);
+          const optsV = document.createElement("div");
+          optsV.className = "opts";
+          PLANCHA_VARIANTES.forEach(par => {
+            const bV = document.createElement("button");
+            bV.className = "opt";
+            bV.textContent = par[1];
+            bV.setAttribute("aria-pressed", String(variantePlancha() === par[0]));
+            bV.addEventListener("click", () => ponVariantePlancha(par[0]));
+            optsV.appendChild(bV);
+          });
+          cajaV.appendChild(optsV);
+          const cueV = document.createElement("p");
+          cueV.style.cssText = "font-size:.82rem;margin:8px 0 4px";
+          cueV.innerHTML = "<strong>Codos bajo los hombros y glúteos APRETADOS.</strong> " +
+            "Sin eso la cadera se hunde y trabaja la lumbar. Ombligo hacia dentro.";
+          cajaV.appendChild(cueV);
+          const dibV = document.createElement("div");
+          dibV.innerHTML = esquema("planchaVar");
+          cajaV.appendChild(dibV);
+          cuerpo.appendChild(cajaV);
+        }
+
         // Ejercicios de aguante: el contador los lleva por ti.
         if(e.tiempo && !hecho){
           const bt2 = document.createElement("button");
           bt2.className = "btTiempo";
-          const seg = e.tiempo.seg[S.fase];
+          const seg = segTiempo(id);
           bt2.textContent = e.tiempo.lados === 2
             ? "▶ Empezar serie " + (yaHechas+1) + " — " + seg + " s por lado"
             : "▶ Empezar serie " + (yaHechas+1) + " — " + seg + " s";
@@ -3374,7 +3510,9 @@ function marcarSerie(id){
       // Cambio de ejercicio: sin cuenta atrás, que hay que cambiar los discos.
       prepararSiguiente(quedan, e.r || 45);
     }else if(!e.bloque){
-      descansoSeries(e.r || 45, "Serie " + (h.series+1) + " de " + total + " · " + e.n);
+      /* Las series cortas de la plancha descansan 15 s, no los 45 de serie. */
+      const rr = (id === "plancha" && variantePlancha() === "cortas") ? 15 : (e.r || 45);
+      descansoSeries(rr, "Serie " + (h.series+1) + " de " + total + " · " + e.n);
     }
   }else{
     cerrarEntreno();
@@ -5935,7 +6073,7 @@ function pintarSemana(){
     if(tipo === "F" && i !== 5) l = l.filter(x => x !== "curl" && x !== "triceps");
     const et2 = tipo === "F" ? "Fuerte" : "Suave";
     const nEj = l.length;
-    const mins = tipo === "F" ? "45-55 min" : "20 min";
+    const mins = tipo === "F" ? "50-60 min" : "25 min";
     return cabecera + '<span class="et">' + et2 + '</span><span class="mn">' + nEj + " ej · " + mins + '</span></div>';
   }).join("");
 
@@ -5966,7 +6104,7 @@ $("#fichas").innerHTML = Object.keys(EJ)
     '</summary>' +
     '<div class="fcuerpo">' +
     '<p class="fvid"><a target="_blank" rel="noopener" href="' + vid(e.v) + '">▶ ver vídeos</a></p>' +
-    esquema(id) +
+    esquema(id) + (id === "plancha" ? esquema("planchaVar") : "") +
     (e.pos ? '<p><span class="et">Posición</span><br>' + e.pos + '</p>' : "") +
     (e.d   ? '<p>' + e.d + '</p>' : "") +
     (e.tip ? '<p>' + e.tip + '</p>' : "") +
@@ -7317,7 +7455,7 @@ function pintarMapa(){
     entEstado = etiquetaDia() + " · " + ids.length + " ejercicios";
     entValor = tipoDia() === "F"
       ? (S.fase === 0 ? "50" : S.fase === 1 ? "60" : "70") + " min"
-      : "20 min";
+      : "25 min";
   }
 
   const nComidas = comidasDe(f).length;
