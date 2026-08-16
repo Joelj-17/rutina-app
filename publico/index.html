@@ -2021,7 +2021,7 @@ const LS = "rutina.v1";
 /* Marca de versión, a la vista en la ficha de sincronización. Sirve para saber
    de un vistazo si un dispositivo está ejecutando el código que crees. Sin
    esto hay que adivinar, y adivinar con los datos de alguien sale caro. */
-const VERSION = "2026-08-15 · 60";
+const VERSION = "2026-08-16 · 61";
 let S = {
   fase:0, dia:new Date().getDay(), ajustes:{},
   faseManual:null, diaManual:null, inicio:null, material:{barra:false},
@@ -2125,8 +2125,31 @@ function faseAuto(){
   const d = diasDesdeInicio();
   return d < 14 ? 0 : d < 35 ? 1 : 2;
 }
+/* El dia elegido a mano CADUCA a medianoche (16-ago). Elegir "hazme la del
+   viernes" es una decision para HOY, no para siempre; guardada sin fecha se
+   quedaba puesta dias, y entonces la app decia "Martes" un lunes. Ya paso el
+   13 de agosto y volvio a pasar el 17. No hace falta guardar nada nuevo: la
+   maquinaria de sincronizacion ya sella en S.ts.diaManual CUANDO se eligio.
+   Si no hay sello, es de antes de que esto existiera: tambien caduca. */
+function caducaDiaManual(){
+  if(S.diaManual === null || S.diaManual === undefined) return false;
+  const sello = (S.ts || {}).diaManual;
+  const d = sello ? new Date(sello) : null;
+  if(d && !isNaN(d) && hoyISO(d) === hoyISO()) return false;   // elegido hoy: vale
+  S.diaManual = null;
+  /* Se sella A MANO. Caducar suele pasar nada mas cargar, y ahi sellarCambios
+     todavia esta tomando la foto de referencia: sin este sello el borrado se
+     quedaria con la hora VIEJA, y la nube —que aun tiene el dia puesto con esa
+     misma hora— lo devolveria en la siguiente fusion. Es el mismo agujero por
+     el que el boton «Automatico» se deshacia solo. */
+  if(!S.ts) S.ts = {};
+  S.ts.diaManual = new Date().toISOString();
+  return true;
+}
+
 function aplicarAuto(){
   const puesto = v => !(v === null || v === undefined);
+  if(caducaDiaManual() && typeof guardar === "function") guardar();
   S.dia  = puesto(S.diaManual)  ? S.diaManual  : new Date().getDay();
   S.fase = puesto(S.faseManual) ? S.faseManual : faseAuto();
   /* Con una sesion abierta manda la sesion, no el calendario: si empezaste el
@@ -2915,6 +2938,31 @@ function pintarHoy(){
   const sig = siguienteId(), cont = $("#lista");
   cont.innerHTML = "";
   const focoId = ejercicioEnFoco();
+
+  /* Si lo que estas viendo NO es el dia de hoy, se dice aqui y se arregla de
+     un toque. Antes solo lo delataba una linea gris de "elegidos a mano" que
+     no se lee, y acababas haciendo la rutina de otro dia sin enterarte. */
+  const hoyDia = new Date().getDay();
+  if(S.dia !== hoyDia && !S.t0){
+    const av = document.createElement("div");
+    av.className = "nota ambar";
+    const pav = document.createElement("p");
+    pav.innerHTML = "<strong>Estás viendo la rutina del " + DIAS[S.dia].n.toLowerCase() +
+      ", pero hoy es " + DIAS[hoyDia].n.toLowerCase() + ".</strong>";
+    av.appendChild(pav);
+    const acc = document.createElement("div");
+    acc.className = "acciones";
+    const bHoy = document.createElement("button");
+    bHoy.className = "bt p";
+    bHoy.textContent = "Hacer la de hoy (" + DIAS[hoyDia].n.toLowerCase() + ")";
+    bHoy.addEventListener("click", () => {
+      S.diaManual = null; S.foco = null;
+      aplicarAuto(); guardar(); pintarHoy(); pintarInicio(); pintarSemana();
+    });
+    acc.appendChild(bHoy);
+    av.appendChild(acc);
+    cont.appendChild(av);
+  }
 
   /* La regla de la sesion suave, visible SIEMPRE que estes en una: la suave
      NO repite los compuestos. Remo y press necesitan sus 48 h entre fuertes;
@@ -7503,7 +7551,13 @@ function fechaCorta(iso){
 
 function pintarInicio(){
   const f = hoyISO(), d = DIAS[S.dia], ids = listaEj(), hoy = new Date();
-  $("#portadaHoy").textContent = d.n + ", " + hoy.getDate() + " de " + MESES[hoy.getMonth()] +
+  /* El nombre del dia sale del CALENDARIO, no de la rutina que estes viendo:
+     el numero (17) venia del reloj y el nombre de S.dia, asi que con un dia
+     pinchado a mano la portada decia "Martes, 17 de agosto" un lunes. Si la
+     rutina apunta a otro dia, se dice aparte y con todas las letras. */
+  const diaReal = DIAS[hoy.getDay()];
+  $("#portadaHoy").textContent = diaReal.n + ", " + hoy.getDate() + " de " + MESES[hoy.getMonth()] +
+    (S.dia !== hoy.getDay() ? " · rutina del " + d.n.toLowerCase() : "") +
     (S.inicio ? " · día " + (diasDesdeInicio()+1) + " del plan" : "");
 
   pintarMapa();
